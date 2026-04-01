@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import DeckGL from '@deck.gl/react';
 import { ScatterplotLayer } from '@deck.gl/layers';
-import { Map } from 'react-map-gl/mapbox';
+import { Map } from 'react-map-gl/maplibre';
 import { Client } from '@stomp/stompjs';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import 'maplibre-gl/dist/maplibre-gl.css';
 
-// TODO: aza esto con tu token de Mapbox o usa variables de entorno (ej. import.meta.env.VITE_MAPBOX_TOKEN)
+// En caso de que vayamos a usar un mapa mejor hay que poner un token de 
+// Mapbox, por ahora se pone así pero toca usar usar variables de entorno (ej. import.meta.env.VITE_MAPBOX_TOKEN)
 const MAPBOX_ACCESS_TOKEN = '';
 
-// Vista inicial configurada para el centro de Bogotá (puedes ajustarla)
+// Vista inicial configurada para el centro de Bogotá (Se puede ajustar)
 const INITIAL_VIEW_STATE = {
   longitude: -74.0721,
   latitude: 4.7110,
@@ -21,7 +22,7 @@ export default function DeliveryMap() {
   const [deliveries, setDeliveries] = useState([]);
 
   useEffect(() => {
-    // ---- MODO SIMULADOR OPCIONAL (Solo UI) ----
+    // ---- Simulador solo se ve al mapa y puntos al azar ----
     const mockInterval = setInterval(() => {
       setDeliveries(prev => {
         // Mover el repartidor 1 a una posición aleatoria cerca del centro
@@ -102,6 +103,7 @@ export default function DeliveryMap() {
       >
         <Map
           mapboxAccessToken={MAPBOX_ACCESS_TOKEN}
+          // Mapa gratuito
           mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
         />
       </DeckGL>
