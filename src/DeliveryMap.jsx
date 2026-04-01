@@ -22,19 +22,12 @@ export default function DeliveryMap() {
   const [deliveries, setDeliveries] = useState([]);
 
   useEffect(() => {
-    // ---- Simulador solo se ve al mapa y puntos al azar ----
+    /* 
+    // ---- Simulador local deshabilitado para usar el backend real ----
     const mockInterval = setInterval(() => {
-      setDeliveries(prev => {
-        // Mover el repartidor 1 a una posición aleatoria cerca del centro
-        const rLat = 4.7110 + (Math.random() - 0.5) * 0.05;
-        const rLng = -74.0721 + (Math.random() - 0.5) * 0.05;
-        // Crea o actualiza 2 repartidores falsos
-        return [
-          { id: "mock-1", longitude: rLng, latitude: rLat, status: "active" },
-          { id: "mock-2", longitude: -74.08, latitude: 4.69, status: "inactive" }
-        ];
-      });
-    }, 1000); // 1 Vez por segundo
+      // ...
+    }, 1000); 
+    */
 
     // Inicializa el cliente STOMP
     const client = new Client({
@@ -70,7 +63,7 @@ export default function DeliveryMap() {
     }
 
     return () => {
-      clearInterval(mockInterval);
+      // clearInterval(mockInterval);
       client.deactivate();
     };
   }, []);
@@ -103,7 +96,7 @@ export default function DeliveryMap() {
       >
         <Map
           mapboxAccessToken={MAPBOX_ACCESS_TOKEN}
-          // Mapa gratuito
+          // Mapa gratuito, no requiere token obligatorio
           mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
         />
       </DeckGL>
