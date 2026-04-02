@@ -395,7 +395,7 @@ export default function Register() {
         }
 
         .hero-medigo span {
-          font-size: 1.5rem;
+          font-size: 4.2rem;
           font-weight: 800;
           color: #ffffff;
           text-decoration: underline;
