@@ -297,7 +297,7 @@ export default function CentroSubastas() {
                 <div className={`auction-card-visual ${auction.skin}`} aria-hidden="true">
                   <div className="auction-live-timer">
                     <span />
-                    {auction.timeLeft}
+                    {' '}{auction.timeLeft}
                   </div>
                 </div>
 
@@ -322,7 +322,7 @@ export default function CentroSubastas() {
                   </div>
 
                   <button type="button" className="auction-bid-btn">
-                    Pujar Ahora
+                    Pujar Ahora{' '}
                     <span className="material-symbols-outlined">trending_up</span>
                   </button>
                 </div>
@@ -347,7 +347,7 @@ export default function CentroSubastas() {
               </div>
 
               <button type="button" className="featured-improve-btn">
-                Mejorar Oferta
+                Mejorar Oferta{' '}
                 <span className="material-symbols-outlined">edit</span>
               </button>
             </article>
