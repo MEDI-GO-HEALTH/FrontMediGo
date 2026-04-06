@@ -73,7 +73,7 @@ export default function GestionSedes() {
 
         const source = response?.data || response
         if (Array.isArray(source) && source.length > 0) {
-          setBranches(source.map(mapBranchFromApi))
+          setBranches(source.map((item, index) => mapBranchFromApi(item, index)))
         }
       } catch {
         if (mounted) {

@@ -78,7 +78,7 @@ export default function GestionUsuarios() {
 
         const source = response?.data || response
         if (Array.isArray(source) && source.length > 0) {
-          setUsers(source.map(mapUserFromApi))
+          setUsers(source.map((item, index) => mapUserFromApi(item, index)))
         }
       } catch {
         if (mounted) {
