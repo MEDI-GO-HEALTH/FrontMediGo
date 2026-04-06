@@ -89,7 +89,7 @@ export default function Login() {
     setLoading(true)
     try {
       const data = await login({
-        email: form.email.trim(),
+        email: form.email.trim().toLowerCase(),
         password: form.password
       })
       
@@ -101,7 +101,12 @@ export default function Login() {
       const redirect = ROLE_REDIRECTS[data.user.role] || '/login'
       navigate(redirect, { replace: true })
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Credenciales incorrectas. Intenta de nuevo.'
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        'Credenciales incorrectas. Intenta de nuevo.'
       setError(msg)
     } finally {
       setLoading(false)
