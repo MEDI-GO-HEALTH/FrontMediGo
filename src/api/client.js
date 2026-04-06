@@ -14,6 +14,15 @@
 import axios from 'axios';
 import { API_CONFIG } from '../config/api';
 
+const PROD_API_BASE_URL = 'https://ezequiel-gateway-etcrh9dxg9dwhng4.canadacentral-01.azurewebsites.net';
+
+const isLocalhostUrl = (value = '') => /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(value);
+
+const isRunningOnLocalhost = () => {
+  const host = globalThis?.location?.hostname || '';
+  return host === 'localhost' || host === '127.0.0.1';
+};
+
 const client = axios.create({
   baseURL: API_CONFIG.baseURL,
   timeout: API_CONFIG.timeoutMs,
@@ -26,6 +35,14 @@ const client = axios.create({
 // ── Interceptor de REQUEST: Adjunta token de autenticación ──
 client.interceptors.request.use(
   (config) => {
+    const configuredBaseUrl = String(config.baseURL || client.defaults.baseURL || '');
+
+    // Failsafe: en despliegues (Vercel/produccion) nunca usar localhost como API.
+    if (!isRunningOnLocalhost() && isLocalhostUrl(configuredBaseUrl)) {
+      config.baseURL = PROD_API_BASE_URL;
+      client.defaults.baseURL = PROD_API_BASE_URL;
+    }
+
     // 🔑 TOKEN — El token se almacena en localStorage bajo la clave 'medigo_token'
     const token = localStorage.getItem('medigo_token');
     if (token) {
@@ -44,7 +61,7 @@ client.interceptors.response.use(
       // 🚪 Token expirado o inválido → limpiar sesión y redirigir
       localStorage.removeItem('medigo_token');
       localStorage.removeItem('medigo_user');
-      window.location.href = '/';
+      globalThis.location.href = '/';
     }
     return Promise.reject(error);
   }
