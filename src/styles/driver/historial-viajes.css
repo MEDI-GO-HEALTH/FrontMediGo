@@ -1,0 +1,580 @@
+.driver-history-page {
+  min-height: 100vh;
+  background: #f8f9fb;
+  color: #191c1e;
+}
+
+.driver-history-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.driver-history-sidebar {
+  width: 288px;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 50;
+  border-right: 1px solid rgba(193, 199, 208, 0.45);
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+}
+
+.driver-history-side-head {
+  padding: 2.2rem 2rem 1.5rem;
+}
+
+.driver-history-side-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.driver-history-side-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 0.6rem;
+  background: linear-gradient(140deg, #003358 0%, #004a7c 100%);
+  color: #fff;
+  display: grid;
+  place-items: center;
+}
+
+.driver-history-side-logo .material-symbols-outlined {
+  font-size: 20px;
+}
+
+.driver-history-side-brand-text h1 {
+  margin: 0 0 0.35rem;
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: #0c4a6e;
+}
+
+.driver-history-side-brand-text p {
+  margin: 0;
+  font-size: 0.72rem;
+  color: #64748b;
+  letter-spacing: 0.03em;
+  font-weight: 600;
+}
+
+.driver-history-nav {
+  flex: 1;
+  padding: 0 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.driver-history-nav button {
+  border: none;
+  background: transparent;
+  border-radius: 0.8rem;
+  padding: 0.85rem 0.95rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 0.68rem;
+  text-align: left;
+  font-weight: 500;
+}
+
+.driver-history-nav button:hover {
+  background: #eef2f7;
+  color: #0f172a;
+}
+
+.driver-history-nav button.active {
+  background: #fff;
+  color: #003358;
+  border-right: 4px solid #003358;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 16px -12px rgba(2, 132, 199, 0.5);
+  font-weight: 700;
+}
+
+.driver-history-nav button .material-symbols-outlined,
+.driver-side-link .material-symbols-outlined,
+.driver-emergency-btn .material-symbols-outlined {
+  font-size: 20px;
+}
+
+.driver-history-side-footer {
+  padding: 1.2rem 1rem 1.8rem;
+}
+
+.driver-emergency-btn {
+  width: 100%;
+  border: none;
+  border-radius: 0.78rem;
+  background: #ffdad6;
+  color: #93000a;
+  font-weight: 700;
+  padding: 0.68rem 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.driver-side-link {
+  border: none;
+  width: 100%;
+  background: transparent;
+  text-align: left;
+  color: #64748b;
+  padding: 0.62rem 0.7rem;
+  border-radius: 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+}
+
+.driver-side-link:hover {
+  background: #eef2f7;
+}
+
+.driver-side-link.danger {
+  color: #ba1a1a;
+}
+
+.driver-history-main {
+  margin-left: 288px;
+  flex: 1;
+  min-height: 100vh;
+}
+
+.driver-history-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 35;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.84);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 12px 32px -4px rgba(25, 28, 30, 0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2.4rem;
+}
+
+.driver-history-topbar h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #0c4a6e;
+}
+
+.driver-history-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.driver-online {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.driver-online span:first-child {
+  width: 9px;
+  height: 9px;
+  border-radius: 9999px;
+  background: #006a6a;
+}
+
+.driver-top-icon {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  color: #64748b;
+}
+
+.driver-top-icon:hover {
+  background: #f1f5f9;
+}
+
+.driver-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #003358 0%, #004a7c 100%);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.driver-history-content {
+  padding: 2.2rem 2.4rem 2.8rem;
+  max-width: 1180px;
+}
+
+.driver-history-title {
+  margin: 0;
+  font-size: clamp(1.6rem, 2vw, 2rem);
+  font-weight: 900;
+  color: #003358;
+}
+
+.driver-history-subtitle {
+  margin: 0.55rem 0 1.5rem;
+  max-width: 700px;
+  color: #42474f;
+  font-size: 0.92rem;
+}
+
+.driver-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.driver-summary-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.85rem;
+  background: #fff;
+  padding: 1.2rem;
+  box-shadow: 0 12px 32px -4px rgba(25, 28, 30, 0.08);
+}
+
+.driver-summary-card .icon {
+  position: absolute;
+  right: 0.8rem;
+  top: 0.5rem;
+  opacity: 0.08;
+  font-size: 3rem;
+}
+
+.driver-summary-card small {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-weight: 800;
+  color: #6b7280;
+}
+
+.driver-summary-value {
+  margin-top: 0.58rem;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.45rem;
+}
+
+.driver-summary-value strong {
+  font-size: clamp(1.9rem, 2vw, 2.3rem);
+  line-height: 1;
+  color: #003358;
+}
+
+.driver-summary-value span {
+  font-size: 0.7rem;
+  color: #006a6a;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  margin-bottom: 0.16rem;
+}
+
+.driver-summary-card.income {
+  color: #fff;
+  background: linear-gradient(135deg, #003358 0%, #004a7c 100%);
+}
+
+.driver-summary-card.income small,
+.driver-summary-card.income strong,
+.driver-summary-card.income span {
+  color: #d0e4ff;
+}
+
+.driver-summary-card.income .currency {
+  font-size: 0.72rem;
+  margin-left: 0.2rem;
+  margin-bottom: 0.3rem;
+  font-weight: 700;
+}
+
+.driver-history-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.driver-history-actions h3 {
+  margin: 0;
+  color: #003358;
+  font-size: 1.45rem;
+  font-weight: 800;
+}
+
+.driver-history-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.driver-search {
+  position: relative;
+}
+
+.driver-search span {
+  position: absolute;
+  left: 0.7rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #727780;
+}
+
+.driver-search input {
+  width: 280px;
+  border: none;
+  border-radius: 0.8rem;
+  background: #e6e8ea;
+  padding: 0.72rem 0.7rem 0.72rem 2.3rem;
+  font-size: 0.85rem;
+}
+
+.driver-date-filter {
+  border: none;
+  border-radius: 0.8rem;
+  background: #f2f4f6;
+  padding: 0.72rem 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #42474f;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.driver-history-table {
+  background: transparent;
+}
+
+.driver-history-head,
+.driver-history-row {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr 1fr 1fr 0.7fr 0.9fr;
+  gap: 0.8rem;
+}
+
+.driver-history-head {
+  padding: 0.75rem 1rem;
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #727780;
+  font-weight: 800;
+}
+
+.driver-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.driver-history-row {
+  align-items: center;
+  background: #fff;
+  border-radius: 0.82rem;
+  padding: 1rem;
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.05);
+}
+
+.driver-history-row .id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #003358;
+  font-weight: 800;
+}
+
+.driver-history-row .main {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.driver-history-row .sub {
+  font-size: 0.68rem;
+  color: #64748b;
+  margin-top: 0.15rem;
+}
+
+.driver-distance-pill {
+  justify-self: center;
+  padding: 0.22rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  background: #cbe7f5;
+  color: #021f29;
+}
+
+.driver-distance-pill.muted {
+  background: #e0e3e5;
+  color: #42474f;
+}
+
+.driver-status {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 9999px;
+  padding: 0.22rem 0.55rem;
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+.driver-status.done {
+  background: #9ef1f0;
+  color: #077070;
+}
+
+.driver-status.cancelled {
+  background: #ffdad6;
+  color: #93000a;
+}
+
+.driver-history-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+  gap: 1rem;
+}
+
+.driver-history-bottom p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.driver-pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.driver-pagination button {
+  border: none;
+  min-width: 34px;
+  height: 34px;
+  border-radius: 0.5rem;
+  background: #eceef0;
+  color: #191c1e;
+  font-weight: 700;
+}
+
+.driver-pagination button.active {
+  background: #003358;
+  color: #fff;
+}
+
+.driver-pagination button.arrow {
+  color: #727780;
+}
+
+.driver-page-footer {
+  border-top: 1px solid #e6e8ea;
+  margin-top: 2rem;
+  padding-top: 1.6rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.driver-page-footer p {
+  margin: 0;
+  font-size: 0.72rem;
+  color: #727780;
+}
+
+.driver-page-links {
+  display: flex;
+  gap: 1.1rem;
+  flex-wrap: wrap;
+}
+
+.driver-page-links a {
+  color: #003358;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.driver-page-links a:hover {
+  text-decoration: underline;
+}
+
+.driver-history-error {
+  margin-top: 0.7rem;
+  color: #93000a;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+@media (max-width: 1200px) {
+  .driver-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .driver-history-head,
+  .driver-history-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .driver-history-row .distance,
+  .driver-history-row .status {
+    justify-self: start;
+  }
+}
+
+@media (max-width: 900px) {
+  .driver-history-sidebar {
+    display: none;
+  }
+
+  .driver-history-main {
+    margin-left: 0;
+  }
+
+  .driver-history-topbar {
+    padding: 0 1rem;
+  }
+
+  .driver-history-content {
+    padding: 1.2rem 1rem 1.8rem;
+  }
+
+  .driver-history-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .driver-history-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .driver-search input {
+    width: 100%;
+  }
+}

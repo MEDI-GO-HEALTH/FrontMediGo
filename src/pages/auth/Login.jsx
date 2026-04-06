@@ -15,12 +15,13 @@ import heroImage from '../../assets/LoginImg.png'
 import logoImage from '../../assets/Logo.png'
 import { useAuthFormState } from '../../hooks/useAuthFormState'
 import { isLikelyValidEmail } from '../../utils/authValidation'
+import { API_CONFIG } from '../../config/api'
 import '../../styles/auth/auth-base.css'
 import '../../styles/auth/login.css'
 
 const ROLE_REDIRECTS = {
   ADMIN: '/admin/inventario',
-  AFILIADO: '/afiliado/subastas',
+  AFILIADO: '/afiliado/mapa',
   REPARTIDOR: '/repartidor/mapa',
 }
 
@@ -62,22 +63,21 @@ export default function Login() {
 
   // Quick login para desarrollo
   const handleQuickLogin = async (role) => {
-    const rolesMap = {
-      ADMIN: 'admin@medigo.co',
-      AFILIADO: 'afiliado@medigo.co',
-      REPARTIDOR: 'repartidor@medigo.co'
+    const quickUsers = {
+      ADMIN: { id: 1, name: 'Admin Demo', email: 'admin@medigo.co', role: 'ADMIN' },
+      AFILIADO: { id: 2, name: 'Afiliado Demo', email: 'afiliado@medigo.co', role: 'AFILIADO' },
+      REPARTIDOR: { id: 3, name: 'Repartidor Demo', email: 'repartidor@medigo.co', role: 'REPARTIDOR' },
     }
-    setLoading(true)
-    try {
-      const data = await login({ email: rolesMap[role], password: 'password123' })
-      localStorage.setItem('medigo_token', data.token)
-      localStorage.setItem('medigo_user', JSON.stringify(data.user))
-      navigate(ROLE_REDIRECTS[role], { replace: true })
-    } catch (err) {
-      setError('Error al acceder. Intenta de nuevo.')
-    } finally {
-      setLoading(false)
+
+    const user = quickUsers[role]
+    if (!user) {
+      setError('Rol de acceso rapido no valido.')
+      return
     }
+
+    localStorage.setItem('medigo_token', `dev-token-${role.toLowerCase()}`)
+    localStorage.setItem('medigo_user', JSON.stringify(user))
+    navigate(ROLE_REDIRECTS[role], { replace: true })
   }
 
   // Submit del formulario
@@ -261,37 +261,39 @@ export default function Login() {
           </form>
 
           {/* Quick Access (Development) */}
-          <div className="quick-access-section">
-            <div className="divider-line">
-              <span>QUICK ACCESS (Development)</span>
+          {API_CONFIG.showDevLoginButtons && (
+            <div className="quick-access-section">
+              <div className="divider-line">
+                <span>QUICK ACCESS (Development)</span>
+              </div>
+              <div className="quick-buttons">
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('ADMIN')}
+                  disabled={loading}
+                  className="quick-btn"
+                >
+                  ADMIN
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('AFILIADO')}
+                  disabled={loading}
+                  className="quick-btn"
+                >
+                  AFFILIATE
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('REPARTIDOR')}
+                  disabled={loading}
+                  className="quick-btn"
+                >
+                  DRIVER
+                </button>
+              </div>
             </div>
-            <div className="quick-buttons">
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('ADMIN')}
-                disabled={loading}
-                className="quick-btn"
-              >
-                ADMIN
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('AFILIADO')}
-                disabled={loading}
-                className="quick-btn"
-              >
-                AFFILIATE
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('REPARTIDOR')}
-                disabled={loading}
-                className="quick-btn"
-              >
-                DRIVER
-              </button>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Footer Links */}

@@ -1,129 +1,417 @@
-/**
- * GestionSedes.jsx — Gestión de Sedes Farmacéuticas (Admin)
- *
- * 🔗 CONEXIONES AL BACKEND:
- *   src/api/sedesService.js
- *   - getSedes()       → GET /sedes
- *   - createSede(data) → POST /sedes
- *   - updateSede(id)   → PUT /sedes/:id
- *   - deleteSede(id)   → DELETE /sedes/:id
- */
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router'
+import { createSede, getSedes } from '../../api/sedesService'
+import { ROUTES } from '../../constants/routes'
+import '../../styles/admin/gestion-sedes.css'
 
-import { useState } from 'react'
-import { Building2, MapPin, Phone, Plus, Edit2, Trash2, Search } from 'lucide-react'
-import DashboardLayout from '../../components/layout/DashboardLayout'
-
-const MOCK_SEDES = [
-  { id: 1, nombre: 'Sede Norte',      ciudad: 'Bogotá',     direccion: 'Cra 15 #120-45',     telefono: '601-234-5678', estado: 'Activa',   usuarios: 12, medicamentos: 340 },
-  { id: 2, nombre: 'Sede Sur',        ciudad: 'Bogotá',     direccion: 'Av. 68 #45-20',      telefono: '601-876-5432', estado: 'Activa',   usuarios: 8,  medicamentos: 218 },
-  { id: 3, nombre: 'Sede El Poblado', ciudad: 'Medellín',   direccion: 'Cra 43a #10-50',     telefono: '604-223-4567', estado: 'Activa',   usuarios: 15, medicamentos: 512 },
-  { id: 4, nombre: 'Sede Centro',     ciudad: 'Cali',       direccion: 'Calle 15 #6-54',     telefono: '602-445-6789', estado: 'Inactiva', usuarios: 3,  medicamentos: 87 },
-  { id: 5, nombre: 'Sede Laureles',   ciudad: 'Medellín',   direccion: 'Cra 80 #34-15',      telefono: '604-789-1234', estado: 'Activa',   usuarios: 9,  medicamentos: 265 },
+const FALLBACK_BRANCHES = [
+  {
+    id: 'SED-001',
+    name: 'Central Medical Plaza',
+    address: 'Av. El Dorado #22-10',
+    phone: '(601) 455-8800',
+    specialization: 'ATENCION PRIMARIA',
+    team: 42,
+    icon: 'apartment',
+  },
+  {
+    id: 'SED-002',
+    name: 'Advanced Diagnostic Wing',
+    address: 'Carrera 15 #93-45',
+    phone: '(601) 210-9900',
+    specialization: 'ESPECIALIZADA',
+    team: 18,
+    icon: 'biotech',
+  },
+  {
+    id: 'SED-003',
+    name: 'MediGo Pediatrics Hub',
+    address: 'Street 116 #45-12',
+    phone: '(601) 677-1122',
+    specialization: 'MATERNIDAD',
+    team: 35,
+    icon: 'child_care',
+  },
 ]
 
-export default function GestionSedes() {
-  const [sedes,  setSedes]  = useState(MOCK_SEDES)
-  const [search, setSearch] = useState('')
-
-  // ─────────────────────────────────────────────────────────────────
-  // 📡 LLAMADA AL BACKEND — deleteSede(id)
-  //    DELETE /sedes/:id
-  // ─────────────────────────────────────────────────────────────────
-  const handleDelete = async (id) => {
-    if (!window.confirm('¿Eliminar esta sede?')) return
-    try {
-      // await deleteSede(id)
-      setSedes(prev => prev.filter(s => s.id !== id))
-    } catch (err) { console.error(err) }
-  }
-
-  const filtered = sedes.filter(s =>
-    s.nombre.toLowerCase().includes(search.toLowerCase()) ||
-    s.ciudad.toLowerCase().includes(search.toLowerCase())
-  )
-
-  return (
-    <DashboardLayout
-      title="Gestión de Sedes"
-      subtitle="Administra las sedes y farmacias de la red MediGo"
-      actions={
-        <button id="sedes-add-btn" style={styles.primaryBtn}><Plus size={16} /> Nueva Sede</button>
-      }
-    >
-      <div style={styles.statsRow}>
-        {[
-          { label: 'Total Sedes',    value: sedes.length,                             color: 'var(--primary)' },
-          { label: 'Activas',        value: sedes.filter(s => s.estado === 'Activa').length, color: 'var(--secondary-fixed)' },
-          { label: 'Medicamentos',   value: sedes.reduce((a, s) => a + s.medicamentos, 0),   color: 'var(--tertiary)' },
-        ].map((s, i) => (
-          <div key={i} style={styles.statCard}>
-            <p style={styles.statLabel}>{s.label}</p>
-            <p style={{ ...styles.statValue, color: s.color }}>{s.value.toLocaleString()}</p>
-          </div>
-        ))}
-      </div>
-
-      <div style={styles.tableCard}>
-        <div style={styles.toolbar}>
-          <div style={styles.searchBox}>
-            <Search size={15} style={{ color: 'var(--outline)' }} />
-            <input id="sedes-search" type="text" placeholder="Buscar sede o ciudad..." value={search} onChange={e => setSearch(e.target.value)} style={styles.searchInput} />
-          </div>
-        </div>
-
-        <div style={styles.grid}>
-          {filtered.map(s => (
-            <div key={s.id} style={styles.sedeCard}>
-              <div style={styles.sedeHeader}>
-                <div style={styles.sedeIconWrap}><Building2 size={18} style={{ color: 'var(--primary)' }} /></div>
-                <div style={{ flex: 1, overflow: 'hidden' }}>
-                  <h3 style={styles.sedeName}>{s.nombre}</h3>
-                  <span style={{ ...styles.estadoBadge, background: s.estado === 'Activa' ? 'rgba(0,254,102,0.1)' : 'rgba(255,180,171,0.1)', color: s.estado === 'Activa' ? '#00e55b' : '#ffb4ab' }}>{s.estado}</span>
-                </div>
-                <div style={{ display: 'flex', gap: '0.35rem' }}>
-                  <button id={`sede-edit-${s.id}`} style={styles.iconBtn}><Edit2 size={13} /></button>
-                  <button id={`sede-delete-${s.id}`} style={{ ...styles.iconBtn, color: '#ffb4ab' }} onClick={() => handleDelete(s.id)}><Trash2 size={13} /></button>
-                </div>
-              </div>
-              <div style={styles.sedeInfo}>
-                <div style={styles.infoRow}><MapPin size={13} style={{ color: 'var(--outline)', flexShrink: 0 }} /><span>{s.direccion}, {s.ciudad}</span></div>
-                <div style={styles.infoRow}><Phone size={13} style={{ color: 'var(--outline)', flexShrink: 0 }} /><span>{s.telefono}</span></div>
-              </div>
-              <div style={styles.sedeFooter}>
-                <div style={styles.footerStat}><span style={styles.footerNum}>{s.usuarios}</span><span style={styles.footerLabel}>Usuarios</span></div>
-                <div style={styles.footerDivider} />
-                <div style={styles.footerStat}><span style={styles.footerNum}>{s.medicamentos}</span><span style={styles.footerLabel}>Medicamentos</span></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </DashboardLayout>
-  )
+const EMPTY_FORM = {
+  name: '',
+  specialty: 'Medicina General',
+  address: '',
+  phone: '',
+  capacity: '',
 }
 
-const styles = {
-  primaryBtn:  { background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff', border: 'none', borderRadius: 'var(--radius-full)', padding: '0.55rem 1.25rem', fontWeight: 700, fontSize: '0.875rem', fontFamily: 'var(--font-display)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' },
-  statsRow:    { display: 'flex', gap: '1rem', marginBottom: '1.75rem' },
-  statCard:    { flex: 1, background: 'var(--surface-container)', border: '1px solid rgba(74,68,85,0.25)', borderRadius: 'var(--radius-xl)', padding: '1.1rem 1.5rem' },
-  statLabel:   { fontSize: '0.8rem', color: 'var(--on-surface-variant)', marginBottom: 4 },
-  statValue:   { fontSize: '1.6rem', fontWeight: 800, fontFamily: 'var(--font-display)' },
-  tableCard:   { background: 'var(--surface-container)', border: '1px solid rgba(74,68,85,0.25)', borderRadius: 'var(--radius-xl)', overflow: 'hidden', padding: '1.25rem' },
-  toolbar:     { marginBottom: '1.25rem' },
-  searchBox:   { display: 'flex', alignItems: 'center', gap: '0.6rem', background: 'var(--surface-container-high)', borderRadius: 'var(--radius-full)', padding: '0.5rem 1rem', maxWidth: 360 },
-  searchInput: { border: 'none', background: 'none', color: 'var(--on-surface)', fontSize: '0.875rem', outline: 'none', width: '100%', padding: 0 },
-  grid:        { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' },
-  sedeCard:    { background: 'var(--surface-container-high)', borderRadius: 'var(--radius-xl)', padding: '1.25rem', border: '1px solid rgba(74,68,85,0.2)', transition: 'border-color var(--transition-fast)' },
-  sedeHeader:  { display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '1rem' },
-  sedeIconWrap:{ width: 38, height: 38, borderRadius: 10, background: 'rgba(124,58,237,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  sedeName:    { fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--on-surface)', marginBottom: '0.3rem' },
-  estadoBadge: { fontSize: '0.72rem', fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--radius-full)' },
-  sedeInfo:    { display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1rem' },
-  infoRow:     { display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--on-surface-variant)' },
-  sedeFooter:  { display: 'flex', borderTop: '1px solid rgba(74,68,85,0.2)', paddingTop: '0.85rem', alignItems: 'center', gap: '1rem' },
-  footerStat:  { display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 },
-  footerNum:   { fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.2rem', color: 'var(--on-surface)' },
-  footerLabel: { fontSize: '0.72rem', color: 'var(--outline)' },
-  footerDivider:{ width: 1, height: 30, background: 'rgba(74,68,85,0.3)' },
-  iconBtn:     { background: 'var(--surface-container)', border: 'none', borderRadius: 'var(--radius-md)', padding: '0.4rem', cursor: 'pointer', color: 'var(--on-surface-variant)', display: 'flex', alignItems: 'center' },
+const mapBranchFromApi = (item, index) => ({
+  id: item?.id || item?.codigo || `SED-${String(index + 1).padStart(3, '0')}`,
+  name: item?.nombre || item?.name || 'Nueva Sede',
+  address: item?.direccion || item?.address || 'Direccion por confirmar',
+  phone: item?.telefono || item?.phone || '(000) 000-0000',
+  specialization: String(item?.especialidad || item?.specialization || 'GENERAL').toUpperCase(),
+  team: Number(item?.miembros || item?.personal || item?.team || 0),
+  icon: item?.icon || 'apartment',
+})
+
+export default function GestionSedes() {
+  const navigate = useNavigate()
+  const [search, setSearch] = useState('')
+  const [branches, setBranches] = useState(FALLBACK_BRANCHES)
+  const [formData, setFormData] = useState(EMPTY_FORM)
+  const [saving, setSaving] = useState(false)
+  const [syncNotice, setSyncNotice] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let mounted = true
+
+    const loadBranches = async () => {
+      try {
+        const response = await getSedes({ limit: 20 })
+        if (!mounted) {
+          return
+        }
+
+        const source = response?.data || response
+        if (Array.isArray(source) && source.length > 0) {
+          setBranches(source.map(mapBranchFromApi))
+        }
+      } catch {
+        if (mounted) {
+          setSyncNotice('Backend no disponible para sedes. Visualizando datos de respaldo.')
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadBranches()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const filteredBranches = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    if (!query) {
+      return branches
+    }
+
+    return branches.filter((item) => `${item.name} ${item.address} ${item.specialization}`.toLowerCase().includes(query))
+  }, [branches, search])
+
+  const handleLogout = () => {
+    localStorage.removeItem('medigo_token')
+    localStorage.removeItem('medigo_user')
+    navigate(ROUTES.AUTH.LOGIN, { replace: true })
+  }
+
+  const handleFormChange = (field, value) => {
+    setFormData((previous) => ({ ...previous, [field]: value }))
+  }
+
+  const handleRegisterBranch = async () => {
+    if (!formData.name.trim() || !formData.address.trim()) {
+      setSyncNotice('Completa nombre y direccion para registrar la sede.')
+      return
+    }
+
+    setSaving(true)
+    setSyncNotice('')
+
+    const payload = {
+      nombre: formData.name,
+      especialidad: formData.specialty,
+      direccion: formData.address,
+      telefono: formData.phone,
+      capacidad: Number(formData.capacity || 0),
+    }
+
+    try {
+      const created = await createSede(payload)
+      const branch = mapBranchFromApi(created, 0)
+      setBranches((previous) => [branch, ...previous])
+      setFormData(EMPTY_FORM)
+      setSyncNotice('Sede registrada en backend correctamente.')
+    } catch {
+      const localBranch = {
+        id: `SED-LOCAL-${Date.now()}`,
+        name: formData.name,
+        address: formData.address,
+        phone: formData.phone || '(000) 000-0000',
+        specialization: formData.specialty.toUpperCase(),
+        team: Number(formData.capacity || 0),
+        icon: 'domain',
+      }
+      setBranches((previous) => [localBranch, ...previous])
+      setFormData(EMPTY_FORM)
+      setSyncNotice('Sede registrada en modo local. Lista para conectar al endpoint cuando este disponible.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="admin-branches-shell">
+      <aside className="branches-side">
+        <div className="branches-brand">
+          <div className="branches-brand-icon">
+            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
+              medical_services
+            </span>
+          </div>
+          <div>
+            <h1>MediGo Admin</h1>
+            <p>CLINICAL PRECISION</p>
+          </div>
+        </div>
+
+        <nav className="branches-nav" aria-label="Navegacion administrador">
+          <button type="button" onClick={() => navigate(ROUTES.ADMIN.AUCTIONS)}>
+            <span className="material-symbols-outlined">gavel</span>
+            Subastas
+          </button>
+          <button type="button" onClick={() => navigate(ROUTES.ADMIN.INVENTORY)}>
+            <span className="material-symbols-outlined">inventory_2</span>
+            Inventario
+          </button>
+          <button type="button" className="active" onClick={() => navigate(ROUTES.ADMIN.BRANCHES)}>
+            <span className="material-symbols-outlined">account_tree</span>
+            Sedes
+          </button>
+          <button type="button" onClick={() => navigate(ROUTES.ADMIN.USERS)}>
+            <span className="material-symbols-outlined">group</span>
+            Usuarios
+          </button>
+        </nav>
+
+        <div className="branches-side-bottom">
+          <button type="button" className="new-income-btn">
+            <span className="material-symbols-outlined">add</span>
+            Nuevo Ingreso
+          </button>
+
+          <button type="button" className="side-link">
+            <span className="material-symbols-outlined">help</span>
+            Soporte
+          </button>
+
+          <button type="button" className="side-link danger" onClick={handleLogout}>
+            <span className="material-symbols-outlined">logout</span>
+            Cerrar Sesion
+          </button>
+        </div>
+      </aside>
+
+      <main className="branches-main">
+        <header className="branches-topbar">
+          <label className="branches-search" aria-label="Buscar sedes">
+            <span className="material-symbols-outlined">search</span>
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar sedes..." />
+          </label>
+
+          <div className="branches-top-right">
+            <button type="button" className="icon-btn" aria-label="Notificaciones">
+              <span className="material-symbols-outlined">notifications</span>
+              <i />
+            </button>
+            <button type="button" className="icon-btn" aria-label="Configuracion">
+              <span className="material-symbols-outlined">settings</span>
+            </button>
+            <div className="top-separator" />
+            <div className="top-profile">
+              <div>
+                <strong>Admin User</strong>
+                <small>Administrator</small>
+              </div>
+              <div className="profile-image-placeholder" aria-label="Placeholder de imagen de administrador">
+                IMG
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <section className="branches-content">
+          <div className="branches-header-row">
+            <div>
+              <h2>Sucursales</h2>
+              <p>
+                Administre la red de sedes de la EPS, instalaciones clinicas y sucursales medicas estrategicas en todo
+                el territorio.
+              </p>
+            </div>
+
+            <button type="button" className="export-network-btn">
+              <span className="material-symbols-outlined">download</span>
+              Exportar Red
+            </button>
+          </div>
+
+          {syncNotice ? <p className="branches-notice">{syncNotice}</p> : null}
+
+          <div className="branches-grid">
+            <div className="left-column">
+              <article className="register-card">
+                <header>
+                  <h3>Agregar Nueva Sede</h3>
+                  <p>Registrar una nueva instalacion clinica</p>
+                </header>
+
+                <form className="register-form" onSubmit={(event) => event.preventDefault()}>
+                  <label>
+                    <span>NOMBRE DE LA SEDE</span>
+                    <input
+                      value={formData.name}
+                      onChange={(event) => handleFormChange('name', event.target.value)}
+                      placeholder="ej. MediGo Norte Central"
+                    />
+                  </label>
+
+                  <label>
+                    <span>ESPECIALIDAD CLINICA</span>
+                    <select value={formData.specialty} onChange={(event) => handleFormChange('specialty', event.target.value)}>
+                      <option>Medicina General</option>
+                      <option>Pediatria y Maternidad</option>
+                      <option>Centro Quirurgico</option>
+                      <option>Imagenes Diagnosticas</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    <span>DIRECCION FISICA</span>
+                    <div className="field-with-icon">
+                      <span className="material-symbols-outlined">location_on</span>
+                      <input
+                        value={formData.address}
+                        onChange={(event) => handleFormChange('address', event.target.value)}
+                        placeholder="Calle 45 #12-88, Distrito Medico"
+                      />
+                    </div>
+                  </label>
+
+                  <div className="form-row-split">
+                    <label>
+                      <span>TELEFONO DE CONTACTO</span>
+                      <input
+                        value={formData.phone}
+                        onChange={(event) => handleFormChange('phone', event.target.value)}
+                        placeholder="+57 (601) 000-0000"
+                      />
+                    </label>
+
+                    <label>
+                      <span>CAPACIDAD</span>
+                      <input
+                        value={formData.capacity}
+                        onChange={(event) => handleFormChange('capacity', event.target.value)}
+                        placeholder="Camas/Unidades"
+                        type="number"
+                      />
+                    </label>
+                  </div>
+
+                  <button type="button" className="confirm-btn" onClick={handleRegisterBranch} disabled={saving}>
+                    <span className="material-symbols-outlined">domain_add</span>
+                    {saving ? 'Guardando...' : 'Confirmar Registro de Sede'}
+                  </button>
+                </form>
+              </article>
+
+              <article className="network-card">
+                <div className="network-head">
+                  <span className="material-symbols-outlined">hub</span>
+                  <small>RED EN VIVO</small>
+                </div>
+                <strong>{branches.length} Activas</strong>
+                <p>Instalaciones clinicas registradas</p>
+              </article>
+            </div>
+
+            <div className="right-column">
+              <article className="map-panel" aria-label="Mapa de sedes">
+                <div className="map-surface" aria-hidden="true">
+                  <div className="map-noise" />
+                  <div className="map-glow" />
+                  <div className="map-grid" />
+                </div>
+
+                <div className="map-live-tag">
+                  <i />
+                  Cobertura de Red en Vivo: 94%
+                </div>
+
+                <div className="map-zoom-actions">
+                  <button type="button" aria-label="Acercar">
+                    <span className="material-symbols-outlined">add</span>
+                  </button>
+                  <button type="button" aria-label="Alejar">
+                    <span className="material-symbols-outlined">remove</span>
+                  </button>
+                </div>
+              </article>
+
+              <section className="directory-panel" aria-label="Directorio de sedes">
+                <div className="directory-head">
+                  <h3>Directorio de Sedes</h3>
+                  <button type="button">
+                    Ver Reportes Detallados
+                    <span className="material-symbols-outlined">arrow_forward</span>
+                  </button>
+                </div>
+
+                <div className="directory-list">
+                  {filteredBranches.map((branch) => (
+                    <article key={branch.id} className="branch-item">
+                      <div className="branch-main">
+                        <div className="branch-icon">
+                          <span className="material-symbols-outlined">{branch.icon}</span>
+                        </div>
+                        <div>
+                          <h4>{branch.name}</h4>
+                          <div className="branch-meta">
+                            <span>
+                              <span className="material-symbols-outlined">location_on</span>
+                              {branch.address}
+                            </span>
+                            <span>
+                              <span className="material-symbols-outlined">call</span>
+                              {branch.phone}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="branch-side">
+                        <span>{branch.specialization}</span>
+                        <small>{branch.team} Miembros del personal</small>
+                      </div>
+
+                      <button type="button" className="branch-report-btn" aria-label={`Ver reportes de ${branch.name}`}>
+                        <span className="material-symbols-outlined">arrow_forward</span>
+                      </button>
+                    </article>
+                  ))}
+                </div>
+
+                {filteredBranches.length === 0 ? <p className="empty-branches">No hay sedes que coincidan con "{search}".</p> : null}
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <footer className="branches-footer">
+          <div>
+            <span>ESTADO DE LA RED: OPTIMO</span>
+            <i />
+            <span>VERSION BD: 4.0.2-CLINICAL</span>
+          </div>
+          <small>© 2024 MediGo Systems - Todos los derechos reservados</small>
+        </footer>
+      </main>
+
+      {loading ? <div className="branches-loading">Sincronizando sedes...</div> : null}
+    </div>
+  )
 }

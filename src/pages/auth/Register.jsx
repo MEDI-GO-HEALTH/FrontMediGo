@@ -19,7 +19,7 @@ import '../../styles/auth/auth-base.css'
 import '../../styles/auth/register.css'
 
 const ROLE_REDIRECTS = {
-  AFILIADO: '/afiliado/subastas',
+  AFILIADO: '/afiliado/mapa',
   REPARTIDOR: '/repartidor/mapa',
 }
 

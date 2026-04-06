@@ -1,192 +1,414 @@
-/**
- * Inventario.jsx — Gestión de Inventario de Medicamentos (Admin)
- *
- * 🔗 CONEXIONES AL BACKEND:
- *   src/api/inventarioService.js
- *   - getInventarioStats()  → GET /inventario/stats
- *   - getInventario(params) → GET /inventario
- *   - deleteMedicamento(id) → DELETE /inventario/:id
- *   - createMedicamento(data) [modal] → POST /inventario  (por implementar con modal)
- *   - updateMedicamento(id, data)    → PUT /inventario/:id (por implementar con modal)
- */
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router'
+import { getInventario, getInventarioStats } from '../../api/inventarioService'
+import { ROUTES } from '../../constants/routes'
+import '../../styles/admin/inventario.css'
 
-import { useState, useEffect } from 'react'
-import { Search, Plus, Trash2, Edit2, Package, AlertTriangle, TrendingUp, ChevronDown } from 'lucide-react'
-import DashboardLayout from '../../components/layout/DashboardLayout'
-import { getInventario, getInventarioStats, deleteMedicamento } from '../../api/inventarioService'
-
-// ── Datos de demostración (reemplazar cuando el backend esté listo) ──
-const MOCK_STATS = [
-  { label: 'Total Medicamentos', value: '1,248', icon: Package, color: 'var(--primary)' },
-  { label: 'Stock Bajo',         value: '34',    icon: AlertTriangle, color: '#ffb4ab' },
-  { label: 'Valor Inventario',   value: '$4.2M', icon: TrendingUp, color: 'var(--secondary-fixed)' },
+const FALLBACK_ITEMS = [
+  {
+    id: 'SKU-29384-CH',
+    name: 'Atorvastatin 20mg',
+    category: 'CARDIOVASCULAR',
+    stock: 2400,
+    unitPrice: 42,
+    minStock: 250,
+    icon: 'medication',
+  },
+  {
+    id: 'SKU-10293-AB',
+    name: 'Amoxicillin 500mg',
+    category: 'ANTIBIOTICO',
+    stock: 12,
+    unitPrice: 18.5,
+    minStock: 100,
+    icon: 'medication',
+  },
+  {
+    id: 'SKU-55421-VC',
+    name: 'Influenza Vaccine',
+    category: 'INMUNIZACION',
+    stock: 450,
+    unitPrice: 125,
+    minStock: 300,
+    icon: 'vaccines',
+  },
 ]
-const MOCK_ITEMS = [
-  { id: 1, nombre: 'Amoxicilina 500mg', categoria: 'Antibiótico', stock: 320, precio: '$12.500', estado: 'Disponible',  lote: 'LOT-2024-001' },
-  { id: 2, nombre: 'Ibuprofeno 400mg',  categoria: 'Analgésico',  stock: 85,  precio: '$8.200',  estado: 'Bajo Stock',  lote: 'LOT-2024-002' },
-  { id: 3, nombre: 'Metformina 850mg',  categoria: 'Antidiabético', stock: 512, precio: '$22.000', estado: 'Disponible', lote: 'LOT-2024-003' },
-  { id: 4, nombre: 'Losartán 50mg',     categoria: 'Antihipertensivo', stock: 198, precio: '$18.500', estado: 'Disponible', lote: 'LOT-2024-004' },
-  { id: 5, nombre: 'Omeprazol 20mg',    categoria: 'Gastroprotector', stock: 12,  precio: '$9.800',  estado: 'Crítico',   lote: 'LOT-2024-005' },
-  { id: 6, nombre: 'Atorvastatina 20mg',categoria: 'Hipolipemiante', stock: 245, precio: '$35.000', estado: 'Disponible', lote: 'LOT-2024-006' },
-]
 
-const ESTADO_STYLES = {
-  'Disponible': { background: 'rgba(0,254,102,0.12)', color: '#00e55b' },
-  'Bajo Stock':  { background: 'rgba(255,180,171,0.12)', color: '#ffb4ab' },
-  'Crítico':     { background: 'rgba(147,0,10,0.2)',  color: '#ffb4ab' },
+const FALLBACK_ADMIN = {
+  adminName: 'Dr. Aris Thorne',
+  roleLabel: 'ADMINISTRATOR',
+  totalInventoryValue: 1248390.42,
+  valueDeltaPct: 4.2,
+  activeLots: 1482,
+  allVerified: true,
 }
 
-export default function Inventario() {
-  const [items,  setItems]  = useState(MOCK_ITEMS)
-  const [stats,  setStats]  = useState(MOCK_STATS)
-  const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(false)
+const formatMoney = (value, currency = 'USD') =>
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(value) || 0)
 
-  // ─────────────────────────────────────────────────────────────────
-  // 📡 LLAMADA AL BACKEND — getInventarioStats() + getInventario()
-  //    Descomentar cuando el backend esté disponible:
-  // ─────────────────────────────────────────────────────────────────
-  // useEffect(() => {
-  //   setLoading(true)
-  //   Promise.all([getInventarioStats(), getInventario()])
-  //     .then(([statsData, itemsData]) => {
-  //       setStats(statsData)
-  //       setItems(itemsData)
-  //     })
-  //     .catch(console.error)
-  //     .finally(() => setLoading(false))
-  // }, [])
+const formatUnits = (value) => `${new Intl.NumberFormat('en-US').format(Number(value) || 0)} Unidades`
 
-  // ─────────────────────────────────────────────────────────────────
-  // 📡 LLAMADA AL BACKEND — deleteMedicamento(id)
-  //    DELETE /inventario/:id
-  // ─────────────────────────────────────────────────────────────────
-  const handleDelete = async (id) => {
-    if (!window.confirm('¿Eliminar este medicamento?')) return
-    try {
-      // await deleteMedicamento(id)
-      setItems(prev => prev.filter(i => i.id !== id))
-    } catch (err) {
-      alert('Error al eliminar: ' + (err?.response?.data?.message || err.message))
-    }
+const getStockTone = (row) => {
+  const min = Number(row.minStock || 1)
+  const current = Number(row.stock || 0)
+  const ratio = min > 0 ? current / min : current
+
+  if (ratio < 0.35) {
+    return { label: 'Critico Bajo', tone: 'critical', percent: Math.max(6, Math.round(ratio * 100)) }
   }
 
-  const filtered = items.filter(i =>
-    i.nombre.toLowerCase().includes(search.toLowerCase()) ||
-    i.categoria.toLowerCase().includes(search.toLowerCase())
-  )
+  if (ratio < 1) {
+    return { label: 'Adecuado', tone: 'medium', percent: Math.max(20, Math.round(ratio * 100)) }
+  }
 
-  return (
-    <DashboardLayout
-      title="Inventario"
-      subtitle="Gestiona el stock de medicamentos de todas las sedes"
-      actions={
-        <button id="inventario-add-btn" className="btn-primary">
-          <Plus size={16} /> Nuevo Medicamento
-        </button>
-      }
-    >
-      {/* Stats */}
-      <div style={styles.statsGrid}>
-        {stats.map((s, i) => (
-          <div key={i} style={styles.statCard}>
-            <div style={{ ...styles.statIcon, background: `${s.color}20` }}>
-              <s.icon size={20} style={{ color: s.color }} />
-            </div>
-            <div>
-              <p style={styles.statLabel}>{s.label}</p>
-              <p style={{ ...styles.statValue, color: s.color }}>{s.value}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Buscador */}
-      <div style={styles.tableCard}>
-        <div style={styles.tableToolbar}>
-          <div style={styles.searchBox}>
-            <Search size={16} style={{ color: 'var(--outline)', flexShrink: 0 }} />
-            <input
-              id="inventario-search"
-              type="text"
-              placeholder="Buscar por nombre o categoría..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={styles.searchInput}
-            />
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button className="btn-tertiary" style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}>Categoría <ChevronDown size={14} /></button>
-            <button className="btn-tertiary" style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}>Estado <ChevronDown size={14} /></button>
-          </div>
-        </div>
-
-        {/* Tabla */}
-        <div style={{ overflowX: 'auto' }}>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                {['Medicamento', 'Categoría', 'Lote', 'Stock', 'Precio', 'Estado', 'Acciones'].map(h => (
-                  <th key={h} style={styles.th}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((item, idx) => (
-                <tr key={item.id} style={{ ...styles.tr, background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
-                  <td style={styles.td}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                      <div style={styles.pillIcon}><Package size={14} style={{ color: 'var(--primary)' }} /></div>
-                      <span style={{ fontWeight: 600, color: 'var(--on-surface)', fontSize: '0.88rem' }}>{item.nombre}</span>
-                    </div>
-                  </td>
-                  <td style={styles.td}><span style={styles.chip}>{item.categoria}</span></td>
-                  <td style={{ ...styles.td, fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--outline)' }}>{item.lote}</td>
-                  <td style={{ ...styles.td, fontWeight: 700, color: item.stock < 50 ? '#ffb4ab' : 'var(--on-surface)' }}>{item.stock}</td>
-                  <td style={styles.td}>{item.precio}</td>
-                  <td style={styles.td}>
-                    <span style={{ ...styles.estadoBadge, ...ESTADO_STYLES[item.estado] }}>{item.estado}</span>
-                  </td>
-                  <td style={styles.td}>
-                    <div style={{ display: 'flex', gap: '0.4rem' }}>
-                      <button id={`inventario-edit-${item.id}`} className="btn-tertiary" style={{ padding: '0.4rem', minHeight: 'auto', minWidth: 'auto' }} title="Editar"><Edit2 size={14} /></button>
-                      <button id={`inventario-delete-${item.id}`} className="btn-tertiary" style={{ padding: '0.4rem', minHeight: 'auto', minWidth: 'auto', color: '#ffb4ab' }} title="Eliminar" onClick={() => handleDelete(item.id)}><Trash2 size={14} /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {filtered.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--on-surface-variant)' }}>
-            No se encontraron medicamentos con "{search}"
-          </div>
-        )}
-      </div>
-    </DashboardLayout>
-  )
+  return { label: 'Optimo', tone: 'good', percent: Math.min(100, Math.round(ratio * 100)) }
 }
 
-const styles = {
-  primaryBtn: { background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff', border: 'none', borderRadius: 'var(--radius-full)', padding: '0.55rem 1.25rem', fontWeight: 700, fontSize: '0.875rem', fontFamily: 'var(--font-display)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' },
-  statsGrid:  { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.75rem' },
-  statCard:   { background: 'var(--surface-container)', border: '1px solid rgba(74,68,85,0.25)', borderRadius: 'var(--radius-xl)', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' },
-  statIcon:   { width: 44, height: 44, borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  statLabel:  { fontSize: '0.8rem', color: 'var(--on-surface-variant)', marginBottom: '0.2rem' },
-  statValue:  { fontSize: '1.5rem', fontWeight: 800, fontFamily: 'var(--font-display)' },
-  tableCard:  { background: 'var(--surface-container)', border: '1px solid rgba(74,68,85,0.25)', borderRadius: 'var(--radius-xl)', overflow: 'hidden' },
-  tableToolbar: { display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem 1.25rem', borderBottom: '1px solid rgba(74,68,85,0.2)', flexWrap: 'wrap' },
-  searchBox:  { display: 'flex', alignItems: 'center', gap: '0.6rem', background: 'var(--surface-container-high)', borderRadius: 'var(--radius-full)', padding: '0.45rem 1rem', flex: 1, minWidth: 220 },
-  searchInput:{ border: 'none', background: 'none', color: 'var(--on-surface)', fontSize: '0.875rem', outline: 'none', width: '100%', padding: 0 },
-  filterBtn:  { background: 'var(--surface-container-high)', border: '1px solid rgba(74,68,85,0.4)', borderRadius: 'var(--radius-full)', color: 'var(--on-surface-variant)', padding: '0.4rem 0.85rem', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' },
-  table:      { width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' },
-  th:         { padding: '0.85rem 1.25rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'var(--surface-container-high)' },
-  tr:         { borderBottom: '1px solid rgba(74,68,85,0.15)', transition: 'background var(--transition-fast)' },
-  td:         { padding: '0.9rem 1.25rem', color: 'var(--on-surface-variant)' },
-  pillIcon:   { width: 30, height: 30, borderRadius: 8, background: 'rgba(124,58,237,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  chip:       { background: 'var(--surface-container-high)', borderRadius: 'var(--radius-full)', padding: '3px 10px', fontSize: '0.75rem', color: 'var(--on-surface-variant)' },
-  estadoBadge:{ borderRadius: 'var(--radius-full)', padding: '3px 10px', fontSize: '0.75rem', fontWeight: 600 },
-  iconBtn:    { background: 'var(--surface-container-high)', border: 'none', borderRadius: 'var(--radius-md)', padding: '0.4rem', cursor: 'pointer', color: 'var(--on-surface-variant)', display: 'flex', alignItems: 'center', transition: 'background var(--transition-fast)' },
+const mapInventoryFromApi = (item, index) => ({
+  id: item?.id || item?.sku || `SKU-${String(index + 1).padStart(5, '0')}`,
+  name: item?.nombre || item?.medicamento || item?.name || 'Medicamento',
+  category: String(item?.categoria || item?.category || 'GENERAL').toUpperCase(),
+  stock: Number(item?.stock ?? item?.existencias ?? item?.cantidad ?? 0),
+  unitPrice: Number(item?.precioUnitario ?? item?.precio ?? item?.unitPrice ?? 0),
+  minStock: Number(item?.stockMinimo ?? item?.minStock ?? 100),
+  icon: item?.icon || 'medication',
+})
+
+export default function Inventario() {
+  const navigate = useNavigate()
+  const [search, setSearch] = useState('')
+  const [items, setItems] = useState(FALLBACK_ITEMS)
+  const [adminData, setAdminData] = useState(FALLBACK_ADMIN)
+  const [loading, setLoading] = useState(true)
+  const [backendNotice, setBackendNotice] = useState('')
+
+  useEffect(() => {
+    let mounted = true
+
+    const loadInventory = async () => {
+      try {
+        const [statsRes, listRes] = await Promise.allSettled([
+          getInventarioStats(),
+          getInventario({ page: 1, limit: 12 }),
+        ])
+
+        if (!mounted) {
+          return
+        }
+
+        if (listRes.status === 'fulfilled') {
+          const source = listRes.value?.data || listRes.value
+          if (Array.isArray(source) && source.length > 0) {
+            setItems(source.map(mapInventoryFromApi))
+          }
+        }
+
+        if (statsRes.status === 'fulfilled') {
+          const stats = statsRes.value || {}
+          setAdminData((previous) => ({
+            ...previous,
+            totalInventoryValue: Number(stats.totalInventoryValue ?? stats.valorTotal ?? previous.totalInventoryValue),
+            valueDeltaPct: Number(stats.deltaPct ?? stats.porcentajeCambio ?? previous.valueDeltaPct),
+            activeLots: Number(stats.activeLots ?? stats.lotesActivos ?? previous.activeLots),
+            allVerified: Boolean(stats.allVerified ?? previous.allVerified),
+          }))
+        }
+
+        if (statsRes.status === 'rejected' || listRes.status === 'rejected') {
+          setBackendNotice('No fue posible sincronizar todos los datos del backend. Se muestra informacion de respaldo.')
+        }
+      } catch {
+        if (mounted) {
+          setBackendNotice('Backend no disponible por ahora. Se muestra informacion de respaldo.')
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadInventory()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const criticalItems = useMemo(() => items.filter((row) => getStockTone(row).tone === 'critical').slice(0, 2), [items])
+
+  const filteredRows = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    if (!query) {
+      return items
+    }
+
+    return items.filter((row) => `${row.id} ${row.name} ${row.category}`.toLowerCase().includes(query))
+  }, [items, search])
+
+  const handleLogout = () => {
+    localStorage.removeItem('medigo_token')
+    localStorage.removeItem('medigo_user')
+    navigate(ROUTES.AUTH.LOGIN, { replace: true })
+  }
+
+  const totalRows = new Intl.NumberFormat('en-US').format(items.length)
+
+  return (
+    <div className="admin-inventory-shell">
+      <aside className="admin-side">
+        <div className="admin-side-brand">
+          <div className="admin-side-logo-icon">
+            <span className="material-symbols-outlined">clinical_notes</span>
+          </div>
+          <div>
+            <h1>MediGo Admin</h1>
+            <p>CLINICAL PRECISION</p>
+          </div>
+        </div>
+
+        <nav className="admin-side-nav" aria-label="Navegacion de administrador">
+          <button type="button" onClick={() => navigate(ROUTES.ADMIN.AUCTIONS)}>
+            <span className="material-symbols-outlined">gavel</span>
+            Subastas
+          </button>
+          <button type="button" className="active" onClick={() => navigate(ROUTES.ADMIN.INVENTORY)}>
+            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
+              inventory_2
+            </span>
+            Inventario
+          </button>
+          <button type="button" onClick={() => navigate(ROUTES.ADMIN.BRANCHES)}>
+            <span className="material-symbols-outlined">account_tree</span>
+            Sedes/Sucursales
+          </button>
+          <button type="button" onClick={() => navigate(ROUTES.ADMIN.USERS)}>
+            <span className="material-symbols-outlined">group</span>
+            Usuarios
+          </button>
+        </nav>
+
+        <div className="admin-side-footer">
+          <button type="button">
+            <span className="material-symbols-outlined">help</span>
+            Soporte
+          </button>
+          <button type="button" className="danger" onClick={handleLogout}>
+            <span className="material-symbols-outlined">logout</span>
+            Cerrar Sesion
+          </button>
+        </div>
+      </aside>
+
+      <main className="admin-main">
+        <header className="admin-topbar">
+          <label className="admin-top-search" aria-label="Buscar en inventario">
+            <span className="material-symbols-outlined">search</span>
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Buscar en inventario, SKU o composicion quimica..."
+            />
+          </label>
+
+          <div className="admin-top-right">
+            <button type="button" className="admin-top-icon" aria-label="Notificaciones">
+              <span className="material-symbols-outlined">notifications</span>
+            </button>
+            <button type="button" className="admin-top-icon" aria-label="Configuracion">
+              <span className="material-symbols-outlined">settings</span>
+            </button>
+            <div className="admin-top-separator" />
+            <div className="admin-profile-wrap">
+              <div>
+                <strong>{adminData.adminName}</strong>
+                <small>{adminData.roleLabel}</small>
+              </div>
+              <div className="admin-avatar-placeholder" aria-label="Placeholder de imagen de perfil">
+                IMG
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div className="admin-content">
+          <section className="inventory-hero">
+            <div>
+              <h2>Gestion de Inventario</h2>
+              <p>
+                Seguimiento de precision para suministros clinicos. Mantenga niveles optimos de stock con analisis en
+                tiempo real y disparadores de adquisicion automatizados.
+              </p>
+            </div>
+
+            <button type="button" className="new-entry-btn">
+              <span className="material-symbols-outlined">add</span>
+              Nueva Entrada
+            </button>
+          </section>
+
+          {backendNotice ? <p className="inventory-notice">{backendNotice}</p> : null}
+
+          <section className="inventory-stat-grid" aria-label="Indicadores de inventario">
+            <article className="critical-card">
+              <div className="critical-head">
+                <strong>
+                  <span className="material-symbols-outlined">warning</span>
+                  Alertas de Stock Bajo
+                </strong>
+                <span>ACCION REQUERIDA</span>
+              </div>
+
+              <div className="critical-list">
+                {(criticalItems.length > 0 ? criticalItems : FALLBACK_ITEMS.slice(1, 3)).map((item) => (
+                  <div key={item.id} className="critical-item">
+                    <div>
+                      <p>{item.name}</p>
+                      <small>
+                        {item.category} - {item.stock} unidades restantes
+                      </small>
+                    </div>
+                    <span className="material-symbols-outlined">trending_down</span>
+                  </div>
+                ))}
+              </div>
+
+              <button type="button" className="critical-link">
+                Revisar todo el stock critico
+                <span className="material-symbols-outlined">arrow_forward</span>
+              </button>
+            </article>
+
+            <div className="health-grid">
+              <article className="health-card">
+                <div>
+                  <p>Valor Total del Inventario</p>
+                  <strong>{formatMoney(adminData.totalInventoryValue)}</strong>
+                  <small>
+                    <span className="material-symbols-outlined">trending_up</span>
+                    +{adminData.valueDeltaPct}% desde el mes pasado
+                  </small>
+                </div>
+                <span className="material-symbols-outlined bg-symbol">payments</span>
+              </article>
+
+              <article className="health-card">
+                <div>
+                  <p>Lotes Activos</p>
+                  <strong>{new Intl.NumberFormat('en-US').format(adminData.activeLots)}</strong>
+                  <small>
+                    <span className="material-symbols-outlined">check_circle</span>
+                    {adminData.allVerified ? 'Todas las unidades verificadas' : 'Revision pendiente'}
+                  </small>
+                </div>
+                <span className="material-symbols-outlined bg-symbol">inventory_2</span>
+              </article>
+            </div>
+          </section>
+
+          <section className="inventory-table-card" aria-label="Repositorio de medicamentos">
+            <div className="inventory-table-head">
+              <h3>Repositorio de Medicamentos</h3>
+              <div className="inventory-table-actions">
+                <button type="button">
+                  <span className="material-symbols-outlined">filter_list</span>
+                  Filtrar Categoria
+                </button>
+                <button type="button">
+                  <span className="material-symbols-outlined">download</span>
+                  Exportar CSV
+                </button>
+              </div>
+            </div>
+
+            <div className="inventory-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>NOMBRE DEL MEDICAMENTO</th>
+                    <th>CATEGORIA</th>
+                    <th>NIVEL DE STOCK</th>
+                    <th>PRECIO UNITARIO</th>
+                    <th>ESTADO</th>
+                    <th className="actions">ACCIONES</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRows.map((row) => {
+                    const stockMeta = getStockTone(row)
+                    return (
+                      <tr key={row.id}>
+                        <td>
+                          <div className="medicine-cell">
+                            <div className="medicine-icon">
+                              <span className="material-symbols-outlined">{row.icon}</span>
+                            </div>
+                            <div>
+                              <p>{row.name}</p>
+                              <small>{row.id}</small>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <span className="category-chip">{row.category}</span>
+                        </td>
+                        <td>
+                          <div className="stock-cell">
+                            <strong className={stockMeta.tone === 'critical' ? 'critical' : ''}>{formatUnits(row.stock)}</strong>
+                            <div className="stock-bar">
+                              <span className={stockMeta.tone} style={{ width: `${stockMeta.percent}%` }} />
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <strong className="price-cell">{formatMoney(row.unitPrice)}</strong>
+                        </td>
+                        <td>
+                          <span className={`status-pill ${stockMeta.tone}`}>{stockMeta.label}</span>
+                        </td>
+                        <td>
+                          <div className="action-btns">
+                            <button type="button" aria-label={`Editar ${row.name}`}>
+                              <span className="material-symbols-outlined">edit</span>
+                            </button>
+                            <button type="button" aria-label={`Mas opciones ${row.name}`}>
+                              <span className="material-symbols-outlined">more_vert</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {filteredRows.length === 0 ? (
+              <div className="empty-table">No hay resultados para "{search}".</div>
+            ) : null}
+
+            <div className="inventory-footer-row">
+              <p>Mostrando 1-{filteredRows.length} de {totalRows} entradas</p>
+              <div className="pager">
+                <button type="button" className="active">1</button>
+                <button type="button">2</button>
+                <button type="button">3</button>
+                <span>...</span>
+                <button type="button">124</button>
+              </div>
+            </div>
+          </section>
+
+          <footer className="inventory-legal">Arquitectura del Sistema MediGo - v4.2.0 - Asegurado con encriptacion de 256 bits</footer>
+        </div>
+      </main>
+
+      {loading ? <div className="inventory-loading">Sincronizando inventario...</div> : null}
+    </div>
+  )
 }
