@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { createSubasta, getSubastas } from '../../api/subastaService'
+import { createSubasta, getActiveAuctions } from '../../api/subastaService'
 import AuctionAdminActions from '../../components/admin/AuctionAdminActions'
 import { ROUTES } from '../../constants/routes'
 import '../../styles/admin/gestion-subastas.css'
@@ -61,14 +61,17 @@ const formatMoney = (value, compact = false) =>
 
 const mapAuctionFromApi = (item, index) => ({
   id: item?.id || item?.codigo || `SUB-${String(index + 1).padStart(3, '0')}`,
-  name: item?.nombre || item?.medicamento || `Medicamento #${item?.medicationId ?? index + 1}`,
+  name: item?.medicationName || item?.nombre || item?.medicamento || `Medicamento #${item?.medicationId ?? index + 1}`,
   batch: item?.lote || item?.batch || `SEDE-${item?.branchId ?? index + 1}`,
-  status: String(item?.estado || (item?.activa ? 'EN VIVO' : 'PENDIENTE')).toUpperCase(),
+  status: String(item?.status || item?.estado || (item?.activa ? 'EN VIVO' : 'PENDIENTE')).toUpperCase(),
   startPrice: Number(item?.precioInicial ?? item?.montoActual ?? item?.precioBase ?? item?.basePrice ?? 0),
-  reserveNote: item?.reservaNota || 'Reserva Alcanzada',
-  remaining: item?.tiempoRestante || item?.cierre || '01h 00m 00s',
+  reserveNote: item?.reservaNota || `Tipo cierre: ${item?.closureType || 'N/A'}`,
+  remaining:
+    item?.remainingSeconds === null || item?.remainingSeconds === undefined
+      ? 'Sin dato'
+      : `${Math.max(0, Math.floor(Number(item.remainingSeconds) / 60))} min`,
   icon: index % 2 === 0 ? 'pill' : 'vaccines',
-  active: Boolean(item?.activa ?? String(item?.estado || '').toUpperCase().includes('VIVO')),
+  active: Boolean(item?.activa ?? String(item?.status || item?.estado || '').toUpperCase().includes('ACTIVE')),
 })
 
 export default function GestionSubastas() {
@@ -81,6 +84,14 @@ export default function GestionSubastas() {
     const offset = value.getTimezoneOffset() * 60 * 1000
     const local = new Date(value.getTime() - offset)
     return local.toISOString().slice(0, 16)
+  }
+
+  const toApiLocalDateTime = (dateTimeLocalValue) => {
+    if (!dateTimeLocalValue) {
+      return null
+    }
+
+    return `${dateTimeLocalValue}:00`
   }
 
   const initialCreateForm = {
@@ -110,7 +121,7 @@ export default function GestionSubastas() {
 
     const loadAuctions = async () => {
       try {
-        const response = await getSubastas({ limit: 30 })
+        const response = await getActiveAuctions()
         if (!mounted) {
           return
         }
@@ -130,9 +141,12 @@ export default function GestionSubastas() {
             topBid,
           }))
         }
-      } catch {
+      } catch (error) {
         if (mounted) {
-          setNotice('No fue posible sincronizar subastas con backend. Se muestran datos de respaldo.')
+          const message =
+            error?.response?.data?.message ||
+            'No fue posible sincronizar subastas con backend. Se muestran datos de respaldo.'
+          setNotice(message)
         }
       } finally {
         if (mounted) {
@@ -201,8 +215,14 @@ export default function GestionSubastas() {
       return
     }
 
-    if (createForm.medicationId <= 0 || createForm.branchId <= 0 || createForm.basePrice <= 0 || createForm.maxPrice <= 0) {
-      setCreateError('Medication ID, Branch ID, Base Price y Max Price deben ser mayores a 0.')
+    if (createForm.medicationId <= 0 || createForm.branchId <= 0 || createForm.basePrice <= 0) {
+      setCreateError('Medication ID, Branch ID y Base Price deben ser mayores a 0.')
+      setCreating(false)
+      return
+    }
+
+    if (createForm.closureType === 'MAX_PRICE' && createForm.maxPrice <= 0) {
+      setCreateError('Para cierre MAX_PRICE debes indicar Max Price mayor a 0.')
       setCreating(false)
       return
     }
@@ -211,11 +231,11 @@ export default function GestionSubastas() {
       medicationId: Number(createForm.medicationId),
       branchId: Number(createForm.branchId),
       basePrice: Number(createForm.basePrice),
-      startTime: new Date(createForm.startTime).toISOString(),
-      endTime: new Date(createForm.endTime).toISOString(),
+      startTime: toApiLocalDateTime(createForm.startTime),
+      endTime: toApiLocalDateTime(createForm.endTime),
       closureType: String(createForm.closureType),
-      maxPrice: Number(createForm.maxPrice),
-      inactivityMinutes: Number(createForm.inactivityMinutes),
+      ...(createForm.maxPrice > 0 ? { maxPrice: Number(createForm.maxPrice) } : {}),
+      ...(createForm.inactivityMinutes > 0 ? { inactivityMinutes: Number(createForm.inactivityMinutes) } : {}),
     }
 
     try {
@@ -224,7 +244,7 @@ export default function GestionSubastas() {
       setAuctions((previous) => [item, ...previous])
       setNotice('Subasta creada en backend correctamente.')
       setShowCreateModal(false)
-    } catch {
+    } catch (error) {
       const local = {
         id: `SUB-LOCAL-${Date.now()}`,
         name: `Medicamento #${payload.medicationId}`,
@@ -237,7 +257,8 @@ export default function GestionSubastas() {
         active: false,
       }
       setAuctions((previous) => [local, ...previous])
-      setNotice('No se pudo crear en backend. Se agregó una vista previa local de la subasta.')
+      const message = error?.response?.data?.message || 'No se pudo crear en backend. Se agregó una vista previa local de la subasta.'
+      setNotice(message)
       setShowCreateModal(false)
     } finally {
       setCreating(false)
@@ -546,6 +567,7 @@ export default function GestionSubastas() {
                 <select name="closureType" value={createForm.closureType} onChange={handleCreateInputChange}>
                   <option value="FIXED_TIME">FIXED_TIME</option>
                   <option value="INACTIVITY">INACTIVITY</option>
+                  <option value="MAX_PRICE">MAX_PRICE</option>
                 </select>
               </label>
 
@@ -553,12 +575,11 @@ export default function GestionSubastas() {
                 <span>Max Price</span>
                 <input
                   type="number"
-                  min="1"
+                  min="0"
                   step="0.01"
                   name="maxPrice"
                   value={createForm.maxPrice}
                   onChange={handleCreateInputChange}
-                  required
                 />
               </label>
 
@@ -570,7 +591,6 @@ export default function GestionSubastas() {
                   name="inactivityMinutes"
                   value={createForm.inactivityMinutes}
                   onChange={handleCreateInputChange}
-                  required
                 />
               </label>
 
