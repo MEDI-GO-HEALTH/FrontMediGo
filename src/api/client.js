@@ -12,13 +12,11 @@
  */
 
 import axios from 'axios';
-
-// ⚙️ CONFIGURACIÓN DE CONEXIÓN — Cambiar URL según entorno
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+import { API_CONFIG } from '../config/api';
 
 const client = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 15000,
+  baseURL: API_CONFIG.baseURL,
+  timeout: API_CONFIG.timeoutMs,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -46,7 +44,7 @@ client.interceptors.response.use(
       // 🚪 Token expirado o inválido → limpiar sesión y redirigir
       localStorage.removeItem('medigo_token');
       localStorage.removeItem('medigo_user');
-      window.location.href = '/login';
+      window.location.href = '/';
     }
     return Promise.reject(error);
   }

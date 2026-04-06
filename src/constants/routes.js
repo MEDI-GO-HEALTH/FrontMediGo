@@ -6,7 +6,7 @@
 
 export const ROLE_REDIRECTS = {
   ADMIN: '/admin/inventario',
-  AFILIADO: '/afiliado/subastas',
+  AFILIADO: '/afiliado/mapa',
   REPARTIDOR: '/repartidor/mapa',
 }
 

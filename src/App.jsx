@@ -41,7 +41,7 @@ import PerfilRepartidor from './pages/driver/PerfilRepartidor'
 // ═════════════════════════════════════════════════════════════════
 // CONSTANTES DE RUTAS
 // ═════════════════════════════════════════════════════════════════
-import { ROUTES, ROLE_REDIRECTS } from './constants/routes'
+import { ROUTES } from './constants/routes'
 
 // ═════════════════════════════════════════════════════════════════
 // COMPONENTE: ProtectedRoute
@@ -103,29 +103,6 @@ function ProtectedRoute({ children, allowedRoles }) {
 }
 
 // ═════════════════════════════════════════════════════════════════
-// COMPONENTE: AutoRedirectLogin
-// Verifica autenticación y redirige automáticamente
-// ═════════════════════════════════════════════════════════════════
-function AutoRedirectLogin() {
-  useEffect(() => {
-    const token = localStorage.getItem('medigo_token')
-    const userStr = localStorage.getItem('medigo_user')
-
-    if (token && userStr) {
-      try {
-        const user = JSON.parse(userStr)
-        const path = ROLE_REDIRECTS[user.role] || ROUTES.AUTH.LOGIN
-        window.location.replace(path)
-      } catch (error) {
-        console.error('Error parsing user:', error)
-      }
-    }
-  }, [])
-
-  return <Login />
-}
-
-// ═════════════════════════════════════════════════════════════════
 // COMPONENTE: App
 // Punto de entrada principal con rutas
 // ═════════════════════════════════════════════════════════════════
@@ -142,7 +119,7 @@ export default function App() {
         {/* ═════════════════════════════════════════════════════════════
             RUTAS PÚBLICAS (Sin autenticación)
             ═════════════════════════════════════════════════════════════ */}
-        <Route path={ROUTES.AUTH.LOGIN} element={<AutoRedirectLogin />} />
+        <Route path={ROUTES.AUTH.LOGIN} element={<Login />} />
         <Route path={ROUTES.AUTH.REGISTER} element={<Register />} />
 
         {/* ═════════════════════════════════════════════════════════════

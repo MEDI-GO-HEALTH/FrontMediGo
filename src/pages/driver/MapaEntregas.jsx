@@ -1,62 +1,340 @@
-/**
- * MapaEntregas.jsx (Map Page - Driver)
- * ═════════════════════════════════════════════════════════════════
- * Página de mapa de entregas para repartidores
- * - Mapa interactivo con ubicación actual
- * - Panel de pedidos disponibles
- * - Aceptar/rechazar pedidos
- */
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
+import {
+  acceptDriverOrder,
+  getDriverCurrentOrder,
+  getDriverMapSnapshot,
+  startDriverShift,
+} from '../../api/driverDeliveryService';
+import '../../styles/driver/mapa-entregas.css';
 
-import DriverSidebar from '../../components/layout/DriverSidebar'
+const FALLBACK_DATA = {
+  driver: {
+    name: 'Laura Mena',
+    vehicle: 'Moto - MDG 45B',
+  },
+  metrics: {
+    onlineDrivers: 14,
+    pendingOrders: 6,
+  },
+  selectedOrder: {
+    id: 'PED-2031',
+    statusLabel: 'Pedido sugerido',
+    urgencyLabel: 'Urgente',
+    estimatedTimeLabel: '18 min',
+    distanceLabel: '4.8 km',
+    pickupAddress: 'Sede Norte - Av. Calle 116 #15-28',
+    destinationAddress: 'EPS Chapinero - Calle 94 #13-55',
+  },
+};
 
 export default function MapaEntregas() {
+  const navigate = useNavigate();
+  const [dashboardData, setDashboardData] = useState(FALLBACK_DATA);
+  const [loading, setLoading] = useState(false);
+  const [actionError, setActionError] = useState('');
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadDashboard = async () => {
+      try {
+        const [mapSnapshot, currentOrder] = await Promise.all([
+          getDriverMapSnapshot(),
+          getDriverCurrentOrder(),
+        ]);
+
+        if (!mounted) {
+          return;
+        }
+
+        setDashboardData((prev) => ({
+          ...prev,
+          ...mapSnapshot,
+          selectedOrder: {
+            ...prev.selectedOrder,
+            ...(currentOrder ?? {}),
+          },
+        }));
+      } catch {
+        if (!mounted) {
+          return;
+        }
+
+        setDashboardData(FALLBACK_DATA);
+      }
+    };
+
+    loadDashboard();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const selectedOrder = useMemo(() => dashboardData.selectedOrder ?? FALLBACK_DATA.selectedOrder, [dashboardData]);
+
+  const handleStartShift = async () => {
+    setActionError('');
+    setLoading(true);
+
+    try {
+      await startDriverShift();
+    } catch {
+      setActionError('No fue posible iniciar turno con el backend. Se mantiene modo de prueba local.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAcceptOrder = async () => {
+    setActionError('');
+    setLoading(true);
+
+    try {
+      await acceptDriverOrder(selectedOrder.id);
+    } catch {
+      setActionError('No fue posible confirmar el pedido con el backend. El flujo visual permanece activo.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('medigo_token');
+    localStorage.removeItem('medigo_user');
+    navigate('/');
+  };
+
   return (
-    <div className="bg-surface h-screen overflow-hidden">
-      <DriverSidebar />
-
-      <main className="ml-72 pt-16 h-full relative">
-        {/* Map Background */}
-        <div className="absolute inset-0 bg-slate-100">
-          <img
-            className="w-full h-full object-cover"
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuAwjnP8A_l6GXYHx3BO6JrZexfgAVRJoumb82nDZGAw9IkXU2-7QiODHpPcEHfTvQrqq4RAtAG1111JWLXabE8YYyHcpJUyf3xnCx7NNK-FMZgtII-h7Fe3v15oWKpybhlsAg8DFVh4E4naakl-rQrEIQ3zuCO_8GKAOOCJR9S3dq5_E8S7pl_jFvIXCj2Jren-Yfl9NKCb1wP83TnrkPflF8dWBg_Rl7mH2T8UFewf9P3T9Xll1Ca-X-Mbw2Zo-uDKS0zFWyQC3aET"
-            alt="Mapa de entregas"
-          />
-          {/* Current Location Marker */}
-          <div className="absolute top-[45%] left-[45%] w-6 h-6 bg-sky-600 rounded-full border-4 border-white shadow-xl animate-pulse"></div>
-        </div>
-
-        {/* Order Details Card */}
-        <div className="absolute bottom-10 left-10 w-[420px] bg-white rounded-2xl shadow-2xl p-8 border border-slate-200">
-          <span className="bg-sky-100 text-sky-800 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest">
-            EPS Sanitas
-          </span>
-          <h2 className="text-2xl font-bold mt-4">Pedido #MG-8829</h2>
-          <p className="text-slate-500 text-sm mb-6">Entrega de 12 ítems • 2.4 km</p>
-
-          {/* Order Details */}
-          <div className="space-y-4 mb-6 p-4 bg-surface-container-low rounded-lg">
-            <div>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Origen</p>
-              <p className="font-semibold text-sm">Centro Logístico Central</p>
-            </div>
-            <div>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Destino</p>
-              <p className="font-semibold text-sm">EPS Sanitas - Calle 5 #45-10</p>
+    <div className="driver-map-page">
+      <div className="driver-layout">
+        <aside className="driver-sidenav" aria-label="Navegacion de repartidor">
+          <div className="driver-side-head">
+            <div className="driver-side-brand">
+              <div className="driver-side-logo">
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
+                  local_shipping
+                </span>
+              </div>
+              <div className="driver-side-brand-text">
+                <h1>Driver Portal</h1>
+                <p>Clinical Logistics Unit</p>
+              </div>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-4">
-            <button className="flex-1 bg-gradient-to-r from-primary to-primary-container text-white py-4 rounded-xl font-bold hover:shadow-lg transition-shadow">
-              Aceptar Pedido
+          <nav>
+            <button type="button" className="driver-nav-btn active">
+              <span className="material-symbols-outlined">map</span>
+              Mapa de Entregas
             </button>
-            <button className="flex-1 bg-surface-container text-on-surface py-4 rounded-xl font-bold hover:bg-surface-container-high transition-colors">
-              Rechazar
+
+            <button
+              type="button"
+              className="driver-nav-btn"
+              onClick={() => navigate('/repartidor/historial')}
+            >
+              <span className="material-symbols-outlined">history</span>
+              Historial de Viajes
+            </button>
+
+            <button
+              type="button"
+              className="driver-nav-btn"
+              onClick={() => navigate('/repartidor/perfil')}
+            >
+              <span className="material-symbols-outlined">person</span>
+              Mi Perfil
+            </button>
+          </nav>
+
+          <div className="driver-sidenav-footer">
+            <button
+              type="button"
+              className="start-shift-btn"
+              onClick={handleStartShift}
+              disabled={loading}
+            >
+              {loading ? 'Procesando...' : 'Iniciar Turno'}
+            </button>
+
+            <button type="button" className="driver-footer-link">
+              <span className="material-symbols-outlined">help</span>
+              Help
+            </button>
+
+            <button type="button" className="driver-footer-link danger" onClick={handleLogout}>
+              <span className="material-symbols-outlined">logout</span>
+              Cerrar sesion
             </button>
           </div>
-        </div>
-      </main>
+        </aside>
+
+        <main className="driver-main" aria-label="Mapa de entregas provisional">
+          <header className="driver-topbar">
+            <h2 className="driver-top-title">MediGo Clinical Logistics</h2>
+
+            <div className="driver-topbar-right">
+              <div className="driver-top-online">
+                <span />
+                <span>Online</span>
+              </div>
+
+              <button type="button" className="driver-icon-btn" aria-label="Notificaciones">
+                <span className="material-symbols-outlined">notifications</span>
+              </button>
+
+              <div className="driver-top-avatar" aria-label="Avatar por defecto del repartidor">DR</div>
+            </div>
+          </header>
+
+          <div className="driver-main-stage">
+            <div className="driver-map-canvas" role="img" aria-label="Mapa provisional para futura integracion en tiempo real">
+              <div className="driver-map-grid" />
+              <div className="driver-map-overlay" />
+
+              <div className="driver-marker eps-a">
+                <span className="material-symbols-outlined">location_on</span>
+              </div>
+
+              <div className="driver-marker eps-b">
+                <span className="material-symbols-outlined">location_on</span>
+              </div>
+
+              <div className="driver-marker truck-busy">
+                <span className="material-symbols-outlined">local_shipping</span>
+              </div>
+
+              <div className="driver-marker truck-free">
+                <span className="material-symbols-outlined">local_shipping</span>
+              </div>
+
+              <div className="driver-self-marker">
+                <div className="pulse" />
+                <div className="dot-wrap">
+                  <div className="dot" />
+                </div>
+                <span className="tag">Tu ubicacion</span>
+              </div>
+
+              <svg className="driver-route-svg" viewBox="0 0 1200 720" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M 180 520 C 260 470, 340 410, 430 395 C 515 380, 575 420, 650 350 C 760 250, 820 220, 980 200" />
+              </svg>
+            </div>
+
+            <div className="driver-search-floating">
+              <div className="driver-search-bar">
+                <div className="driver-search-inner">
+                  <span className="material-symbols-outlined">search</span>
+                  <input type="text" placeholder="Buscar sede, pedido o direccion" disabled />
+                </div>
+                <button type="button" className="filter-btn" aria-label="Filtrar">
+                  <span className="material-symbols-outlined">tune</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="driver-legend" aria-label="Leyenda del mapa">
+              <div className="driver-legend-row">
+                <span className="driver-legend-dot free" />
+                Repartidor libre
+              </div>
+              <div className="driver-legend-row">
+                <span className="driver-legend-dot busy" />
+                Repartidor ocupado
+              </div>
+              <div className="driver-legend-row">
+                <span className="driver-legend-dot orders" />
+                Punto de pedido
+              </div>
+            </div>
+
+            <article className="driver-order-card" aria-label="Detalle de pedido actual">
+              <div className="card-top">
+                <div>
+                  <span className="card-badge">{selectedOrder.statusLabel}</span>
+                  <h2 className="card-title">#{selectedOrder.id}</h2>
+                </div>
+
+                <span className="urgency-pill">
+                  <span className="material-symbols-outlined">priority_high</span>
+                  {selectedOrder.urgencyLabel}
+                </span>
+              </div>
+
+              <div className="card-stats">
+                <div className="stat-box">
+                  <small>ETA estimado</small>
+                  <p>
+                    <span className="material-symbols-outlined">schedule</span>
+                    {selectedOrder.estimatedTimeLabel}
+                  </p>
+                </div>
+
+                <div className="stat-box">
+                  <small>Distancia</small>
+                  <p>
+                    <span className="material-symbols-outlined">route</span>
+                    {selectedOrder.distanceLabel}
+                  </p>
+                </div>
+              </div>
+
+              <div className="route-flow">
+                <div className="route-axis" aria-hidden="true">
+                  <span className="route-point start" />
+                  <span className="route-line" />
+                  <span className="route-point end" />
+                </div>
+
+                <div className="route-text">
+                  <small>Recoger en</small>
+                  <p>{selectedOrder.pickupAddress}</p>
+
+                  <small>Entregar en</small>
+                  <p>{selectedOrder.destinationAddress}</p>
+                </div>
+              </div>
+
+              <button type="button" className="accept-order-btn" onClick={handleAcceptOrder} disabled={loading}>
+                <span className="material-symbols-outlined">check_circle</span>
+                {loading ? 'Procesando...' : 'Aceptar Pedido'}
+              </button>
+
+              {actionError ? <p style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: '#ba1a1a' }}>{actionError}</p> : null}
+            </article>
+
+            <div className="driver-map-controls" aria-label="Controles de mapa">
+              <button type="button" aria-label="Acercar">
+                <span className="material-symbols-outlined">add</span>
+              </button>
+              <button type="button" aria-label="Alejar">
+                <span className="material-symbols-outlined">remove</span>
+              </button>
+              <button type="button" className="locate" aria-label="Ubicarme">
+                <span className="material-symbols-outlined">my_location</span>
+              </button>
+            </div>
+          </div>
+
+          <footer className="driver-mobile-footer" aria-label="Navegacion movil repartidor">
+            <button type="button" onClick={() => navigate('/repartidor/historial')}>
+              <span className="material-symbols-outlined">history</span>
+              Historial
+            </button>
+
+            <span className="driver-mobile-center" aria-hidden="true">
+              <span className="material-symbols-outlined">map</span>
+            </span>
+
+            <button type="button" onClick={() => navigate('/repartidor/perfil')}>
+              <span className="material-symbols-outlined">person</span>
+              Perfil
+            </button>
+          </footer>
+        </main>
+      </div>
     </div>
-  )
+  );
 }
