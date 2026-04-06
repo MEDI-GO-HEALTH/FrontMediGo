@@ -38,8 +38,10 @@ export const updateAuction = async (id, data) => {
 };
 
 /** POST /api/auctions/{id}/join — Unirse a subasta */
-export const joinAuction = async (id, payload = {}) => {
-  const response = await client.post(`${AUCTIONS_BASE}/${id}/join`, payload);
+export const joinAuction = async (id, userId) => {
+  const response = await client.post(`${AUCTIONS_BASE}/${id}/join`, null, {
+    params: { userId },
+  });
   return response.data;
 };
 
@@ -62,7 +64,8 @@ export const getAuctionWinner = async (id) => {
 };
 
 // Alias de compatibilidad para el resto de pantallas existentes
-export const getSubastas = getAuctions;
+// El backend actual no expone GET /api/auctions general; se usa active para evitar 404.
+export const getSubastas = async () => getActiveAuctions();
 export const getSubastasDisponibles = getActiveAuctions;
 export const getSubasta = getAuctionById;
 export const createSubasta = createAuction;
