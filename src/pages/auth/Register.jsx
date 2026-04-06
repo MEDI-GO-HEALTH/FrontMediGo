@@ -21,13 +21,6 @@ import '../../styles/auth/register.css'
 const PHONE_REGEX = /^\+\d{1,3}-\d{3}-\d{7}$/
 const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
 
-const ROLE_REDIRECTS = {
-  AFFILIATE: '/afiliado/mapa',
-  DELIVERY: '/repartidor/mapa',
-  AFILIADO: '/afiliado/mapa',
-  REPARTIDOR: '/repartidor/mapa',
-}
-
 export default function Register() {
   const navigate = useNavigate()
   const [role, setRole] = useState('AFFILIATE')
@@ -97,7 +90,7 @@ export default function Register() {
 
     setLoading(true)
     try {
-      const data = await registerUser({
+      await registerUser({
         name: form.name.trim(),
         email: form.email.trim().toLowerCase(),
         password: form.password,
@@ -105,13 +98,10 @@ export default function Register() {
         role,
       })
 
-      if (data?.token) {
-        localStorage.setItem('medigo_token', data.token)
-        localStorage.setItem('medigo_user', JSON.stringify(data.user))
-      }
-
-      const nextRole = data?.user?.role || role
-      navigate(ROLE_REDIRECTS[nextRole] || '/login', { replace: true })
+      // Seguridad: no auto-login tras registro. Siempre volver a login.
+      localStorage.removeItem('medigo_token')
+      localStorage.removeItem('medigo_user')
+      navigate('/?registered=1', { replace: true })
     } catch (err) {
       const traceId = err?.response?.headers?.['x-trace-id'] || err?.response?.headers?.['X-Trace-Id']
       const msg =
