@@ -13,6 +13,8 @@ import { useNavigate, Link } from 'react-router'
 import { Eye, EyeOff, Loader2, User, Truck } from 'lucide-react'
 import { register } from '../../api/authService'
 import heroImage from '../../assets/CreateAccount.png'
+import { useAuthFormState } from '../../hooks/useAuthFormState'
+import { isLikelyValidEmail } from '../../utils/authValidation'
 import '../../styles/auth/auth-base.css'
 import '../../styles/auth/register.css'
 
@@ -24,42 +26,24 @@ const ROLE_REDIRECTS = {
 export default function Register() {
   const navigate = useNavigate()
   const [role, setRole] = useState('AFILIADO')
-  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '' })
-  const [showPass, setShowPass] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [touched, setTouched] = useState({})
-
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setForm(prev => ({ ...prev, [name]: value }))
-    setError('')
-  }
-
-  const handleBlur = (e) => {
-    setTouched(prev => ({ ...prev, [e.target.name]: true }))
-  }
-
-  const isLikelyValidEmail = (value) => {
-    const email = value.trim()
-    if (email.length < 5 || email.length > 254) return false
-    if (email.includes(' ')) return false
-
-    const atIndex = email.indexOf('@')
-    if (atIndex <= 0 || atIndex !== email.lastIndexOf('@') || atIndex === email.length - 1) {
-      return false
-    }
-
-    const localPart = email.slice(0, atIndex)
-    const domainPart = email.slice(atIndex + 1)
-
-    if (!localPart || !domainPart) return false
-    if (domainPart.startsWith('.') || domainPart.endsWith('.')) return false
-    if (!domainPart.includes('.')) return false
-    if (domainPart.includes('..')) return false
-
-    return true
-  }
+  const {
+    form,
+    showPass,
+    setShowPass,
+    loading,
+    setLoading,
+    error,
+    setError,
+    touched,
+    handleChange,
+    handleBlur,
+  } = useAuthFormState({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: '',
+  })
 
   const validateForm = () => {
     if (!form.name.trim()) {
