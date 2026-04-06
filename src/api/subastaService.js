@@ -1,53 +1,80 @@
 /**
  * subastaService.js — Gestión de Subastas
- * 📡 BACKEND endpoints: /subastas
+ * Backend principal: /api/auctions
  */
 
 import client from './client';
 
-/** GET /subastas — Listar todas las subastas */
-export const getSubastas = async (params = {}) => {
-  const response = await client.get('/subastas', { params });
+const AUCTIONS_BASE = '/api/auctions';
+
+/** GET /api/auctions — Listar subastas */
+export const getAuctions = async (params = {}) => {
+  const response = await client.get(AUCTIONS_BASE, { params });
   return response.data;
 };
 
-/** GET /subastas/disponibles — Subastas disponibles para repartidor */
-export const getSubastasDisponibles = async () => {
-  const response = await client.get('/subastas/disponibles');
+/** GET /api/auctions/active — Subastas activas */
+export const getActiveAuctions = async () => {
+  const response = await client.get(`${AUCTIONS_BASE}/active`);
   return response.data;
 };
 
-/** GET /subastas/:id — Detalle de una subasta */
-export const getSubasta = async (id) => {
-  const response = await client.get(`/subastas/${id}`);
+/** GET /api/auctions/{id} — Detalle de subasta */
+export const getAuctionById = async (id) => {
+  const response = await client.get(`${AUCTIONS_BASE}/${id}`);
   return response.data;
 };
 
-/** POST /subastas — Crear nueva subasta (Admin) */
-export const createSubasta = async (data) => {
-  const response = await client.post('/subastas', data);
+/** POST /api/auctions — Crear subasta */
+export const createAuction = async (data) => {
+  const response = await client.post(AUCTIONS_BASE, data);
   return response.data;
 };
 
-/** PUT /subastas/:id — Actualizar subasta (Admin) */
-export const updateSubasta = async (id, data) => {
-  const response = await client.put(`/subastas/${id}`, data);
+/** PUT /api/auctions/{id} — Editar subasta */
+export const updateAuction = async (id, data) => {
+  const response = await client.put(`${AUCTIONS_BASE}/${id}`, data);
   return response.data;
 };
 
-/** POST /subastas/:id/pujar — El repartidor hace una puja */
-export const pujarSubasta = async (id, monto) => {
-  const response = await client.post(`/subastas/${id}/pujar`, { monto });
+/** POST /api/auctions/{id}/join — Unirse a subasta */
+export const joinAuction = async (id, payload = {}) => {
+  const response = await client.post(`${AUCTIONS_BASE}/${id}/join`, payload);
   return response.data;
 };
 
-/** POST /subastas/:id/aceptar — El afiliado acepta oferta ganadora */
+/** GET /api/auctions/{id}/bids — Historial de pujas */
+export const getAuctionBids = async (id) => {
+  const response = await client.get(`${AUCTIONS_BASE}/${id}/bids`);
+  return response.data;
+};
+
+/** POST /api/auctions/{id}/bids — Colocar puja */
+export const placeAuctionBid = async (id, payload) => {
+  const response = await client.post(`${AUCTIONS_BASE}/${id}/bids`, payload);
+  return response.data;
+};
+
+/** GET /api/auctions/{id}/winner — Ganador de la subasta */
+export const getAuctionWinner = async (id) => {
+  const response = await client.get(`${AUCTIONS_BASE}/${id}/winner`);
+  return response.data;
+};
+
+// Alias de compatibilidad para el resto de pantallas existentes
+export const getSubastas = getAuctions;
+export const getSubastasDisponibles = getActiveAuctions;
+export const getSubasta = getAuctionById;
+export const createSubasta = createAuction;
+export const updateSubasta = updateAuction;
+export const pujarSubasta = async (id, monto) => placeAuctionBid(id, { amount: monto });
+
+// Endpoints legacy conservados por compatibilidad retroactiva
 export const aceptarSubasta = async (id) => {
   const response = await client.post(`/subastas/${id}/aceptar`);
   return response.data;
 };
 
-/** DELETE /subastas/:id — Cancelar subasta */
 export const cancelarSubasta = async (id) => {
   const response = await client.delete(`/subastas/${id}`);
   return response.data;
