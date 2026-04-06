@@ -11,21 +11,26 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router'
 import { Eye, EyeOff, Loader2, User, Truck } from 'lucide-react'
-import { register } from '../../api/authService'
+import { registerUser } from '../../api/authService'
 import heroImage from '../../assets/CreateAccount.png'
 import { useAuthFormState } from '../../hooks/useAuthFormState'
 import { isLikelyValidEmail } from '../../utils/authValidation'
 import '../../styles/auth/auth-base.css'
 import '../../styles/auth/register.css'
 
+const PHONE_REGEX = /^\+\d{1,3}-\d{3}-\d{7}$/
+const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
+
 const ROLE_REDIRECTS = {
+  AFFILIATE: '/afiliado/mapa',
+  DELIVERY: '/repartidor/mapa',
   AFILIADO: '/afiliado/mapa',
   REPARTIDOR: '/repartidor/mapa',
 }
 
 export default function Register() {
   const navigate = useNavigate()
-  const [role, setRole] = useState('AFILIADO')
+  const [role, setRole] = useState('AFFILIATE')
   const {
     form,
     showPass,
@@ -62,14 +67,26 @@ export default function Register() {
       setError('Por favor ingresa una contraseña')
       return false
     }
-    if (form.password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres')
+    if (!STRONG_PASSWORD_REGEX.test(form.password)) {
+      setError('La contraseña debe tener minimo 8 caracteres, con mayuscula, minuscula y numero')
       return false
     }
     if (form.password !== form.confirmPassword) {
       setError('Las contraseñas no coinciden')
       return false
     }
+
+    const phone = form.phone.trim()
+    if (phone && !PHONE_REGEX.test(phone)) {
+      setError('El teléfono debe tener formato +57-322-5555555')
+      return false
+    }
+
+    if (!['AFFILIATE', 'DELIVERY'].includes(role)) {
+      setError('El rol seleccionado no es válido')
+      return false
+    }
+
     return true
   }
 
@@ -80,19 +97,30 @@ export default function Register() {
 
     setLoading(true)
     try {
-      const data = await register({
+      const data = await registerUser({
         name: form.name.trim(),
-        email: form.email.trim(),
+        email: form.email.trim().toLowerCase(),
         password: form.password,
-        phone: form.phone,
+        phone: form.phone.trim(),
         role,
       })
-      localStorage.setItem('medigo_token', data.token)
-      localStorage.setItem('medigo_user', JSON.stringify(data.user))
-      navigate(ROLE_REDIRECTS[data.user.role] || '/login', { replace: true })
+
+      if (data?.token) {
+        localStorage.setItem('medigo_token', data.token)
+        localStorage.setItem('medigo_user', JSON.stringify(data.user))
+      }
+
+      const nextRole = data?.user?.role || role
+      navigate(ROLE_REDIRECTS[nextRole] || '/login', { replace: true })
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Error al registrarse. Intenta de nuevo.'
-      setError(msg)
+      const traceId = err?.response?.headers?.['x-trace-id'] || err?.response?.headers?.['X-Trace-Id']
+      const msg =
+        err?.message ||
+        err?.response?.data?.message ||
+        err?.response?.data?.data?.message ||
+        err?.response?.data?.error ||
+        'Error al registrarse. Intenta de nuevo.'
+      setError(traceId && !String(msg).includes('traceId') ? `${msg} (traceId: ${traceId})` : msg)
     } finally {
       setLoading(false)
     }
@@ -151,8 +179,8 @@ export default function Register() {
           {/* Role Selector */}
           <div className="role-selector">
             {[
-              { value: 'AFILIADO', label: 'Affiliate', icon: User, desc: 'Access auctions & medications' },
-              { value: 'REPARTIDOR', label: 'Driver', icon: Truck, desc: 'Manage deliveries' },
+              { value: 'AFFILIATE', label: 'Affiliate', icon: User, desc: 'Access auctions & medications' },
+              { value: 'DELIVERY', label: 'Driver', icon: Truck, desc: 'Manage deliveries' },
             ].map(({ value, label, icon: Icon, desc }) => (
               <button
                 key={value}
