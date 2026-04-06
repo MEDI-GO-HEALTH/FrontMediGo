@@ -258,7 +258,7 @@ export default function CentroSubastas() {
           <div className="live-auctions-head">
             <h3>
               <span className="material-symbols-outlined">bolt</span>
-              Subastas Activas en Vivo
+              {' '}Subastas Activas en Vivo
             </h3>
 
             <div className="live-auctions-tools">
