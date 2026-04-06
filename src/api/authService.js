@@ -8,6 +8,38 @@
 import client from './client';
 import { API_CONFIG, AUTH_ENDPOINTS } from '../config/api';
 
+const normalizeRole = (role = '') => {
+  const normalized = String(role).toUpperCase();
+  if (normalized.includes('ADMIN')) return 'ADMIN';
+  if (normalized.includes('REPART')) return 'REPARTIDOR';
+  if (normalized.includes('DELIVERY')) return 'REPARTIDOR';
+  return 'AFILIADO';
+};
+
+const normalizeLoginPayload = (payload, fallbackEmail = '') => {
+  const root = payload?.data ? payload.data : payload;
+  const nested = root?.data || {};
+
+  const token =
+    nested?.jwtToken ||
+    nested?.token ||
+    root?.jwtToken ||
+    root?.token ||
+    root?.accessToken ||
+    '';
+
+  const userSource = nested?.user || root?.user || nested || root || {};
+
+  const user = {
+    id: userSource?.id ?? userSource?.user_id ?? null,
+    name: userSource?.name || userSource?.username || 'Usuario',
+    email: userSource?.email || fallbackEmail,
+    role: normalizeRole(userSource?.role),
+  };
+
+  return { token, user, message: payload?.message || root?.message || '' };
+};
+
 /**
  * Iniciar sesión
  * @param {{ email: string, password: string }} credentials
@@ -30,18 +62,13 @@ export const login = async (credentials) => {
 
   try {
     const response = await client.post(AUTH_ENDPOINTS.login, credentials);
-    const data = response.data.data // Extraer del envelope 'data' del Gateway
-    
-    // Normalizar para el frontend: data.jwtToken -> token, el resto -> user
-    return {
-      token: data.jwtToken,
-      user: {
-        id: data.id,
-        username: data.username,
-        email: data.email,
-        role: data.role
-      }
-    };
+    const normalized = normalizeLoginPayload(response.data, email);
+
+    if (!normalized.token) {
+      throw new Error('El backend no devolvio un JWT valido para el login.');
+    }
+
+    return normalized;
   } catch (error) {
     // Si falla la conexión (backend apagado), pero es una de nuestras cuentas de prueba rápidas
     console.error('Auth Error:', error);
