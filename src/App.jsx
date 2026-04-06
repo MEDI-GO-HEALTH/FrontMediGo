@@ -1,121 +1,248 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+/**
+ * App.jsx
+ * ═════════════════════════════════════════════════════════════════
+ * Componente raíz de la aplicación
+ * - Configuración de rutas con React Router
+ * - Protección de rutas según autenticación y rol
+ * - Encaminamiento dinámico basado en roles de usuario
+ */
 
-function App() {
-  const [count, setCount] = useState(0)
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router'
+import { useState, useEffect } from 'react'
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+// ═════════════════════════════════════════════════════════════════
+// PÁGINAS DE AUTENTICACIÓN
+// ═════════════════════════════════════════════════════════════════
+import Login from './pages/auth/Login'
+import Register from './pages/auth/Register'
+
+// ═════════════════════════════════════════════════════════════════
+// PÁGINAS DE ADMINISTRADOR
+// ═════════════════════════════════════════════════════════════════
+import GestionSubastas from './pages/admin/GestionSubastas'
+import Inventario from './pages/admin/Inventario'
+import GestionSedes from './pages/admin/GestionSedes'
+import GestionUsuarios from './pages/admin/GestionUsuarios'
+
+// ═════════════════════════════════════════════════════════════════
+// PÁGINAS DE AFILIADO
+// ═════════════════════════════════════════════════════════════════
+import MapaPedidos from './pages/affiliate/MapaPedidos'
+import CentroSubastas from './pages/affiliate/CentroSubastas'
+import PerfilAfiliado from './pages/affiliate/PerfilAfiliado'
+
+// ═════════════════════════════════════════════════════════════════
+// PÁGINAS DE REPARTIDOR
+// ═════════════════════════════════════════════════════════════════
+import MapaEntregas from './pages/driver/MapaEntregas'
+import HistorialViajes from './pages/driver/HistorialViajes'
+import PerfilRepartidor from './pages/driver/PerfilRepartidor'
+
+// ═════════════════════════════════════════════════════════════════
+// CONSTANTES DE RUTAS
+// ═════════════════════════════════════════════════════════════════
+import { ROUTES, ROLE_REDIRECTS } from './constants/routes'
+
+// ═════════════════════════════════════════════════════════════════
+// COMPONENTE: ProtectedRoute
+// ═════════════════════════════════════════════════════════════════
+/**
+ * Envuelve rutas que requieren autenticación
+ * - Valida que exista token
+ * - Valida que el rol sea permitido
+ * - Redirige a login si no está autenticado
+ */
+function ProtectedRoute({ children, allowedRoles }) {
+  const [isLoading, setIsLoading] = useState(true)
+  const [isAuthorized, setIsAuthorized] = useState(false)
+
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem('medigo_token')
+      const userStr = localStorage.getItem('medigo_user')
+
+      if (!token || !userStr) {
+        setIsAuthorized(false)
+        setIsLoading(false)
+        return
+      }
+
+      const user = JSON.parse(userStr)
+
+      if (allowedRoles && !allowedRoles.includes(user.role)) {
+        setIsAuthorized(false)
+        setIsLoading(false)
+        return
+      }
+
+      setIsAuthorized(true)
+    } catch (error) {
+      console.error('Auth validation error:', error)
+      setIsAuthorized(false)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [allowedRoles])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-slate-600 font-medium">Verificando autenticación...</p>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      </div>
+    )
+  }
 
-      <div className="ticks"></div>
+  if (!isAuthorized) {
+    return <Navigate to={ROUTES.AUTH.LOGIN} replace />
+  }
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+  return children
 }
 
-export default App
+// ═════════════════════════════════════════════════════════════════
+// COMPONENTE: AutoRedirectLogin
+// Verifica autenticación y redirige automáticamente
+// ═════════════════════════════════════════════════════════════════
+function AutoRedirectLogin() {
+  useEffect(() => {
+    const token = localStorage.getItem('medigo_token')
+    const userStr = localStorage.getItem('medigo_user')
+
+    if (token && userStr) {
+      try {
+        const user = JSON.parse(userStr)
+        const path = ROLE_REDIRECTS[user.role] || ROUTES.AUTH.LOGIN
+        window.location.replace(path)
+      } catch (error) {
+        console.error('Error parsing user:', error)
+      }
+    }
+  }, [])
+
+  return <Login />
+}
+
+// ═════════════════════════════════════════════════════════════════
+// COMPONENTE: App
+// Punto de entrada principal con rutas
+// ═════════════════════════════════════════════════════════════════
+export default function App() {
+  // Asegurar Light Mode siempre
+  useEffect(() => {
+    document.documentElement.classList.remove('dark')
+    document.documentElement.setAttribute('color-scheme', 'light')
+  }, [])
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* ═════════════════════════════════════════════════════════════
+            RUTAS PÚBLICAS (Sin autenticación)
+            ═════════════════════════════════════════════════════════════ */}
+        <Route path={ROUTES.AUTH.LOGIN} element={<AutoRedirectLogin />} />
+        <Route path={ROUTES.AUTH.REGISTER} element={<Register />} />
+
+        {/* ═════════════════════════════════════════════════════════════
+            RUTAS DE ADMIN (Requiere role = 'ADMIN')
+            ═════════════════════════════════════════════════════════════ */}
+        <Route
+          path={ROUTES.ADMIN.AUCTIONS}
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <GestionSubastas />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.ADMIN.INVENTORY}
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <Inventario />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.ADMIN.BRANCHES}
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <GestionSedes />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.ADMIN.USERS}
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <GestionUsuarios />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ═════════════════════════════════════════════════════════════
+            RUTAS DE AFILIADO (Requiere role = 'AFILIADO')
+            ═════════════════════════════════════════════════════════════ */}
+        <Route
+          path={ROUTES.AFFILIATE.MAP}
+          element={
+            <ProtectedRoute allowedRoles={['AFILIADO']}>
+              <MapaPedidos />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.AFFILIATE.AUCTIONS}
+          element={
+            <ProtectedRoute allowedRoles={['AFILIADO']}>
+              <CentroSubastas />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.AFFILIATE.PROFILE}
+          element={
+            <ProtectedRoute allowedRoles={['AFILIADO']}>
+              <PerfilAfiliado />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ═════════════════════════════════════════════════════════════
+            RUTAS DE REPARTIDOR (Requiere role = 'REPARTIDOR')
+            ═════════════════════════════════════════════════════════════ */}
+        <Route
+          path={ROUTES.DRIVER.MAP}
+          element={
+            <ProtectedRoute allowedRoles={['REPARTIDOR']}>
+              <MapaEntregas />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.DRIVER.HISTORY}
+          element={
+            <ProtectedRoute allowedRoles={['REPARTIDOR']}>
+              <HistorialViajes />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.DRIVER.PROFILE}
+          element={
+            <ProtectedRoute allowedRoles={['REPARTIDOR']}>
+              <PerfilRepartidor />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ═════════════════════════════════════════════════════════════
+            RUTAS POR DEFECTO
+            ═════════════════════════════════════════════════════════════ */}
+        <Route path="/" element={<Navigate to={ROUTES.AUTH.LOGIN} replace />} />
+        <Route path="*" element={<Navigate to={ROUTES.AUTH.LOGIN} replace />} />
+      </Routes>
+    </BrowserRouter>
+  )
+}

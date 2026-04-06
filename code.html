@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>MediGo | Clinical Governance Portal</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary": "#1a343f",
+                        "surface-variant": "#e0e3e5",
+                        "outline": "#727780",
+                        "on-tertiary-container": "#9fbac8",
+                        "error": "#ba1a1a",
+                        "on-error": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "on-surface-variant": "#42474f",
+                        "on-primary-fixed-variant": "#00497b",
+                        "surface-container": "#eceef0",
+                        "on-secondary-fixed-variant": "#004f50",
+                        "on-tertiary-fixed-variant": "#304a55",
+                        "error-container": "#ffdad6",
+                        "secondary": "#006a6a",
+                        "inverse-on-surface": "#eff1f3",
+                        "inverse-primary": "#9ccaff",
+                        "primary-fixed-dim": "#9ccaff",
+                        "surface-dim": "#d8dadc",
+                        "primary": "#003358",
+                        "primary-fixed": "#d0e4ff",
+                        "surface-container-low": "#f2f4f6",
+                        "surface-container-high": "#e6e8ea",
+                        "surface-container-highest": "#e0e3e5",
+                        "background": "#f8f9fb",
+                        "on-primary": "#ffffff",
+                        "surface-tint": "#296195",
+                        "secondary-fixed-dim": "#82d4d4",
+                        "secondary-fixed": "#9ef1f0",
+                        "on-primary-container": "#87baf3",
+                        "surface-bright": "#f8f9fb",
+                        "on-surface": "#191c1e",
+                        "on-background": "#191c1e",
+                        "on-primary-fixed": "#001d35",
+                        "tertiary-container": "#314b56",
+                        "on-tertiary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "on-secondary-container": "#077070",
+                        "outline-variant": "#c1c7d0",
+                        "on-tertiary-fixed": "#021f29",
+                        "on-secondary-fixed": "#002020",
+                        "surface-container-lowest": "#ffffff",
+                        "surface": "#f8f9fb",
+                        "tertiary-fixed-dim": "#afcbd8",
+                        "tertiary-fixed": "#cbe7f5",
+                        "inverse-surface": "#2d3133",
+                        "primary-container": "#004a7c",
+                        "secondary-container": "#9ef1f0"
+                    },
+                    fontFamily: {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+        }
+        .primary-gradient {
+            background: linear-gradient(135deg, #003358 0%, #004a7c 100%);
+        }
+        .ghost-border {
+            border: 1px solid rgba(193, 199, 208, 0.15);
+        }
+        .marker-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: .7; transform: scale(1.1); }
+        }
+        .map-gradient-overlay {
+            background: linear-gradient(to right, rgba(248, 249, 251, 0.9) 0%, rgba(248, 249, 251, 0) 20%);
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased overflow-x-hidden">
+    <div id="root"></div>
+
+    <!-- React Dependencies -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
+
+        // --- COMPONENTS ---
+
+        const AdminSidebar = () => {
+            const navigate = useNavigate();
+            const location = useLocation();
+            
+            const isActive = (path) => location.pathname === path;
+
+            return (
+                <aside className="h-screen w-64 fixed left-0 top-0 bg-slate-100 flex flex-col py-6 px-4 z-50">
+                    <div className="mb-10 px-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl primary-gradient flex items-center justify-center text-white">
+                                <span className="material-symbols-outlined">medical_services</span>
+                            </div>
+                            <div>
+                                <h1 className="text-xl font-extrabold text-sky-800 tracking-tight leading-tight">MediGo Admin</h1>
+                                <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Clinical Precision</p>
+                            </div>
+                        </div>
+                    </div>
+                    <nav className="flex-1 space-y-2">
+                        <Link to="/admin/auctions" className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-sm transition-all duration-200 ${isActive('/admin/auctions') ? 'bg-white text-sky-700 font-bold' : 'text-slate-600 hover:bg-white/50'}`}>
+                            <span className="material-symbols-outlined">gavel</span>
+                            <span>Subastas</span>
+                        </Link>
+                        <Link to="/admin/inventory" className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-sm transition-all duration-200 ${isActive('/admin/inventory') ? 'bg-white text-sky-700 font-bold' : 'text-slate-600 hover:bg-white/50'}`}>
+                            <span className="material-symbols-outlined">inventory_2</span>
+                            <span>Inventario</span>
+                        </Link>
+                        <Link to="/admin/branches" className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-sm transition-all duration-200 ${isActive('/admin/branches') ? 'bg-white text-sky-700 font-bold' : 'text-slate-600 hover:bg-white/50'}`}>
+                            <span className="material-symbols-outlined">account_tree</span>
+                            <span>Sedes</span>
+                        </Link>
+                        <Link to="/admin/users" className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-sm transition-all duration-200 ${isActive('/admin/users') ? 'bg-white text-sky-700 font-bold' : 'text-slate-600 hover:bg-white/50'}`}>
+                            <span className="material-symbols-outlined">group</span>
+                            <span>Usuarios</span>
+                        </Link>
+                    </nav>
+                    <div className="mt-auto pt-6 space-y-2">
+                        <button className="w-full mb-6 py-3 px-4 primary-gradient text-white rounded-lg font-semibold flex items-center justify-center gap-2 shadow-lg shadow-sky-900/10">
+                            <span className="material-symbols-outlined text-sm">add</span>
+                            <span>Nueva Entrada</span>
+                        </button>
+                        <button onClick={() => navigate('/')} className="flex items-center gap-3 w-full px-4 py-2 text-slate-600 hover:bg-white/50 transition-all text-left">
+                            <span className="material-symbols-outlined">logout</span>
+                            <span className="text-sm">Cerrar Sesión</span>
+                        </button>
+                    </div>
+                </aside>
+            );
+        };
+
+        const AffiliateSidebar = () => {
+            const navigate = useNavigate();
+            const location = useLocation();
+            const isActive = (path) => location.pathname === path;
+
+            return (
+                <aside className="hidden lg:flex flex-col h-screen w-64 fixed left-0 top-0 bg-slate-50 border-r border-slate-100 z-50 pt-24">
+                    <div className="px-6 mb-8">
+                        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Configuración</h2>
+                    </div>
+                    <nav className="flex-1 space-y-1">
+                        <Link to="/affiliate/map" className={`flex items-center px-4 py-3 mx-2 rounded-xl transition-all group ${isActive('/affiliate/map') ? 'bg-white text-sky-700 font-semibold shadow-sm' : 'text-slate-600 hover:bg-sky-50'}`}>
+                            <span className="material-symbols-outlined mr-3 text-slate-400 group-hover:text-sky-600">map</span>
+                            <span className="text-sm font-medium">Logistics Map</span>
+                        </Link>
+                        <Link to="/affiliate/auctions" className={`flex items-center px-4 py-3 mx-2 rounded-xl transition-all group ${isActive('/affiliate/auctions') ? 'bg-white text-sky-700 font-semibold shadow-sm' : 'text-slate-600 hover:bg-sky-50'}`}>
+                            <span className="material-symbols-outlined mr-3 text-slate-400 group-hover:text-sky-600">gavel</span>
+                            <span className="text-sm font-medium">Live Auctions</span>
+                        </Link>
+                        <Link to="/affiliate/profile" className={`flex items-center px-4 py-3 mx-2 rounded-xl transition-all group ${isActive('/affiliate/profile') ? 'bg-white text-sky-700 font-semibold shadow-sm' : 'text-slate-600 hover:bg-sky-50'}`}>
+                            <span className="material-symbols-outlined mr-3 text-slate-400 group-hover:text-sky-600">account_circle</span>
+                            <span className="text-sm font-medium">Profile Settings</span>
+                        </Link>
+                    </nav>
+                    <div className="p-4 mt-auto space-y-1">
+                        <button onClick={() => navigate('/')} className="w-full flex items-center px-4 py-3 mx-2 text-error hover:bg-error-container/20 rounded-xl transition-all text-left">
+                            <span className="material-symbols-outlined mr-3">logout</span>
+                            <span className="text-sm font-medium">Sign Out</span>
+                        </button>
+                    </div>
+                </aside>
+            );
+        };
+
+        const DriverSidebar = () => {
+            const navigate = useNavigate();
+            const location = useLocation();
+            const isActive = (path) => location.pathname === path;
+
+            return (
+                <aside className="bg-slate-50 dark:bg-slate-950 flex flex-col h-full border-r border-slate-100/10 w-72 fixed left-0 top-0 z-50">
+                    <div className="px-8 py-10">
+                        <h1 className="text-lg font-black text-sky-900 dark:text-sky-100 mb-1">Driver Portal</h1>
+                        <p className="text-xs text-slate-500 font-medium tracking-wide">Clinical Logistics Unit</p>
+                    </div>
+                    <nav className="flex-1 px-4 space-y-2">
+                        <Link to="/driver/map" className={`flex items-center gap-4 px-4 py-4 rounded-xl transition-all ${isActive('/driver/map') ? 'bg-white dark:bg-slate-900 text-teal-700 font-bold shadow-sm border-r-4 border-teal-600' : 'text-slate-600 hover:bg-slate-200'}`}>
+                            <span className="material-symbols-outlined">map</span>
+                            <span className="font-medium">Mapa de Entregas</span>
+                        </Link>
+                        <Link to="/driver/history" className={`flex items-center gap-4 px-4 py-4 rounded-xl transition-all ${isActive('/driver/history') ? 'bg-white dark:bg-slate-900 text-teal-700 font-bold shadow-sm border-r-4 border-teal-600' : 'text-slate-600 hover:bg-slate-200'}`}>
+                            <span className="material-symbols-outlined">history</span>
+                            <span className="font-medium">Historial de Viajes</span>
+                        </Link>
+                        <Link to="/driver/profile" className={`flex items-center gap-4 px-4 py-4 rounded-xl transition-all ${isActive('/driver/profile') ? 'bg-white dark:bg-slate-900 text-teal-700 font-bold shadow-sm border-r-4 border-teal-600' : 'text-slate-600 hover:bg-slate-200'}`}>
+                            <span className="material-symbols-outlined">settings_accessibility</span>
+                            <span className="font-medium">Configuración de Perfil</span>
+                        </Link>
+                    </nav>
+                    <div className="p-6 mt-auto">
+                         <button onClick={() => navigate('/')} className="w-full flex items-center gap-4 px-4 py-2 text-slate-600 hover:text-sky-900 transition-all text-left">
+                            <span className="material-symbols-outlined">logout</span>
+                            <span className="text-sm">Sign Out</span>
+                        </button>
+                    </div>
+                </aside>
+            );
+        };
+
+        // --- PAGES ---
+
+        const Login = () => {
+            const navigate = useNavigate();
+            return (
+                <main className="min-h-screen flex flex-col md:flex-row">
+                    <section className="relative w-full md:w-1/2 lg:w-[55%] h-64 md:h-auto overflow-hidden flex items-center justify-center">
+                        <div className="absolute inset-0 z-0">
+                            <img className="w-full h-full object-cover grayscale-[20%] contrast-[1.1]" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDsfnvrFrqAXTK1lHb1UiOYHvNioYYT-bHVI1mgNhzRzf_q8PkUEl7HaC2sR7QsV02nSWRHcdG8-PRZ-782zOBqOZr8oYgfjCUGgLsWXs3Wpq5CalV8ClwcftqghXxbINIRmLwfS-9Pl0WcrS4FunQpZefbUOp8UDwInbk6tT6RbUN6cscGDG43vnehQwwjnM4hDKHMIwGIMIQHvHFd2L-5P-H4XwaJBU00FnqUBfLUjwX5MNb_v9NOf34ydlUdvH_RA3MFiiPl9ueg" />
+                            <div className="absolute inset-0 bg-primary/20 mix-blend-multiply"></div>
+                            <div className="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent"></div>
+                        </div>
+                        <div className="relative z-10 px-12 py-16 hidden md:flex flex-col h-full justify-between w-full">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-white">medical_services</span>
+                                </div>
+                                <span className="font-headline font-black tracking-tighter text-3xl text-white">MediGo</span>
+                            </div>
+                            <div className="max-w-md">
+                                <h2 className="font-headline text-5xl font-extrabold text-white leading-tight mb-6">The Future of <br/>Clinical Governance.</h2>
+                                <p className="text-white/80 text-lg font-light leading-relaxed">Access high-fidelity diagnostics and patient care metrics through our encrypted clinical portal.</p>
+                            </div>
+                            <div className="text-white/60 text-xs font-label uppercase tracking-[0.2em]">MediGo Systems © 2026</div>
+                        </div>
+                    </section>
+                    <section className="w-full md:w-1/2 lg:w-[45%] flex flex-col items-center justify-center px-6 py-12 md:px-16 lg:px-24 bg-surface">
+                        <div className="w-full max-w-md">
+                            <header className="mb-10 text-center md:text-left">
+                                <h1 className="font-headline text-3xl font-bold text-primary mb-2">Welcome Back</h1>
+                                <p className="text-on-surface-variant font-medium">Your clinical journey starts here</p>
+                            </header>
+                            <form className="space-y-6">
+                                <div>
+                                    <label className="block text-xs font-bold text-primary uppercase tracking-widest mb-2 ml-1">Institutional Email</label>
+                                    <div className="relative">
+                                        <input className="w-full bg-surface-container-high border-none rounded-xl py-4 pl-12 pr-4 text-on-surface focus:ring-2 focus:ring-primary" placeholder="dr.smith@hospital.medigo" type="email"/>
+                                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">alternate_email</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-primary uppercase tracking-widest mb-2 ml-1">Password</label>
+                                    <div className="relative">
+                                        <input className="w-full bg-surface-container-high border-none rounded-xl py-4 pl-12 pr-4 text-on-surface focus:ring-2 focus:ring-primary" placeholder="••••••••••••" type="password"/>
+                                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">lock</span>
+                                    </div>
+                                </div>
+                                <button onClick={() => navigate('/admin/auctions')} type="button" className="w-full primary-gradient text-white font-headline font-bold py-4 rounded-xl shadow-lg hover:scale-[1.02] transition-all">
+                                    Log In as Admin
+                                </button>
+                                <button onClick={() => navigate('/affiliate/auctions')} type="button" className="w-full bg-secondary text-white font-headline font-bold py-4 rounded-xl shadow-lg hover:scale-[1.02] transition-all mt-2">
+                                    Log In as Affiliate
+                                </button>
+                                <button onClick={() => navigate('/driver/map')} type="button" className="w-full bg-tertiary text-white font-headline font-bold py-4 rounded-xl shadow-lg hover:scale-[1.02] transition-all mt-2">
+                                    Log In as Driver
+                                </button>
+                                <div className="mt-6 text-center">
+                                    <p className="text-sm text-on-surface-variant">Don't have an account? <Link to="/register" className="font-bold text-secondary hover:underline">Create one</Link></p>
+                                </div>
+                            </form>
+                        </div>
+                    </section>
+                </main>
+            );
+        };
+
+        const Register = () => {
+             const navigate = useNavigate();
+             return (
+                <main className="min-h-screen flex flex-col md:flex-row overflow-hidden">
+                    <section className="hidden md:flex md:w-5/12 lg:w-1/2 relative bg-primary-container overflow-hidden items-center justify-center p-12">
+                        <div className="absolute inset-0 z-0">
+                            <img className="w-full h-full object-cover mix-blend-overlay opacity-60" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCSeVDddirN5XJUbfIHx7QlLzcrt0glP66maL6T7n7W1Sr6692iXK_Egf8wfQ_zbh9j-vFIZ3abP7SECSui2N6GpD6BEBFd54wlUU4PHoOUUdyiG-sZ3wytVwVNcWnTsf7nj6iL4iee_6dDANtn8-PvTHZv3Evch_HN8qM-IlOYicSBF7Rk6cPp-x9_RxHKiJtoDcTd25GkiJuEM6m4VoCuLjiymYrczE7m_uPY5Q6jrSWuTAfNxTH12NzkxL68nTrj-OLV3lBzq8zI" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/40 to-transparent"></div>
+                        </div>
+                        <div className="relative z-10 max-w-lg text-white">
+                            <span className="text-secondary-fixed font-headline font-bold text-6xl tracking-tighter block mb-2">MediGo</span>
+                            <h1 className="font-headline text-5xl font-extrabold tracking-tight leading-tight mb-8">La salud conectada a través de la <span className="text-secondary-fixed">logística.</span></h1>
+                        </div>
+                    </section>
+                    <section className="flex-1 flex items-center justify-center bg-surface p-6 md:p-12 lg:p-24">
+                        <div className="w-full max-w-md">
+                            <h2 className="text-primary font-headline text-3xl font-bold mb-2">Crear Cuenta</h2>
+                            <form className="space-y-8 mt-10">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <button type="button" className="flex flex-col items-center justify-center p-4 rounded-xl bg-primary text-white">Afiliado</button>
+                                    <button type="button" className="flex flex-col items-center justify-center p-4 rounded-xl bg-surface-container-low">Repartidor</button>
+                                </div>
+                                <input className="w-full border-b border-outline bg-transparent py-4 focus:ring-0 focus:border-primary outline-none" placeholder="Nombre Completo" />
+                                <input className="w-full border-b border-outline bg-transparent py-4 focus:ring-0 focus:border-primary outline-none" placeholder="Correo Electrónico" />
+                                <input className="w-full border-b border-outline bg-transparent py-4 focus:ring-0 focus:border-primary outline-none" type="password" placeholder="Contraseña" />
+                                <button type="button" onClick={() => navigate('/')} className="w-full primary-gradient text-white font-headline font-bold py-5 rounded-xl shadow-lg uppercase tracking-widest">Registrarse</button>
+                                <p className="text-center text-sm">¿Ya tienes cuenta? <Link to="/" className="text-primary font-bold hover:underline">Log In</Link></p>
+                            </form>
+                        </div>
+                    </section>
+                </main>
+             );
+        };
+
+        const AdminAuctions = () => (
+            <div className="bg-background text-on-background font-body min-h-screen">
+                <AdminSidebar />
+                <main className="ml-64 min-h-screen">
+                    <header className="bg-slate-50/80 backdrop-blur-md sticky top-0 z-40 h-16 flex justify-between items-center w-full px-8 shadow-sm">
+                        <div className="flex items-center gap-4 flex-1">
+                            <div className="relative w-full max-w-md">
+                                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+                                <input className="w-full bg-surface-container border-none rounded-full py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/20" placeholder="Search auctions..." type="text"/>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="text-right">
+                                <p className="text-sm font-bold text-sky-900 leading-none">Admin User</p>
+                                <p className="text-[11px] text-slate-500 mt-1">Administrator</p>
+                            </div>
+                            <img className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBWQxdANn4N_lMGjibZcl2aLykMfVQbhTpB50kj_bnyRRpjzR62XaMkzifznbdndiBQ4lveEu4ZbwXKtC5dq-Ru1FouOkYxAr9kv-C8S68Ber9QgfomkMz05YwoK4Xogu7cMHhFpiL-7DHvMFiS1K-M6SuWeiihkTfA8hEvS7xLNtYVNVRzbcVAMgoy_FvzgmypWJsVO61wk932z208YAjfeoXAHBNu7VuSRSWzs4M0ojqCMOppUc5RbN2OewFaTEU2tEn9EPF458BG" />
+                        </div>
+                    </header>
+                    <div className="p-10 max-w-[1400px] mx-auto">
+                        <div className="flex justify-between items-end mb-12">
+                            <div>
+                                <h2 className="text-4xl font-headline font-extrabold text-primary tracking-tight">Subastas</h2>
+                                <p className="text-slate-500 mt-2 font-medium">Gestione eventos de adquisición en vivo.</p>
+                            </div>
+                            <button className="primary-gradient text-white px-8 py-4 rounded-xl font-bold flex items-center gap-3 shadow-xl">Crear Nueva Subasta</button>
+                        </div>
+                        <div className="grid grid-cols-12 gap-6 mb-12">
+                            <div className="col-span-12 lg:col-span-4 bg-surface-container-lowest p-8 rounded-xl ghost-border shadow-sm">
+                                <h3 className="text-slate-500 text-sm font-semibold uppercase tracking-wider">Subastas Activas</h3>
+                                <p className="text-5xl font-headline font-extrabold text-primary mt-2">142</p>
+                            </div>
+                            <div className="col-span-12 lg:col-span-8 bg-surface-container p-8 rounded-xl ghost-border relative overflow-hidden">
+                                <h3 className="text-slate-500 text-sm font-semibold uppercase tracking-wider mb-6">Valor Total de Subastas</h3>
+                                <p className="text-5xl font-headline font-extrabold text-primary">$2,481,200</p>
+                            </div>
+                        </div>
+                        <div className="bg-surface-container-lowest rounded-2xl ghost-border shadow-sm overflow-hidden">
+                            <table className="w-full text-left border-collapse">
+                                <thead className="bg-slate-50/50">
+                                    <tr>
+                                        <th className="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase">Medicamento y Lote</th>
+                                        <th className="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase text-center">Estado</th>
+                                        <th className="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase">Precio Inicial</th>
+                                        <th className="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase">Tiempo</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    <tr className="hover:bg-slate-50/80">
+                                        <td className="px-8 py-6 flex items-center gap-4">
+                                            <div className="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center text-primary"><span className="material-symbols-outlined">pill</span></div>
+                                            <div><p className="font-bold">Amoxicillin 500mg</p><p className="text-xs text-slate-500">Batch #AMX-2024-001</p></div>
+                                        </td>
+                                        <td className="px-8 py-6 text-center"><span className="px-3 py-1 rounded-full text-[11px] font-bold bg-secondary-container text-on-secondary-container">EN VIVO</span></td>
+                                        <td className="px-8 py-6 font-bold">$12,400.00</td>
+                                        <td className="px-8 py-6">04h 12m</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        );
+
+        const AdminInventory = () => (
+            <div className="bg-surface text-on-surface font-body min-h-screen">
+                <AdminSidebar />
+                <main className="ml-64 min-h-screen flex flex-col">
+                    <header className="bg-slate-50/80 backdrop-blur-md text-sky-900 docked full-width top-0 sticky z-40 flex justify-between items-center w-full px-8 h-16 shadow-sm">
+                         <div className="relative w-full max-w-md">
+                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+                            <input className="w-full pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-full text-sm focus:ring-2 focus:ring-primary/20" placeholder="Buscar en inventario..." type="text" />
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="text-right">
+                                <p className="text-sm font-bold text-primary">Dr. Aris Thorne</p>
+                                <p className="text-[10px] text-slate-500 uppercase font-semibold">ADMINISTRATOR</p>
+                            </div>
+                            <img className="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqvTBHGWseBoHpzjgO8lZJSBGQF0iIZdNxMp0z_fH7IrAa4z3MSM9-WYQpgxY12QHk2bCeC-uPKKAPZKdvj_8Rq-uGMml-gCx3X7bSXXwcOeAuosvfMq9qUCsnNUd-67obYWXqzt-YswyE0mn5ucceqs9Ck8wgaeRlQlV4jB5YyznWCbkEjZIfX4n9T2w_3LaGPP2r2ygpSNz6BEoK9hDmiZzNKkXtm7NIs0W5PTVkzPWYa6UfEUu-Tvvmxp_0qU-O5_YHzaqFrwu9" />
+                        </div>
+                    </header>
+                    <div className="p-8 space-y-8">
+                        <section className="flex justify-between items-end mb-12">
+                            <div><h2 className="text-4xl font-extrabold text-primary tracking-tight mb-2">Gestión de Inventario</h2><p className="text-slate-500 text-lg">Seguimiento de precisión para suministros clínicos.</p></div>
+                            <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-primary to-primary-container text-white rounded-lg font-semibold shadow-lg">Nueva Entrada</button>
+                        </section>
+                        <div className="bg-surface-container-lowest rounded-2xl p-8 shadow-sm">
+                             <table className="w-full text-left border-separate border-spacing-y-3">
+                                <thead className="text-slate-400 text-[10px] uppercase tracking-widest font-bold">
+                                    <tr><th className="px-4 py-2">NOMBRE DEL MEDICAMENTO</th><th className="px-4 py-2">CATEGORÍA</th><th className="px-4 py-2">NIVEL DE STOCK</th><th className="px-4 py-2 text-right">ACCIONES</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr className="bg-surface hover:bg-surface-container-low transition-colors rounded-xl">
+                                        <td className="px-4 py-5 font-bold">Atorvastatin 20mg</td>
+                                        <td className="px-4 py-5"><span className="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold rounded">CARDIOVASCULAR</span></td>
+                                        <td className="px-4 py-5">2,400 Unid.</td>
+                                        <td className="px-4 py-5 text-right"><span className="material-symbols-outlined cursor-pointer">edit</span></td>
+                                    </tr>
+                                </tbody>
+                             </table>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        );
+
+        const AdminBranches = () => (
+             <div className="bg-background text-on-background min-h-screen">
+                <AdminSidebar />
+                <main className="ml-64 min-h-screen">
+                    <header className="bg-slate-50/80 backdrop-blur-md sticky top-0 z-40 h-16 flex justify-between items-center w-full px-8 shadow-sm">
+                        <h1 className="text-xl font-bold">Sucursales</h1>
+                    </header>
+                    <div className="p-8 max-w-7xl mx-auto space-y-12">
+                        <div className="grid grid-cols-12 gap-8">
+                             <div className="col-span-12 lg:col-span-4 bg-surface-container-lowest rounded-xl p-8 shadow-sm">
+                                <h3 className="text-xl font-bold text-primary mb-6">Agregar Nueva Sede</h3>
+                                <input className="w-full bg-surface-container-high border-none rounded-lg py-3 px-4 mb-4" placeholder="Nombre de la Sede" />
+                                <button className="w-full primary-gradient text-white py-4 rounded-lg font-bold">Registrar Sede</button>
+                             </div>
+                             <div className="col-span-12 lg:col-span-8 bg-surface-container-low rounded-xl overflow-hidden h-[400px] relative">
+                                <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCMFUEeKWGg2fry79xvkx6rTeb-4UsPPUncikoippBydt7z0lAQ56Gy4nLQtNTmlCZ6W9lytf0EELVDO5QKRXtjUYjYY95qvTDS8r4Rvkvd9tCxsyasdNtFE1OHnjGWNUyKq-sWflMWflUoUbRVqD-hSHZIbENN2RI1y4MY1xSyl9AKjgqgtM-ZSFuz-yRuSNP_QsvbjwyRGh_1Ep8QwuRT5N0F4ok09KjA-5DR8pu0hPHLJFG7nhMYYO5dQcuyjneBYOk8wbjsV0wL" className="w-full h-full object-cover opacity-60 grayscale" />
+                             </div>
+                        </div>
+                    </div>
+                </main>
+             </div>
+        );
+
+        const AdminUsers = () => (
+            <div className="flex min-h-screen">
+                <AdminSidebar />
+                <main className="flex-1 ml-64 min-h-screen">
+                    <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md shadow-sm flex justify-between items-center px-8 py-4">
+                        <h2 className="font-headline text-xl font-bold text-cyan-900">Gestión de Usuarios</h2>
+                    </header>
+                    <div className="p-8 space-y-8">
+                         <section className="bg-surface-container-lowest rounded-2xl shadow-sm overflow-hidden">
+                             <table className="w-full text-left">
+                                <thead className="bg-surface-container-low/50">
+                                    <tr><th className="px-8 py-4 uppercase text-[11px]">Nombre Completo</th><th className="px-6 py-4 uppercase text-[11px]">Correo</th><th className="px-6 py-4 uppercase text-[11px]">Estado</th></tr>
+                                </thead>
+                                <tbody className="divide-y divide-surface-container">
+                                    <tr>
+                                        <td className="px-8 py-5 text-sm font-bold">Dr. Ricardo Valencia</td>
+                                        <td className="px-6 py-5 text-sm">r.valencia@medigo.com</td>
+                                        <td className="px-6 py-5"><span className="text-secondary font-bold">Activo</span></td>
+                                    </tr>
+                                </tbody>
+                             </table>
+                         </section>
+                    </div>
+                </main>
+            </div>
+        );
+
+        const AffiliateMap = () => (
+            <div className="bg-background font-body text-on-surface overflow-hidden h-screen">
+                 <header className="bg-white/80 backdrop-blur-xl shadow-sm sticky top-0 z-50 flex justify-between items-center w-full px-8 py-4">
+                    <span className="text-2xl font-bold text-sky-900">MediGo Affiliate</span>
+                    <button className="bg-primary text-white px-6 py-2 rounded-md font-semibold text-sm">Nuevo Pedido</button>
+                 </header>
+                 <div className="flex h-[calc(100vh-76px)]">
+                    <AffiliateSidebar />
+                    <main className="flex-1 relative flex lg:ml-64">
+                        <div className="flex-1 relative bg-slate-200">
+                            <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjbN4oniwwyOEMsFM0zsG9ucDESQkOZiG2j7Y33J6V2_2wcltCa9pQLKs6J_rB6snK1lKDWeBrHqflFhNYT_59eHkLgzKYk5Ph9PORKlsX0JrN8A0gY7xK42GbcZA6DmZB_WU2wpooJFX35OZ1U0ImWOPG7SQHCR-sv0I1s1tPLjTuNyuSqiIclHqaeYGAtz6Ra7Xtadeef-KrXMp80e65IBRTAmISgB-p2NNcjGT0xEDTKbIjGt0i2ZEXGHW5jQ6WSo2MUYzX3VMa" />
+                            <div className="absolute top-1/4 left-1/3 marker-pulse bg-primary w-8 h-8 rounded-full border-2 border-white"></div>
+                        </div>
+                        <aside className="w-96 h-full bg-white/95 border-l p-8">
+                             <h3 className="text-xl font-extrabold text-primary mb-6">Logística de Pedido</h3>
+                             <div className="space-y-4">
+                                <input className="w-full bg-slate-100 p-4 rounded-xl border-none" placeholder="Medicamento" />
+                                <button className="w-full py-4 bg-primary text-white font-bold rounded-xl mt-8">Confirmar Logística</button>
+                             </div>
+                        </aside>
+                    </main>
+                 </div>
+            </div>
+        );
+
+        const AffiliateAuctions = () => (
+            <div className="bg-background text-on-surface min-h-screen">
+                <header className="bg-white/80 backdrop-blur-xl fixed top-0 w-full z-40 px-8 py-4 flex justify-between border-b">
+                    <span className="text-2xl font-bold text-sky-900">MediGo Affiliate</span>
+                </header>
+                <AffiliateSidebar />
+                <main className="lg:pl-64 pt-24 pb-24 px-12">
+                    <h1 className="text-4xl font-extrabold text-primary mb-8">Centro de Subastas</h1>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <div className="bg-white rounded-3xl overflow-hidden shadow-sm border p-8">
+                            <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_-81jLihfEnYj5MeakpJSJeEnvJ9xiBu72yDnNX8mCJJuAdRqwaKBcYhesSkT0KmlhGDWZ2WVjJOAvDiu4DGieMnzjzfZgs1nAIxS_WdaiLj8wseAkhnETOSZc6fPkDSW1O9H_ElB8j8ddZZ6DOpW6YA1emd_D9wuSoVpc-Za9ayg8Z5CUcmzmXxC-_vhqS2-odkxesXK-RZ-nrDyg7fDiG8wQQm15LyZKrbarrmqHwEKrgkB2z1PFzGldYwQ16SybRijsybA8OCO" className="w-full h-40 object-cover rounded-xl mb-4" />
+                            <h4 className="text-lg font-bold">Insulina Glargina</h4>
+                            <p className="text-primary text-xl font-bold mt-4">$12,450,000</p>
+                            <button className="w-full primary-gradient text-white py-4 rounded-2xl font-bold mt-6">Pujar Ahora</button>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        );
+
+        const AffiliateProfile = () => (
+             <div className="bg-background min-h-screen">
+                <header className="bg-white/80 fixed top-0 w-full z-40 px-8 py-4 flex border-b">
+                    <span className="text-2xl font-bold text-sky-900">MediGo Affiliate</span>
+                </header>
+                <AffiliateSidebar />
+                <main className="lg:pl-64 pt-24 px-12">
+                    <h1 className="text-4xl font-extrabold text-primary mb-8">Perfil del Afiliado</h1>
+                    <div className="bg-white rounded-3xl p-8 border shadow-sm max-w-2xl">
+                        <div className="space-y-6">
+                            <div><label className="text-sm font-bold">Nombre Completo</label><input className="w-full bg-slate-50 border-none rounded-xl p-4" value="Dr. Alejandro Ramírez" readOnly /></div>
+                            <div><label className="text-sm font-bold">Email</label><input className="w-full bg-slate-50 border-none rounded-xl p-4" value="a.ramirez@clinica-central.es" readOnly /></div>
+                            <button className="primary-gradient text-white font-bold py-3 px-8 rounded-xl">Guardar Cambios</button>
+                        </div>
+                    </div>
+                </main>
+             </div>
+        );
+
+        const DriverMap = () => (
+            <div className="bg-surface h-screen overflow-hidden">
+                <DriverSidebar />
+                <main className="ml-72 pt-16 h-full relative">
+                    <div className="absolute inset-0 bg-slate-100">
+                        <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuAwjnP8A_l6GXYHx3BO6JrZexfgAVRJoumb82nDZGAw9IkXU2-7QiODHpPcEHfTvQrqq4RAtAG1111JWLXabE8YYyHcpJUyf3xnCx7NNK-FMZgtII-h7Fe3v15oWKpybhlsAg8DFVh4E4naakl-rQrEIQ3zuCO_8GKAOOCJR9S3dq5_E8S7pl_jFvIXCj2Jren-Yfl9NKCb1wP83TnrkPflF8dWBg_Rl7mH2T8UFewf9P3T9Xll1Ca-X-Mbw2Zo-uDKS0zFWyQC3aET" className="w-full h-full object-cover" />
+                        <div className="absolute top-[45%] left-[45%] w-6 h-6 bg-sky-600 rounded-full border-4 border-white shadow-xl"></div>
+                    </div>
+                    <div className="absolute bottom-10 left-10 w-[420px] bg-white rounded-2xl shadow-2xl p-8 border">
+                        <span className="bg-sky-100 text-sky-800 text-[10px] font-bold px-2 py-1 rounded">EPS Sanitas</span>
+                        <h2 className="text-2xl font-bold mt-2">Pedido #MG-8829</h2>
+                        <p className="text-slate-500 text-sm mb-6">Entrega de 12 ítems • 2.4 km</p>
+                        <button className="w-full primary-gradient text-white py-4 rounded-xl font-bold">Aceptar Pedido</button>
+                    </div>
+                </main>
+            </div>
+        );
+
+        const DriverHistory = () => (
+            <div className="bg-surface min-h-screen">
+                <DriverSidebar />
+                <main className="ml-72 p-12">
+                    <h3 className="text-3xl font-extrabold text-primary mb-8">Historial de Actividad</h3>
+                    <div className="grid grid-cols-3 gap-8 mb-12">
+                        <div className="bg-white p-8 rounded-xl shadow-sm">
+                            <p className="text-xs font-bold text-slate-400 uppercase">Viajes Totales</p>
+                            <p className="text-4xl font-black text-primary">128</p>
+                        </div>
+                    </div>
+                    <div className="space-y-4">
+                        <div className="bg-white grid grid-cols-4 px-8 py-6 rounded-xl shadow-sm">
+                            <div className="font-bold">#MG-82910</div>
+                            <div>12 Oct 2023</div>
+                            <div>Hospital Ángeles</div>
+                            <div className="text-right text-secondary font-bold">Completado</div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        );
+
+        const DriverProfile = () => (
+            <div className="bg-surface min-h-screen">
+                <DriverSidebar />
+                <main className="ml-72 p-12">
+                    <h1 className="text-2xl font-bold text-sky-900 mb-8">Configuración de Perfil</h1>
+                    <div className="max-w-xl bg-white p-8 rounded-xl border shadow-sm">
+                        <div className="flex flex-col items-center mb-8">
+                            <img className="w-32 h-32 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBoskHY9L7pCz7LAAraqrE9Zcu4G9fHwScz5dp7VCPf9Vx7ckNp2xEHhknrxbv9Aw5PPp_43vcnoakQnbumxkYq6TGDZWee_yJbe9gfDmhx8jzXkfzcVFUZrN7xgW1a4uix4LRrcIRAdYgPWrYO--zqUo1ZZYvEl-ApDvO70Aiw_lzHACtHRNUcVo12sy94jDMYJVqTCL7bmPytKx5zpCQ9GhqM8a72RmFTowlIDqXv4W3yAPC_5m3ct6PLdZFzCr9b7KXPXmCgL4v9" />
+                            <h2 className="text-xl font-bold mt-4">Carlos Rivera</h2>
+                        </div>
+                        <input className="w-full bg-slate-50 p-4 rounded-xl border-none mb-4" value="Carlos Rivera Santillán" readOnly />
+                        <button className="primary-gradient text-white font-bold py-3 px-8 rounded-xl w-full">Guardar Cambios</button>
+                    </div>
+                </main>
+            </div>
+        );
+
+        // --- APP ENTRY ---
+
+        const App = () => {
+            return (
+                <MemoryRouter>
+                    <Routes>
+                        <Route path="/" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
+                        
+                        {/* Admin Group */}
+                        <Route path="/admin/auctions" element={<AdminAuctions />} />
+                        <Route path="/admin/inventory" element={<AdminInventory />} />
+                        <Route path="/admin/branches" element={<AdminBranches />} />
+                        <Route path="/admin/users" element={<AdminUsers />} />
+
+                        {/* Affiliate Group */}
+                        <Route path="/affiliate/map" element={<AffiliateMap />} />
+                        <Route path="/affiliate/auctions" element={<AffiliateAuctions />} />
+                        <Route path="/affiliate/profile" element={<AffiliateProfile />} />
+
+                        {/* Driver Group */}
+                        <Route path="/driver/map" element={<DriverMap />} />
+                        <Route path="/driver/history" element={<DriverHistory />} />
+                        <Route path="/driver/profile" element={<DriverProfile />} />
+                    </Routes>
+                    
+                    {/* Global Footer (Visible on public/main screens) */}
+                    <footer className="bg-white dark:bg-slate-900 w-full py-6 mt-auto border-t border-slate-100 flex flex-col md:flex-row justify-between items-center px-12 z-50">
+                        <p className="font-['Inter'] text-xs uppercase tracking-widest text-slate-400">
+                            © 2024 MediGo Systems. HIPAA Compliant Sanctuary.
+                        </p>
+                        <div className="flex gap-8 mt-4 md:mt-0">
+                            <span className="font-['Inter'] text-xs uppercase tracking-widest text-slate-400">Privacy Policy</span>
+                            <span className="font-['Inter'] text-xs uppercase tracking-widest text-slate-400">Terms of Service</span>
+                        </div>
+                    </footer>
+                </MemoryRouter>
+            );
+        };
+
+        const container = document.getElementById('root');
+        const root = createRoot(container);
+        root.render(<App />);
+    </script>
+</body>
+</html>

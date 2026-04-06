@@ -1,0 +1,108 @@
+/* ============================================================
+   MediGo Design Tokens — "The Neon Pulse of Care"
+   Sistema de diseño extraído de Stitch (Acceso Neofarma Pulse)
+   Modo: Dark | Fuentes: Plus Jakarta Sans + Manrope
+   ============================================================ */
+
+:root {
+  /* ── Superficie ── */
+  --surface:                  #131313;
+  --surface-dim:              #131313;
+  --surface-bright:           #393939;
+  --surface-container-lowest: #0e0e0e;
+  --surface-container-low:    #1c1b1b;
+  --surface-container:        #201f1f;
+  --surface-container-high:   #2a2a2a;
+  --surface-container-highest:#353534;
+  --surface-variant:          #353534;
+  --surface-tint:             #d2bbff;
+
+  /* ── Primario (Purple) ── */
+  --primary:                  #d2bbff;
+  --primary-container:        #7c3aed;
+  --primary-fixed:            #eaddff;
+  --primary-fixed-dim:        #d2bbff;
+  --on-primary:               #3f008e;
+  --on-primary-container:     #ede0ff;
+  --on-primary-fixed:         #25005a;
+  --on-primary-fixed-variant: #5a00c6;
+  --inverse-primary:          #732ee4;
+
+  /* ── Secundario (Neon Green) ── */
+  --secondary:                #ebffe6;
+  --secondary-container:      #00fe66;
+  --secondary-fixed:          #6bff83;
+  --secondary-fixed-dim:      #00e55b;
+  --on-secondary:             #003911;
+  --on-secondary-container:   #007128;
+  --on-secondary-fixed:       #002107;
+  --on-secondary-fixed-variant:#00531b;
+
+  /* ── Terciario (Cyan/Sky) ── */
+  --tertiary:                 #7bd0ff;
+  --tertiary-container:       #006e95;
+  --tertiary-fixed:           #c4e7ff;
+  --tertiary-fixed-dim:       #7bd0ff;
+  --on-tertiary:              #00354a;
+  --on-tertiary-container:    #caeaff;
+  --on-tertiary-fixed:        #001e2c;
+  --on-tertiary-fixed-variant:#004c69;
+
+  /* ── Texto / On-Surface ── */
+  --on-surface:               #e5e2e1;
+  --on-surface-variant:       #ccc3d8;
+  --on-background:            #e5e2e1;
+  --inverse-on-surface:       #313030;
+  --inverse-surface:          #e5e2e1;
+
+  /* ── Error ── */
+  --error:                    #ffb4ab;
+  --error-container:          #93000a;
+  --on-error:                 #690005;
+  --on-error-container:       #ffdad6;
+
+  /* ── Bordes / Contornos ── */
+  --outline:                  #958da1;
+  --outline-variant:          #4a4455;
+
+  /* ── Tipografía ── */
+  --font-display:   'Plus Jakarta Sans', sans-serif;
+  --font-body:      'Manrope', sans-serif;
+
+  /* ── Espaciado ── */
+  --spacing-1:  0.25rem;
+  --spacing-2:  0.5rem;
+  --spacing-3:  0.75rem;
+  --spacing-4:  1rem;
+  --spacing-5:  1.25rem;
+  --spacing-6:  1.5rem;
+  --spacing-8:  2rem;
+  --spacing-10: 2.5rem;
+  --spacing-12: 3rem;
+  --spacing-16: 4rem;
+
+  /* ── Radios ── */
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
+  --radius-2xl:  24px;
+  --radius-full: 9999px;
+
+  /* ── Sombras ── */
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.5);
+  --shadow-lg:  0 8px 32px rgba(0,0,0,0.6);
+  --shadow-glow-purple: 0 0 24px rgba(124, 58, 237, 0.25);
+  --shadow-glow-green:  0 0 24px rgba(0, 254, 102, 0.2);
+
+  /* ── Transiciones ── */
+  --transition-fast:   0.15s ease;
+  --transition-normal: 0.25s ease;
+  --transition-slow:   0.4s ease;
+
+  /* ── Gradientes ── */
+  --gradient-primary: linear-gradient(135deg, #7c3aed 0%, #d2bbff 100%);
+  --gradient-dark:    linear-gradient(180deg, #201f1f 0%, #131313 100%);
+  --gradient-glow:    radial-gradient(ellipse at 50% 0%, rgba(124,58,237,0.15) 0%, transparent 70%);
+}
