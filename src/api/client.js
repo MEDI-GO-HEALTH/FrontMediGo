@@ -44,7 +44,7 @@ client.interceptors.response.use(
       // 🚪 Token expirado o inválido → limpiar sesión y redirigir
       localStorage.removeItem('medigo_token');
       localStorage.removeItem('medigo_user');
-      window.location.href = '/';
+      globalThis.location.href = '/';
     }
     return Promise.reject(error);
   }
