@@ -8,7 +8,8 @@
  * - Responsive: Stack vertical en mobile
  */
 
-import { useNavigate, Link } from 'react-router'
+import { useState } from 'react'
+import { useNavigate, Link, useLocation } from 'react-router'
 import { Eye, EyeOff, Lock, Loader2 } from 'lucide-react'
 import { login } from '../../api/authService'
 import heroImage from '../../assets/LoginImg.png'
@@ -27,6 +28,9 @@ const ROLE_REDIRECTS = {
 
 export default function Login() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const justRegistered = new URLSearchParams(location.search).get('registered') === '1'
+  const [hideRegisteredNotice, setHideRegisteredNotice] = useState(false)
   const {
     form,
     showPass,
@@ -83,6 +87,7 @@ export default function Login() {
   // Submit del formulario
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setHideRegisteredNotice(true)
     
     if (!validateForm()) return
 
@@ -106,6 +111,13 @@ export default function Login() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleLoginChange = (event) => {
+    if (!hideRegisteredNotice) {
+      setHideRegisteredNotice(true)
+    }
+    handleChange(event)
   }
 
   return (
@@ -181,7 +193,7 @@ export default function Login() {
                 type="email"
                 name="email"
                 value={form.email}
-                onChange={handleChange}
+                onChange={handleLoginChange}
                 onBlur={handleBlur}
                 placeholder="dr.name@healthcare.com"
                 autoComplete="email"
@@ -206,7 +218,7 @@ export default function Login() {
                   type={showPass ? 'text' : 'password'}
                   name="password"
                   value={form.password}
-                  onChange={handleChange}
+                  onChange={handleLoginChange}
                   onBlur={handleBlur}
                   placeholder="••••••••"
                   autoComplete="current-password"
@@ -225,6 +237,12 @@ export default function Login() {
             </div>
 
             {/* Error Message */}
+            {justRegistered && !hideRegisteredNotice && !error && (
+              <div className="success-message">
+                Cuenta creada correctamente. Inicia sesión para continuar.
+              </div>
+            )}
+
             {error && (
               <div className="error-message">
                 {error}
