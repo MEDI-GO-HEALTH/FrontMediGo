@@ -104,7 +104,7 @@ export default function Inventario() {
         if (listRes.status === 'fulfilled') {
           const source = listRes.value?.data || listRes.value
           if (Array.isArray(source) && source.length > 0) {
-            setItems(source.map(mapInventoryFromApi))
+            setItems(source.map((item, index) => mapInventoryFromApi(item, index)))
           }
         }
 

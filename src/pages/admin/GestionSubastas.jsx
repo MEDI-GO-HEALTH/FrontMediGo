@@ -91,7 +91,7 @@ export default function GestionSubastas() {
 
         const source = response?.data || response
         if (Array.isArray(source) && source.length > 0) {
-          const mapped = source.map(mapAuctionFromApi)
+          const mapped = source.map((item, index) => mapAuctionFromApi(item, index))
           const active = mapped.filter((item) => item.active)
           const totalValue = mapped.reduce((acc, item) => acc + item.startPrice, 0)
           const topBid = Math.max(...mapped.map((item) => item.startPrice), FALLBACK_OVERVIEW.topBid)

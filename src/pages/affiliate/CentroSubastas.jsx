@@ -178,7 +178,7 @@ export default function CentroSubastas() {
           return
         }
 
-        const mapped = list.map(mapApiAuction)
+        const mapped = list.map((item, index) => mapApiAuction(item, index))
         const [first, second, ...rest] = mapped
 
         const featuredSource = rest[0] || second || first
@@ -215,7 +215,10 @@ export default function CentroSubastas() {
 
   const filteredAuctions = useMemo(() => {
     const query = search.trim().toLowerCase()
-    const source = dashboard.activeAuctions.length > 0 ? dashboard.activeAuctions : FALLBACK_AUCTIONS.map(mapApiAuction)
+    const source =
+      dashboard.activeAuctions.length > 0
+        ? dashboard.activeAuctions
+        : FALLBACK_AUCTIONS.map((item, index) => mapApiAuction(item, index))
 
     return source.filter((item) => {
       const bySearch = !query || `${item.id} ${item.name}`.toLowerCase().includes(query)
