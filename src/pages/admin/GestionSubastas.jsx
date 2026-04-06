@@ -259,7 +259,7 @@ export default function GestionSubastas() {
 
             <button type="button" className="create-auction-btn" onClick={handleCreateAuction} disabled={creating}>
               <span className="material-symbols-outlined">add_circle</span>
-              Crear Nueva Subasta
+              {' '}Crear Nueva Subasta
             </button>
           </div>
 
@@ -301,7 +301,7 @@ export default function GestionSubastas() {
               <h3>Estado del Sistema</h3>
               <div className="live-indicator">
                 <i />
-                Todos los Nodos Operativos
+                {' '}Todos los Nodos Operativos
               </div>
               <div className="system-row">
                 <span>Aprobaciones Pendientes</span>
@@ -358,7 +358,7 @@ export default function GestionSubastas() {
                       <td>
                         <div className={`time-cell ${auction.active ? 'live' : 'pending'}`}>
                           <span className="material-symbols-outlined">schedule</span>
-                          {auction.remaining}
+                          {' '}{auction.remaining}
                         </div>
                       </td>
                       <td className="right">

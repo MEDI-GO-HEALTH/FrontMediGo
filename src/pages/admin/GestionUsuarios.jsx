@@ -128,7 +128,7 @@ export default function GestionUsuarios() {
   }
 
   const handleDelete = async (user) => {
-    if (!window.confirm(`Eliminar a ${user.name}?`)) {
+    if (!globalThis.confirm(`Eliminar a ${user.name}?`)) {
       return
     }
 
@@ -309,7 +309,7 @@ export default function GestionUsuarios() {
                             onClick={() => handleToggleStatus(user)}
                           >
                             <span className="material-symbols-outlined">{user.active ? 'check_circle' : 'cancel'}</span>
-                            {user.active ? 'Activo' : 'Inactivo'}
+                            {' '}{user.active ? 'Activo' : 'Inactivo'}
                           </button>
                         </td>
                         <td>

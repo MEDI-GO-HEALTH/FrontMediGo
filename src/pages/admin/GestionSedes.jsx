@@ -314,7 +314,7 @@ export default function GestionSedes() {
 
                   <button type="button" className="confirm-btn" onClick={handleRegisterBranch} disabled={saving}>
                     <span className="material-symbols-outlined">domain_add</span>
-                    {saving ? 'Guardando...' : 'Confirmar Registro de Sede'}
+                    {' '}{saving ? 'Guardando...' : 'Confirmar Registro de Sede'}
                   </button>
                 </form>
               </article>
@@ -339,7 +339,7 @@ export default function GestionSedes() {
 
                 <div className="map-live-tag">
                   <i />
-                  Cobertura de Red en Vivo: 94%
+                  {' '}Cobertura de Red en Vivo: 94%
                 </div>
 
                 <div className="map-zoom-actions">
@@ -356,7 +356,7 @@ export default function GestionSedes() {
                 <div className="directory-head">
                   <h3>Directorio de Sedes</h3>
                   <button type="button">
-                    Ver Reportes Detallados
+                    Ver Reportes Detallados{' '}
                     <span className="material-symbols-outlined">arrow_forward</span>
                   </button>
                 </div>
@@ -404,7 +404,7 @@ export default function GestionSedes() {
         <footer className="branches-footer">
           <div>
             <span>ESTADO DE LA RED: OPTIMO</span>
-            <i />
+            {' '}<i />{' '}
             <span>VERSION BD: 4.0.2-CLINICAL</span>
           </div>
           <small>© 2024 MediGo Systems - Todos los derechos reservados</small>
