@@ -171,36 +171,36 @@ export default function GestionSedes() {
         <nav className="branches-nav" aria-label="Navegacion administrador">
           <button type="button" onClick={() => navigate(ROUTES.ADMIN.AUCTIONS)}>
             <span className="material-symbols-outlined">gavel</span>
-            Subastas
+            {' '}Subastas
           </button>
           <button type="button" onClick={() => navigate(ROUTES.ADMIN.INVENTORY)}>
             <span className="material-symbols-outlined">inventory_2</span>
-            Inventario
+            {' '}Inventario
           </button>
           <button type="button" className="active" onClick={() => navigate(ROUTES.ADMIN.BRANCHES)}>
             <span className="material-symbols-outlined">account_tree</span>
-            Sedes
+            {' '}Sedes
           </button>
           <button type="button" onClick={() => navigate(ROUTES.ADMIN.USERS)}>
             <span className="material-symbols-outlined">group</span>
-            Usuarios
+            {' '}Usuarios
           </button>
         </nav>
 
         <div className="branches-side-bottom">
           <button type="button" className="new-income-btn">
             <span className="material-symbols-outlined">add</span>
-            Nuevo Ingreso
+            {' '}Nuevo Ingreso
           </button>
 
           <button type="button" className="side-link">
             <span className="material-symbols-outlined">help</span>
-            Soporte
+            {' '}Soporte
           </button>
 
           <button type="button" className="side-link danger" onClick={handleLogout}>
             <span className="material-symbols-outlined">logout</span>
-            Cerrar Sesion
+            {' '}Cerrar Sesion
           </button>
         </div>
       </aside>

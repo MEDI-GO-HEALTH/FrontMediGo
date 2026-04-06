@@ -187,34 +187,34 @@ export default function GestionSubastas() {
         <nav className="auctions-nav" aria-label="Navegacion administrador">
           <button type="button" className="active" onClick={() => navigate(ROUTES.ADMIN.AUCTIONS)}>
             <span className="material-symbols-outlined">gavel</span>
-            Subastas
+            {' '}Subastas
           </button>
           <button type="button" onClick={() => navigate(ROUTES.ADMIN.INVENTORY)}>
             <span className="material-symbols-outlined">inventory_2</span>
-            Inventario
+            {' '}Inventario
           </button>
           <button type="button" onClick={() => navigate(ROUTES.ADMIN.BRANCHES)}>
             <span className="material-symbols-outlined">account_tree</span>
-            Sedes
+            {' '}Sedes
           </button>
           <button type="button" onClick={() => navigate(ROUTES.ADMIN.USERS)}>
             <span className="material-symbols-outlined">person</span>
-            Usuarios
+            {' '}Usuarios
           </button>
         </nav>
 
         <div className="auctions-side-footer">
           <button type="button" className="new-entry-btn" onClick={handleCreateAuction} disabled={creating}>
             <span className="material-symbols-outlined">add</span>
-            {creating ? 'Creando...' : 'Nueva Entrada'}
+            {' '}{creating ? 'Creando...' : 'Nueva Entrada'}
           </button>
           <button type="button" className="side-link">
             <span className="material-symbols-outlined">help</span>
-            Soporte
+            {' '}Soporte
           </button>
           <button type="button" className="side-link" onClick={handleLogout}>
             <span className="material-symbols-outlined">logout</span>
-            Cerrar Sesion
+            {' '}Cerrar Sesion
           </button>
         </div>
       </aside>
