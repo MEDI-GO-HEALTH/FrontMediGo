@@ -1,17 +1,12 @@
 const trimTrailingSlash = (value = '') => value.replace(/\/$/, '')
 
-// Produccion/preview: mismo origen + proxy (vercel.json) para evitar CORS del navegador.
-const DEFAULT_PROD_API_BASE_URL = ''
+const DEFAULT_PROD_API_BASE_URL = 'https://ezequiel-gateway-etcrh9dxg9dwhng4.canadacentral-01.azurewebsites.net'
 const DEFAULT_DEV_API_BASE_URL = 'http://localhost:8080/api'
 const DEFAULT_API_BASE_URL = import.meta.env.DEV ? DEFAULT_DEV_API_BASE_URL : DEFAULT_PROD_API_BASE_URL
 
 const isLocalhostUrl = (value = '') => /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(value)
 
 const resolveApiBaseUrl = () => {
-  if (!import.meta.env.DEV) {
-    return DEFAULT_PROD_API_BASE_URL
-  }
-
   const envBaseUrl = trimTrailingSlash(import.meta.env.VITE_API_BASE_URL || '')
 
   if (envBaseUrl && !(isLocalhostUrl(envBaseUrl) && !import.meta.env.DEV)) {
