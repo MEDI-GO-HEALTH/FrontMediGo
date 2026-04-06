@@ -1,162 +1,342 @@
-/**
- * GestionUsuarios.jsx — Página de Gestión de Usuarios (Admin)
- *
- * 🔗 CONEXIONES AL BACKEND:
- *   src/api/usuariosService.js
- *   - getUsuarios(params)       → GET /usuarios
- *   - toggleEstadoUsuario(id, activo) → PUT /usuarios/:id/estado
- *   - cambiarRolUsuario(id, rol)      → PUT /usuarios/:id/rol
- *   - deleteUsuario(id)               → DELETE /usuarios/:id
- */
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router'
+import { cambiarRolUsuario, deleteUsuario, getUsuarios, toggleEstadoUsuario } from '../../api/usuariosService'
+import { ROUTES } from '../../constants/routes'
+import '../../styles/admin/gestion-usuarios.css'
 
-import { useState } from 'react'
-import { Search, Users, UserCheck, UserX, Shield, Truck, User, Trash2, ChevronDown } from 'lucide-react'
-import DashboardLayout from '../../components/layout/DashboardLayout'
-
-const MOCK_USERS = [
-  { id: 1, name: 'Andrea Ospina',   email: 'andrea@clinica.co',  role: 'AFILIADO',   activo: true,  joined: '12 Mar 2024', pedidos: 45 },
-  { id: 2, name: 'Carlos Méndez',   email: 'carlos@raps.co',     role: 'REPARTIDOR', activo: true,  joined: '05 Feb 2024', pedidos: 128 },
-  { id: 3, name: 'Juliana Torres',  email: 'juliana@admin.co',   role: 'ADMIN',      activo: true,  joined: '01 Jan 2024', pedidos: 0 },
-  { id: 4, name: 'Diego Ramírez',   email: 'diego@clinica.co',   role: 'AFILIADO',   activo: false, joined: '20 Mar 2024', pedidos: 12 },
-  { id: 5, name: 'Mónica Salcedo',  email: 'monica@raps.co',     role: 'REPARTIDOR', activo: true,  joined: '18 Mar 2024', pedidos: 87 },
+const FALLBACK_USERS = [
+  {
+    id: 'USR-001',
+    name: 'Andrea Ospina',
+    email: 'andrea@clinica.co',
+    role: 'AFILIADO',
+    active: true,
+    joinedAt: '12 Mar 2024',
+    deliveries: 45,
+  },
+  {
+    id: 'USR-002',
+    name: 'Carlos Mendez',
+    email: 'carlos@raps.co',
+    role: 'REPARTIDOR',
+    active: true,
+    joinedAt: '05 Feb 2024',
+    deliveries: 128,
+  },
+  {
+    id: 'USR-003',
+    name: 'Juliana Torres',
+    email: 'juliana@admin.co',
+    role: 'ADMIN',
+    active: true,
+    joinedAt: '01 Jan 2024',
+    deliveries: 0,
+  },
+  {
+    id: 'USR-004',
+    name: 'Diego Ramirez',
+    email: 'diego@clinica.co',
+    role: 'AFILIADO',
+    active: false,
+    joinedAt: '20 Mar 2024',
+    deliveries: 12,
+  },
 ]
 
-const ROLE_CONFIG = {
-  ADMIN:      { label: 'Admin',      icon: Shield, color: '#d2bbff', bg: 'rgba(124,58,237,0.15)' },
-  AFILIADO:   { label: 'Afiliado',   icon: User,   color: '#00e55b', bg: 'rgba(0,254,102,0.12)' },
-  REPARTIDOR: { label: 'Repartidor', icon: Truck,  color: '#7bd0ff', bg: 'rgba(123,208,255,0.12)' },
+const ROLE_META = {
+  ADMIN: { label: 'Admin', icon: 'shield', tone: 'admin' },
+  AFILIADO: { label: 'Afiliado', icon: 'person', tone: 'affiliate' },
+  REPARTIDOR: { label: 'Repartidor', icon: 'local_shipping', tone: 'driver' },
 }
+
+const mapUserFromApi = (item, index) => ({
+  id: item?.id || item?.codigo || `USR-${String(index + 1).padStart(3, '0')}`,
+  name: item?.name || item?.nombre || 'Usuario',
+  email: item?.email || 'sin-correo@medigo.co',
+  role: String(item?.role || item?.rol || 'AFILIADO').toUpperCase(),
+  active: Boolean(item?.active ?? item?.activo ?? true),
+  joinedAt: item?.joinedAt || item?.creadoEn || 'Fecha no disponible',
+  deliveries: Number(item?.deliveries ?? item?.pedidos ?? 0),
+})
 
 export default function GestionUsuarios() {
-  const [users,  setUsers]  = useState(MOCK_USERS)
+  const navigate = useNavigate()
+  const [users, setUsers] = useState(FALLBACK_USERS)
   const [search, setSearch] = useState('')
+  const [notice, setNotice] = useState('')
+  const [loading, setLoading] = useState(true)
 
-  // ─────────────────────────────────────────────────────────────────
-  // 📡 LLAMADA AL BACKEND — toggleEstadoUsuario(id, !activo)
-  //    PUT /usuarios/:id/estado  → { activo: boolean }
-  // ─────────────────────────────────────────────────────────────────
-  const handleToggle = async (id) => {
-    try {
-      // const updated = await toggleEstadoUsuario(id, !users.find(u=>u.id===id).activo)
-      setUsers(prev => prev.map(u => u.id === id ? { ...u, activo: !u.activo } : u))
-    } catch (err) { console.error(err) }
+  useEffect(() => {
+    let mounted = true
+
+    const loadUsers = async () => {
+      try {
+        const response = await getUsuarios({ limit: 40 })
+        if (!mounted) {
+          return
+        }
+
+        const source = response?.data || response
+        if (Array.isArray(source) && source.length > 0) {
+          setUsers(source.map(mapUserFromApi))
+        }
+      } catch {
+        if (mounted) {
+          setNotice('No se pudo sincronizar con backend. Mostrando usuarios de respaldo.')
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadUsers()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const filteredUsers = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    if (!query) {
+      return users
+    }
+
+    return users.filter((user) => `${user.name} ${user.email} ${user.role}`.toLowerCase().includes(query))
+  }, [users, search])
+
+  const totalActive = users.filter((user) => user.active).length
+  const totalInactive = users.length - totalActive
+
+  const handleLogout = () => {
+    localStorage.removeItem('medigo_token')
+    localStorage.removeItem('medigo_user')
+    navigate(ROUTES.AUTH.LOGIN, { replace: true })
   }
 
-  // ─────────────────────────────────────────────────────────────────
-  // 📡 LLAMADA AL BACKEND — deleteUsuario(id)
-  //    DELETE /usuarios/:id
-  // ─────────────────────────────────────────────────────────────────
-  const handleDelete = async (id) => {
-    if (!window.confirm('¿Eliminar este usuario permanentemente?')) return
+  const handleToggleStatus = async (user) => {
+    setUsers((previous) => previous.map((row) => (row.id === user.id ? { ...row, active: !row.active } : row)))
+
     try {
-      // await deleteUsuario(id)
-      setUsers(prev => prev.filter(u => u.id !== id))
-    } catch (err) { console.error(err) }
+      await toggleEstadoUsuario(user.id, !user.active)
+    } catch {
+      setUsers((previous) => previous.map((row) => (row.id === user.id ? { ...row, active: user.active } : row)))
+      setNotice('No se pudo actualizar el estado en backend. El cambio fue revertido localmente.')
+    }
   }
 
-  const filtered = users.filter(u =>
-    u.name.toLowerCase().includes(search.toLowerCase()) ||
-    u.email.toLowerCase().includes(search.toLowerCase())
-  )
+  const handleDelete = async (user) => {
+    if (!window.confirm(`Eliminar a ${user.name}?`)) {
+      return
+    }
 
-  const totalActivos   = users.filter(u => u.activo).length
-  const totalInactivos = users.filter(u => !u.activo).length
+    const previous = users
+    setUsers((current) => current.filter((row) => row.id !== user.id))
+
+    try {
+      await deleteUsuario(user.id)
+    } catch {
+      setUsers(previous)
+      setNotice('No se pudo eliminar en backend. Se restauraron los datos locales.')
+    }
+  }
+
+  const handleRoleChange = async (user, nextRole) => {
+    if (user.role === nextRole) {
+      return
+    }
+
+    setUsers((previous) => previous.map((row) => (row.id === user.id ? { ...row, role: nextRole } : row)))
+
+    try {
+      await cambiarRolUsuario(user.id, nextRole)
+    } catch {
+      setUsers((previous) => previous.map((row) => (row.id === user.id ? { ...row, role: user.role } : row)))
+      setNotice('No se pudo actualizar el rol en backend. El cambio fue revertido localmente.')
+    }
+  }
 
   return (
-    <DashboardLayout
-      title="Gestión de Usuarios"
-      subtitle="Administra los roles y permisos de todos los usuarios"
-    >
-      <div style={styles.statsRow}>
-        {[
-          { label: 'Total Usuarios', value: users.length, icon: Users,     color: 'var(--primary)' },
-          { label: 'Activos',        value: totalActivos,   icon: UserCheck, color: 'var(--secondary-fixed)' },
-          { label: 'Inactivos',      value: totalInactivos, icon: UserX,     color: '#ffb4ab' },
-        ].map((s, i) => (
-          <div key={i} style={styles.statCard}>
-            <div style={{ ...styles.statIcon, background: `${s.color}20` }}><s.icon size={18} style={{ color: s.color }} /></div>
-            <div>
-              <p style={styles.statLabel}>{s.label}</p>
-              <p style={{ ...styles.statValue, color: s.color }}>{s.value}</p>
-            </div>
+    <div className="admin-users-shell">
+      <aside className="users-side">
+        <div className="users-brand">
+          <div className="users-brand-icon">
+            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
+              clinical_notes
+            </span>
           </div>
-        ))}
-      </div>
-
-      <div style={styles.tableCard}>
-        <div style={styles.toolbar}>
-          <div style={styles.searchBox}>
-            <Search size={15} style={{ color: 'var(--outline)' }} />
-            <input id="usuarios-search" type="text" placeholder="Buscar usuario..." value={search} onChange={e => setSearch(e.target.value)} style={styles.searchInput} />
+          <div>
+            <h1>MediGo Admin</h1>
+            <p>CLINICAL PRECISION</p>
           </div>
-          <button style={styles.filterBtn}>Rol <ChevronDown size={13} /></button>
         </div>
 
-        <table style={styles.table}>
-          <thead>
-            <tr>{['Usuario', 'Rol', 'Pedidos', 'Miembro desde', 'Estado', 'Acciones'].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr>
-          </thead>
-          <tbody>
-            {filtered.map(u => {
-              const rc = ROLE_CONFIG[u.role]
-              return (
-                <tr key={u.id} style={styles.tr}>
-                  <td style={styles.td}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div style={{ ...styles.avatar, background: rc.bg, color: rc.color }}>{u.name[0]}</div>
-                      <div>
-                        <div style={{ fontWeight: 600, color: 'var(--on-surface)', fontSize: '0.88rem' }}>{u.name}</div>
-                        <div style={{ fontSize: '0.78rem', color: 'var(--outline)' }}>{u.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td style={styles.td}>
-                    <span style={{ ...styles.roleBadge, background: rc.bg, color: rc.color }}>
-                      <rc.icon size={12} /> {rc.label}
-                    </span>
-                  </td>
-                  <td style={{ ...styles.td, fontWeight: 700, color: 'var(--on-surface)' }}>{u.pedidos}</td>
-                  <td style={{ ...styles.td, fontSize: '0.8rem' }}>{u.joined}</td>
-                  <td style={styles.td}>
-                    <button
-                      id={`usuario-toggle-${u.id}`}
-                      onClick={() => handleToggle(u.id)}
-                      style={{ ...styles.toggleBtn, background: u.activo ? 'rgba(0,254,102,0.1)' : 'rgba(255,180,171,0.1)', color: u.activo ? '#00e55b' : '#ffb4ab' }}
-                    >
-                      {u.activo ? <UserCheck size={13} /> : <UserX size={13} />}
-                      {u.activo ? 'Activo' : 'Inactivo'}
-                    </button>
-                  </td>
-                  <td style={styles.td}>
-                    <button id={`usuario-delete-${u.id}`} onClick={() => handleDelete(u.id)} style={styles.deleteBtn} title="Eliminar"><Trash2 size={14} /></button>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-    </DashboardLayout>
-  )
-}
+        <nav className="users-nav" aria-label="Navegacion administrador">
+          <button type="button" onClick={() => navigate(ROUTES.ADMIN.AUCTIONS)}>
+            <span className="material-symbols-outlined">gavel</span>
+            Subastas
+          </button>
+          <button type="button" onClick={() => navigate(ROUTES.ADMIN.INVENTORY)}>
+            <span className="material-symbols-outlined">inventory_2</span>
+            Inventario
+          </button>
+          <button type="button" onClick={() => navigate(ROUTES.ADMIN.BRANCHES)}>
+            <span className="material-symbols-outlined">account_tree</span>
+            Sedes
+          </button>
+          <button type="button" className="active" onClick={() => navigate(ROUTES.ADMIN.USERS)}>
+            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
+              group
+            </span>
+            Usuarios
+          </button>
+        </nav>
 
-const styles = {
-  statsRow:   { display: 'flex', gap: '1rem', marginBottom: '1.75rem' },
-  statCard:   { flex: 1, background: 'var(--surface-container)', border: '1px solid rgba(74,68,85,0.25)', borderRadius: 'var(--radius-xl)', padding: '1.1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' },
-  statIcon:   { width: 40, height: 40, borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  statLabel:  { fontSize: '0.78rem', color: 'var(--on-surface-variant)', marginBottom: 2 },
-  statValue:  { fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-display)' },
-  tableCard:  { background: 'var(--surface-container)', border: '1px solid rgba(74,68,85,0.25)', borderRadius: 'var(--radius-xl)', overflow: 'hidden' },
-  toolbar:    { display: 'flex', gap: '0.75rem', padding: '1rem 1.25rem', borderBottom: '1px solid rgba(74,68,85,0.2)', alignItems: 'center' },
-  searchBox:  { display: 'flex', alignItems: 'center', gap: '0.6rem', background: 'var(--surface-container-high)', borderRadius: 'var(--radius-full)', padding: '0.45rem 1rem', flex: 1 },
-  searchInput:{ border: 'none', background: 'none', color: 'var(--on-surface)', fontSize: '0.875rem', outline: 'none', width: '100%', padding: 0 },
-  filterBtn:  { background: 'var(--surface-container-high)', border: '1px solid rgba(74,68,85,0.4)', borderRadius: 'var(--radius-full)', color: 'var(--on-surface-variant)', padding: '0.4rem 0.85rem', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' },
-  table:      { width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' },
-  th:         { padding: '0.85rem 1.25rem', textAlign: 'left', fontSize: '0.73rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'var(--surface-container-high)' },
-  tr:         { borderBottom: '1px solid rgba(74,68,85,0.15)' },
-  td:         { padding: '0.9rem 1.25rem', color: 'var(--on-surface-variant)' },
-  avatar:     { width: 34, height: 34, borderRadius: 'var(--radius-full)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', fontFamily: 'var(--font-display)', flexShrink: 0 },
-  roleBadge:  { display: 'inline-flex', alignItems: 'center', gap: '0.3rem', borderRadius: 'var(--radius-full)', padding: '3px 10px', fontSize: '0.75rem', fontWeight: 600 },
-  toggleBtn:  { display: 'inline-flex', alignItems: 'center', gap: '0.35rem', borderRadius: 'var(--radius-full)', padding: '4px 12px', fontSize: '0.78rem', fontWeight: 600, border: 'none', cursor: 'pointer' },
-  deleteBtn:  { background: 'rgba(255,180,171,0.1)', border: 'none', borderRadius: 'var(--radius-md)', padding: '0.4rem', cursor: 'pointer', color: '#ffb4ab', display: 'flex', alignItems: 'center' },
+        <div className="users-side-footer">
+          <button type="button" className="side-link">
+            <span className="material-symbols-outlined">help</span>
+            Soporte
+          </button>
+          <button type="button" className="side-link danger" onClick={handleLogout}>
+            <span className="material-symbols-outlined">logout</span>
+            Cerrar Sesion
+          </button>
+        </div>
+      </aside>
+
+      <main className="users-main">
+        <header className="users-topbar">
+          <label className="users-search" aria-label="Buscar usuarios">
+            <span className="material-symbols-outlined">search</span>
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar usuario o correo..." />
+          </label>
+
+          <div className="users-top-right">
+            <button type="button" className="icon-btn" aria-label="Notificaciones">
+              <span className="material-symbols-outlined">notifications</span>
+              <i />
+            </button>
+            <button type="button" className="icon-btn" aria-label="Configuracion">
+              <span className="material-symbols-outlined">settings</span>
+            </button>
+            <div className="top-separator" />
+            <div className="top-profile">
+              <div>
+                <strong>Admin User</strong>
+                <small>Administrator</small>
+              </div>
+              <div className="profile-image-placeholder" aria-label="Placeholder de imagen de administrador">
+                IMG
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <section className="users-content">
+          <div className="users-header-row">
+            <div>
+              <h2>Gestion de Usuarios</h2>
+              <p>Administre los roles y permisos de afiliados, repartidores y administradores en toda la red MediGo.</p>
+            </div>
+          </div>
+
+          {notice ? <p className="users-notice">{notice}</p> : null}
+
+          <section className="users-metrics" aria-label="Indicadores de usuarios">
+            <article>
+              <p>Total Usuarios</p>
+              <strong>{users.length}</strong>
+            </article>
+            <article>
+              <p>Activos</p>
+              <strong className="ok">{totalActive}</strong>
+            </article>
+            <article>
+              <p>Inactivos</p>
+              <strong className="warn">{totalInactive}</strong>
+            </article>
+          </section>
+
+          <section className="users-table-card" aria-label="Tabla de usuarios">
+            <div className="users-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>USUARIO</th>
+                    <th>ROL</th>
+                    <th>PEDIDOS</th>
+                    <th>MIEMBRO DESDE</th>
+                    <th>ESTADO</th>
+                    <th className="actions">ACCIONES</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.map((user) => {
+                    const role = ROLE_META[user.role] || ROLE_META.AFILIADO
+                    return (
+                      <tr key={user.id}>
+                        <td>
+                          <div className="user-cell">
+                            <div className={`avatar ${role.tone}`}>{user.name.slice(0, 1).toUpperCase()}</div>
+                            <div>
+                              <p>{user.name}</p>
+                              <small>{user.email}</small>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <label className={`role-pill ${role.tone}`}>
+                            <span className="material-symbols-outlined">{role.icon}</span>
+                            <select value={user.role} onChange={(event) => handleRoleChange(user, event.target.value)}>
+                              <option value="ADMIN">Admin</option>
+                              <option value="AFILIADO">Afiliado</option>
+                              <option value="REPARTIDOR">Repartidor</option>
+                            </select>
+                          </label>
+                        </td>
+                        <td>
+                          <strong className="deliveries">{new Intl.NumberFormat('es-CO').format(user.deliveries)}</strong>
+                        </td>
+                        <td>
+                          <span className="joined">{user.joinedAt}</span>
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className={`status-btn ${user.active ? 'active' : 'inactive'}`}
+                            onClick={() => handleToggleStatus(user)}
+                          >
+                            <span className="material-symbols-outlined">{user.active ? 'check_circle' : 'cancel'}</span>
+                            {user.active ? 'Activo' : 'Inactivo'}
+                          </button>
+                        </td>
+                        <td>
+                          <div className="action-btns">
+                            <button type="button" aria-label={`Editar ${user.name}`}>
+                              <span className="material-symbols-outlined">edit</span>
+                            </button>
+                            <button type="button" aria-label={`Eliminar ${user.name}`} onClick={() => handleDelete(user)}>
+                              <span className="material-symbols-outlined">delete</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {filteredUsers.length === 0 ? <div className="empty-users">No hay usuarios que coincidan con "{search}".</div> : null}
+          </section>
+
+          <footer className="users-legal">Arquitectura del Sistema MediGo - Gestion Segura de Identidades</footer>
+        </section>
+      </main>
+
+      {loading ? <div className="users-loading">Sincronizando usuarios...</div> : null}
+    </div>
+  )
 }

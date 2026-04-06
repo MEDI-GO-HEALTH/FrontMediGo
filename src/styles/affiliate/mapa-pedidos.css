@@ -1,0 +1,329 @@
+/* Affiliate map page specific styles (shell styles are in perfil-afiliado.css) */
+
+.affiliate-map-workspace {
+  display: flex;
+  height: 100%;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 12px 32px -4px rgba(25, 28, 30, 0.08);
+}
+
+.map-viewport {
+  flex: 1;
+  min-width: 0;
+}
+
+.map-surface {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.45), transparent 38%),
+    radial-gradient(circle at 80% 35%, rgba(255, 255, 255, 0.3), transparent 32%),
+    linear-gradient(135deg, #b8e0cd 0%, #9fcfbe 100%);
+  overflow: hidden;
+}
+
+.map-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.2) 1px, transparent 1px),
+    linear-gradient(35deg, rgba(255, 255, 255, 0.14) 2px, transparent 2px);
+  background-size: 36px 36px, 36px 36px, 120px 120px;
+  opacity: 0.75;
+}
+
+.map-gradient-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, rgba(248, 249, 251, 0.9) 0%, rgba(248, 249, 251, 0) 20%);
+}
+
+.map-marker {
+  position: absolute;
+  border-radius: 9999px;
+  border: 2px solid #fff;
+  box-shadow: 0 6px 14px rgba(25, 28, 30, 0.2);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eps-marker {
+  top: 24%;
+  left: 33%;
+  width: 34px;
+  height: 34px;
+  background: #003358;
+}
+
+.courier-busy {
+  top: 47%;
+  left: 49%;
+  width: 26px;
+  height: 26px;
+  background: #7e3af2;
+}
+
+.courier-free {
+  top: 61%;
+  left: 41%;
+  width: 26px;
+  height: 26px;
+  background: #006a6a;
+}
+
+.map-route {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.map-route path {
+  fill: none;
+  stroke: #003358;
+  stroke-width: 3;
+  stroke-dasharray: 10 7;
+  opacity: 0.35;
+}
+
+.map-route circle {
+  fill: #003358;
+  opacity: 0.7;
+}
+
+.map-controls {
+  position: absolute;
+  left: 1.1rem;
+  bottom: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.map-controls button {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: none;
+  border-radius: 0.65rem;
+  background: #ffffff;
+  color: #334155;
+  box-shadow: 0 10px 18px rgba(25, 28, 30, 0.12);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-controls .locate-btn {
+  color: #003358;
+  margin-top: 0.25rem;
+}
+
+.logistics-panel {
+  width: 370px;
+  background: rgba(255, 255, 255, 0.95);
+  border-left: 1px solid rgba(193, 199, 208, 0.35);
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(193, 199, 208, 0.3);
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #003358;
+}
+
+.panel-header p {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.panel-label {
+  display: block;
+  margin-bottom: 0.65rem;
+  font-size: 0.67rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.panel-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.panel-field {
+  background: #f2f4f6;
+  border-radius: 0.75rem;
+  padding: 0.7rem 0.75rem;
+}
+
+.panel-field span {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+.panel-field input,
+.panel-field select {
+  margin-top: 0.45rem;
+  width: 100%;
+  border: none;
+  background: #fff;
+  border-radius: 0.55rem;
+  padding: 0.5rem 0.6rem;
+}
+
+.double-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.delivery-option {
+  display: flex;
+  gap: 0.65rem;
+  border-radius: 0.8rem;
+  padding: 0.75rem;
+  background: #f2f4f6;
+  margin-bottom: 0.5rem;
+}
+
+.delivery-option.active {
+  border: 1px solid rgba(0, 51, 88, 0.2);
+  background: #d0e4ff;
+}
+
+.option-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #003358;
+  background: #fff;
+}
+
+.delivery-option p {
+  margin: 0;
+  color: #003358;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.delivery-option small {
+  color: #64748b;
+  font-size: 0.68rem;
+}
+
+.route-card {
+  background: #fff;
+  border-radius: 0.8rem;
+  border: 1px solid rgba(193, 199, 208, 0.45);
+  padding: 0.75rem;
+}
+
+.route-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.route-card-head h4 {
+  margin: 0;
+  color: #003358;
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+
+.route-card-head span {
+  color: #006a6a;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.route-points {
+  margin-top: 0.7rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.45rem;
+}
+
+.route-points small {
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  color: #727780;
+  font-weight: 800;
+}
+
+.route-points p {
+  margin: 0.15rem 0 0;
+  font-size: 0.77rem;
+  color: #191c1e;
+  font-weight: 700;
+}
+
+.panel-footer {
+  padding: 1rem 1.4rem 1.3rem;
+  border-top: 1px solid rgba(193, 199, 208, 0.35);
+}
+
+.panel-footer button {
+  width: 100%;
+  border: none;
+  border-radius: 0.78rem;
+  padding: 0.72rem;
+  color: #fff;
+  font-weight: 700;
+  background: linear-gradient(145deg, #003358 0%, #004a7c 100%);
+}
+
+@media (max-width: 1080px) {
+  .affiliate-map-workspace {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .map-viewport {
+    min-height: 420px;
+  }
+
+  .logistics-panel {
+    width: 100%;
+  }
+}
+
+@media (max-width: 900px) {
+  .affiliate-map-workspace {
+    border-radius: 0.9rem;
+  }
+
+  .map-viewport {
+    min-height: 360px;
+  }
+}

@@ -1,103 +1,322 @@
-/**
- * PerfilRepartidor.jsx (Profile Page - Driver)
- * ═════════════════════════════════════════════════════════════════
- * Página de perfil del repartidor
- * - Información personal
- * - Foto de perfil
- * - Configuración de cuenta
- */
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router'
+import {
+  getDriverProfile,
+  updateDriverAvailability,
+  updateDriverProfile,
+} from '../../api/driverProfileService'
+import '../../styles/driver/perfil-repartidor.css'
 
-import DriverSidebar from '../../components/layout/DriverSidebar'
+const FALLBACK_PROFILE = {
+  firstName: 'Carlos',
+  lastName: 'Rivera',
+  email: 'carlos.rivera@medigo.co',
+  phone: '+57 3101234567',
+  vehicleType: 'Moto',
+  vehiclePlate: 'MDG-45B',
+  licenseNumber: 'LIC-458210',
+  city: 'Bogota',
+  notes: 'Disponible para entregas urbanas y urgentes.',
+  certifications: ['Repartidor Certificado', 'Cadena de Frio'],
+  metrics: {
+    rating: 4.9,
+    trips: 128,
+    completionRate: 97,
+    availability: 'online',
+  },
+}
 
 export default function PerfilRepartidor() {
+  const navigate = useNavigate()
+  const [form, setForm] = useState(FALLBACK_PROFILE)
+  const [initialForm, setInitialForm] = useState(FALLBACK_PROFILE)
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let mounted = true
+
+    const loadProfile = async () => {
+      setLoading(true)
+      try {
+        const profileResponse = await getDriverProfile()
+        if (!mounted) {
+          return
+        }
+
+        const merged = {
+          ...FALLBACK_PROFILE,
+          ...(profileResponse ?? {}),
+          metrics: {
+            ...FALLBACK_PROFILE.metrics,
+            ...(profileResponse?.metrics ?? {}),
+          },
+          certifications: Array.isArray(profileResponse?.certifications)
+            ? profileResponse.certifications
+            : FALLBACK_PROFILE.certifications,
+        }
+
+        setForm(merged)
+        setInitialForm(merged)
+      } catch {
+        if (!mounted) {
+          return
+        }
+
+        setForm(FALLBACK_PROFILE)
+        setInitialForm(FALLBACK_PROFILE)
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadProfile()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const initials = useMemo(() => {
+    const first = form.firstName?.[0] ?? ''
+    const last = form.lastName?.[0] ?? ''
+    return `${first}${last}`.toUpperCase() || 'DR'
+  }, [form.firstName, form.lastName])
+
+  const fullName = useMemo(() => `${form.firstName} ${form.lastName}`.trim(), [form.firstName, form.lastName])
+
+  const handleChange = (event) => {
+    const { name, value } = event.target
+    setForm((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleReset = () => {
+    setForm(initialForm)
+    setMessage('Cambios descartados.')
+    setError('')
+  }
+
+  const handleSave = async (event) => {
+    event.preventDefault()
+    setMessage('')
+    setError('')
+    setSaving(true)
+
+    try {
+      await updateDriverProfile(form)
+
+      if (form.metrics?.availability && form.metrics.availability !== initialForm.metrics?.availability) {
+        await updateDriverAvailability({ availability: form.metrics.availability })
+      }
+
+      setInitialForm(form)
+      setMessage('Perfil actualizado correctamente.')
+    } catch {
+      setError('No fue posible guardar en backend. Los cambios permanecen visibles en modo local.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('medigo_token')
+    localStorage.removeItem('medigo_user')
+    navigate('/')
+  }
+
   return (
-    <div className="bg-surface min-h-screen">
-      <DriverSidebar />
-
-      <main className="ml-72 p-12">
-        <h1 className="text-2xl font-bold text-sky-900 mb-8">Configuración de Perfil</h1>
-
-        <div className="max-w-xl bg-white p-8 rounded-xl border border-outline-variant shadow-sm">
-          {/* Profile Picture */}
-          <div className="flex flex-col items-center mb-8">
-            <img
-              className="w-32 h-32 rounded-full object-cover border-4 border-primary shadow-lg"
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuBoskHY9L7pCz7LAAraqrE9Zcu4G9fHwScz5dp7VCPf9Vx7ckNp2xEHhknrxbv9Aw5PPp_43vcnoakQnbumxkYq6TGDZWee_yJbe9gfDmhx8jzXkfzcVFUZrN7xgW1a4uix4LRrcIRAdYgPWrYO--zqUo1ZZYvEl-ApDvO70Aiw_lzHACtHRNUcVo12sy94jDMYJVqTCL7bmPytKx5zpCQ9GhqM8a72RmFTowlIDqXv4W3yAPC_5m3ct6PLdZFzCr9b7KXPXmCgL4v9"
-              alt="Carlos Rivera"
-            />
-            <h2 className="text-xl font-bold mt-4 text-primary">Carlos Rivera Santillán</h2>
-            <p className="text-sm text-slate-500 mt-1">Repartidor Certificado</p>
-
-            <button className="mt-4 text-sm text-primary font-semibold hover:underline flex items-center gap-2">
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
-                photo_camera
-              </span>
-              Cambiar foto
-            </button>
+    <div className="driver-profile-page">
+      <div className="driver-profile-shell">
+        <aside className="driver-profile-sidebar" aria-label="Navegacion repartidor">
+          <div className="driver-profile-side-head">
+            <div className="driver-profile-side-brand">
+              <div className="driver-profile-side-logo">
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
+                  local_shipping
+                </span>
+              </div>
+              <div className="driver-profile-side-brand-text">
+                <h1>Driver Portal</h1>
+                <p>Clinical Logistics Unit</p>
+              </div>
+            </div>
           </div>
 
-          {/* Form */}
-          <form className="space-y-6">
-            {/* Full Name */}
-            <div>
-              <label className="text-sm font-bold text-slate-600 block mb-2">Nombre Completo</label>
-              <input
-                className="w-full bg-surface-container-low border-none rounded-xl p-4 focus:ring-2 focus:ring-primary/20"
-                type="text"
-                defaultValue="Carlos Rivera Santillán"
-              />
-            </div>
-
-            {/* Email */}
-            <div>
-              <label className="text-sm font-bold text-slate-600 block mb-2">Correo Electrónico</label>
-              <input
-                className="w-full bg-surface-container-low border-none rounded-xl p-4 focus:ring-2 focus:ring-primary/20"
-                type="email"
-                defaultValue="carlos.rivera@medigo.co"
-              />
-            </div>
-
-            {/* Phone */}
-            <div>
-              <label className="text-sm font-bold text-slate-600 block mb-2">Teléfono Móvil</label>
-              <input
-                className="w-full bg-surface-container-low border-none rounded-xl p-4 focus:ring-2 focus:ring-primary/20"
-                type="tel"
-                defaultValue="+57 3101234567"
-              />
-            </div>
-
-            {/* Vehicle */}
-            <div>
-              <label className="text-sm font-bold text-slate-600 block mb-2">Vehículo</label>
-              <input
-                className="w-full bg-surface-container-low border-none rounded-xl p-4 focus:ring-2 focus:ring-primary/20"
-                type="text"
-                placeholder="Placa o descripción del vehículo"
-              />
-            </div>
-
-            {/* License */}
-            <div>
-              <label className="text-sm font-bold text-slate-600 block mb-2">Licencia de Conducción</label>
-              <input
-                className="w-full bg-surface-container-low border-none rounded-xl p-4 focus:ring-2 focus:ring-primary/20"
-                type="text"
-                placeholder="Número de licencia"
-              />
-            </div>
-
-            {/* Save Button */}
-            <button
-              type="button"
-              className="w-full bg-gradient-to-r from-primary to-primary-container text-white font-bold py-3 px-8 rounded-xl hover:shadow-lg transition-shadow"
-            >
-              Guardar Cambios
+          <nav className="driver-profile-nav">
+            <button type="button" onClick={() => navigate('/repartidor/mapa')}>
+              <span className="material-symbols-outlined">map</span>
+              Mapa de Entregas
             </button>
-          </form>
-        </div>
-      </main>
+
+            <button type="button" onClick={() => navigate('/repartidor/historial')}>
+              <span className="material-symbols-outlined">history</span>
+              Historial de Viajes
+            </button>
+
+            <button type="button" className="active">
+              <span className="material-symbols-outlined">person</span>
+              Configuracion de Perfil
+            </button>
+          </nav>
+
+          <div className="driver-profile-side-footer">
+            <button type="button" className="driver-profile-side-link">
+              <span className="material-symbols-outlined">help</span>
+              Help
+            </button>
+
+            <button type="button" className="driver-profile-side-link danger" onClick={handleLogout}>
+              <span className="material-symbols-outlined">logout</span>
+              Sign Out
+            </button>
+          </div>
+        </aside>
+
+        <main className="driver-profile-main">
+          <header className="driver-profile-topbar">
+            <h2>MediGo Clinical Logistics</h2>
+            <div className="driver-profile-topbar-right">
+              <div className="driver-profile-online">
+                <span />
+                <span>{form.metrics?.availability === 'offline' ? 'Offline' : 'Online'}</span>
+              </div>
+              <div className="driver-profile-avatar-small">{initials}</div>
+            </div>
+          </header>
+
+          <div className="driver-profile-content">
+            <h3 className="driver-profile-title">Configuracion de Perfil</h3>
+            <p className="driver-profile-subtitle">
+              Administra tus datos personales y operativos. Esta vista esta preparada para conectarse a endpoints reales en futuras iteraciones.
+            </p>
+
+            <div className="driver-profile-grid">
+              <aside className="driver-profile-card">
+                <div className="driver-profile-avatar-lg" aria-label="Avatar por defecto del repartidor">
+                  {initials}
+                </div>
+                <h3>{fullName || 'Repartidor'}</h3>
+                <p>{form.email}</p>
+
+                <div className="driver-profile-badges">
+                  {(form.certifications ?? []).map((badge) => (
+                    <span key={badge} className="driver-profile-badge">
+                      {badge}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="driver-profile-metrics">
+                  <div className="driver-profile-metric">
+                    <small>Calificacion</small>
+                    <strong>{form.metrics?.rating}</strong>
+                  </div>
+                  <div className="driver-profile-metric">
+                    <small>Viajes</small>
+                    <strong>{form.metrics?.trips}</strong>
+                  </div>
+                  <div className="driver-profile-metric">
+                    <small>Eficiencia</small>
+                    <strong>{form.metrics?.completionRate}%</strong>
+                  </div>
+                  <div className="driver-profile-metric">
+                    <small>Estado</small>
+                    <strong>{form.metrics?.availability === 'offline' ? 'Offline' : 'Online'}</strong>
+                  </div>
+                </div>
+              </aside>
+
+              <section className="driver-profile-form">
+                <h4>{loading ? 'Cargando perfil...' : 'Datos del Repartidor'}</h4>
+
+                <form onSubmit={handleSave}>
+                  <div className="driver-form-grid">
+                    <label className="driver-form-field">
+                      <span>Nombre</span>
+                      <input name="firstName" value={form.firstName} onChange={handleChange} />
+                    </label>
+
+                    <label className="driver-form-field">
+                      <span>Apellido</span>
+                      <input name="lastName" value={form.lastName} onChange={handleChange} />
+                    </label>
+
+                    <label className="driver-form-field full">
+                      <span>Correo</span>
+                      <input name="email" type="email" value={form.email} onChange={handleChange} />
+                    </label>
+
+                    <label className="driver-form-field">
+                      <span>Telefono</span>
+                      <input name="phone" value={form.phone} onChange={handleChange} />
+                    </label>
+
+                    <label className="driver-form-field">
+                      <span>Ciudad</span>
+                      <input name="city" value={form.city} onChange={handleChange} />
+                    </label>
+
+                    <label className="driver-form-field">
+                      <span>Tipo de vehiculo</span>
+                      <input name="vehicleType" value={form.vehicleType} onChange={handleChange} />
+                    </label>
+
+                    <label className="driver-form-field">
+                      <span>Placa</span>
+                      <input name="vehiclePlate" value={form.vehiclePlate} onChange={handleChange} />
+                    </label>
+
+                    <label className="driver-form-field full">
+                      <span>Licencia</span>
+                      <input name="licenseNumber" value={form.licenseNumber} onChange={handleChange} />
+                    </label>
+
+                    <label className="driver-form-field full">
+                      <span>Disponibilidad</span>
+                      <select
+                        value={form.metrics?.availability ?? 'online'}
+                        onChange={(event) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            metrics: {
+                              ...prev.metrics,
+                              availability: event.target.value,
+                            },
+                          }))
+                        }
+                      >
+                        <option value="online">Online</option>
+                        <option value="offline">Offline</option>
+                      </select>
+                    </label>
+
+                    <label className="driver-form-field full">
+                      <span>Notas operativas</span>
+                      <textarea name="notes" value={form.notes} onChange={handleChange} />
+                    </label>
+                  </div>
+
+                  <div className="driver-form-actions">
+                    <button type="button" className="driver-btn-ghost" onClick={handleReset} disabled={saving}>
+                      Descartar
+                    </button>
+                    <button type="submit" className="driver-btn-primary" disabled={saving}>
+                      {saving ? 'Guardando...' : 'Guardar Cambios'}
+                    </button>
+                  </div>
+
+                  {error ? <p className="driver-profile-error">{error}</p> : null}
+                  {message ? <p className="driver-profile-success">{message}</p> : null}
+                </form>
+              </section>
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
   )
 }
