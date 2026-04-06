@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { createSubasta, getSubastas } from '../../api/subastaService'
+import AuctionAdminActions from '../../components/admin/AuctionAdminActions'
 import { ROUTES } from '../../constants/routes'
 import '../../styles/admin/gestion-subastas.css'
 
@@ -60,10 +61,10 @@ const formatMoney = (value, compact = false) =>
 
 const mapAuctionFromApi = (item, index) => ({
   id: item?.id || item?.codigo || `SUB-${String(index + 1).padStart(3, '0')}`,
-  name: item?.nombre || item?.medicamento || 'Subasta',
-  batch: item?.lote || item?.batch || `BATCH-${index + 1}`,
+  name: item?.nombre || item?.medicamento || `Medicamento #${item?.medicationId ?? index + 1}`,
+  batch: item?.lote || item?.batch || `SEDE-${item?.branchId ?? index + 1}`,
   status: String(item?.estado || (item?.activa ? 'EN VIVO' : 'PENDIENTE')).toUpperCase(),
-  startPrice: Number(item?.precioInicial ?? item?.montoActual ?? item?.precioBase ?? 0),
+  startPrice: Number(item?.precioInicial ?? item?.montoActual ?? item?.precioBase ?? item?.basePrice ?? 0),
   reserveNote: item?.reservaNota || 'Reserva Alcanzada',
   remaining: item?.tiempoRestante || item?.cierre || '01h 00m 00s',
   icon: index % 2 === 0 ? 'pill' : 'vaccines',
@@ -72,12 +73,37 @@ const mapAuctionFromApi = (item, index) => ({
 
 export default function GestionSubastas() {
   const navigate = useNavigate()
+  const now = new Date()
+  const plusOneHour = new Date(now.getTime() + 60 * 60 * 1000)
+
+  const toDateTimeLocal = (dateValue) => {
+    const value = new Date(dateValue)
+    const offset = value.getTimezoneOffset() * 60 * 1000
+    const local = new Date(value.getTime() - offset)
+    return local.toISOString().slice(0, 16)
+  }
+
+  const initialCreateForm = {
+    medicationId: 0,
+    branchId: 0,
+    basePrice: 0,
+    startTime: toDateTimeLocal(now),
+    endTime: toDateTimeLocal(plusOneHour),
+    closureType: 'FIXED_TIME',
+    maxPrice: 0,
+    inactivityMinutes: 0,
+  }
+
   const [search, setSearch] = useState('')
   const [auctions, setAuctions] = useState(FALLBACK_AUCTIONS)
   const [overview, setOverview] = useState(FALLBACK_OVERVIEW)
   const [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [createError, setCreateError] = useState('')
+  const [createForm, setCreateForm] = useState(initialCreateForm)
+  const [selectedAuctionId, setSelectedAuctionId] = useState('')
 
   useEffect(() => {
     let mounted = true
@@ -137,14 +163,59 @@ export default function GestionSubastas() {
     navigate(ROUTES.AUTH.LOGIN, { replace: true })
   }
 
-  const handleCreateAuction = async () => {
+  const handleOpenCreateModal = () => {
+    const freshNow = new Date()
+    const freshPlusOneHour = new Date(freshNow.getTime() + 60 * 60 * 1000)
+    setCreateError('')
+    setCreateForm((previous) => ({
+      ...previous,
+      startTime: toDateTimeLocal(freshNow),
+      endTime: toDateTimeLocal(freshPlusOneHour),
+    }))
+    setShowCreateModal(true)
+  }
+
+  const handleCloseCreateModal = () => {
+    setShowCreateModal(false)
+    setCreateError('')
+  }
+
+  const handleCreateInputChange = (event) => {
+    const { name, value, type } = event.target
+
+    setCreateForm((previous) => ({
+      ...previous,
+      [name]: type === 'number' ? Number(value) : value,
+    }))
+  }
+
+  const handleCreateAuction = async (event) => {
+    event.preventDefault()
     setCreating(true)
     setNotice('')
+    setCreateError('')
+
+    if (new Date(createForm.endTime) <= new Date(createForm.startTime)) {
+      setCreateError('La fecha/hora de fin debe ser posterior a la fecha/hora de inicio.')
+      setCreating(false)
+      return
+    }
+
+    if (createForm.medicationId <= 0 || createForm.branchId <= 0 || createForm.basePrice <= 0 || createForm.maxPrice <= 0) {
+      setCreateError('Medication ID, Branch ID, Base Price y Max Price deben ser mayores a 0.')
+      setCreating(false)
+      return
+    }
 
     const payload = {
-      nombre: 'Nueva Subasta Clinica',
-      precioBase: 10000,
-      estado: 'PENDIENTE',
+      medicationId: Number(createForm.medicationId),
+      branchId: Number(createForm.branchId),
+      basePrice: Number(createForm.basePrice),
+      startTime: new Date(createForm.startTime).toISOString(),
+      endTime: new Date(createForm.endTime).toISOString(),
+      closureType: String(createForm.closureType),
+      maxPrice: Number(createForm.maxPrice),
+      inactivityMinutes: Number(createForm.inactivityMinutes),
     }
 
     try {
@@ -152,20 +223,22 @@ export default function GestionSubastas() {
       const item = mapAuctionFromApi(created, 0)
       setAuctions((previous) => [item, ...previous])
       setNotice('Subasta creada en backend correctamente.')
+      setShowCreateModal(false)
     } catch {
       const local = {
         id: `SUB-LOCAL-${Date.now()}`,
-        name: 'Nueva Subasta Clinica',
-        batch: 'BATCH-LOCAL',
+        name: `Medicamento #${payload.medicationId}`,
+        batch: `SEDE-${payload.branchId}`,
         status: 'PENDIENTE',
-        startPrice: 10000,
+        startPrice: payload.basePrice,
         reserveNote: 'Puja Min. Requerida',
         remaining: 'Empieza en 3d',
         icon: 'medication',
         active: false,
       }
       setAuctions((previous) => [local, ...previous])
-      setNotice('Subasta creada en modo local. Lista para endpoint real cuando este disponible.')
+      setNotice('No se pudo crear en backend. Se agregó una vista previa local de la subasta.')
+      setShowCreateModal(false)
     } finally {
       setCreating(false)
     }
@@ -204,10 +277,6 @@ export default function GestionSubastas() {
         </nav>
 
         <div className="auctions-side-footer">
-          <button type="button" className="new-entry-btn" onClick={handleCreateAuction} disabled={creating}>
-            <span className="material-symbols-outlined">add</span>
-            {' '}{creating ? 'Creando...' : 'Nueva Entrada'}
-          </button>
           <button type="button" className="side-link">
             <span className="material-symbols-outlined">help</span>
             {' '}Soporte
@@ -257,9 +326,8 @@ export default function GestionSubastas() {
               <p>Gestione y supervise los eventos de adquisicion en vivo para suministros farmaceuticos.</p>
             </div>
 
-            <button type="button" className="create-auction-btn" onClick={handleCreateAuction} disabled={creating}>
-              <span className="material-symbols-outlined">add_circle</span>
-              {' '}Crear Nueva Subasta
+            <button type="button" className="create-auction-btn" onClick={handleOpenCreateModal} disabled={creating}>
+              Crear subasta
             </button>
           </div>
 
@@ -362,7 +430,12 @@ export default function GestionSubastas() {
                         </div>
                       </td>
                       <td className="right">
-                        <button type="button" className="row-action-btn" aria-label={`Opciones ${auction.name}`}>
+                        <button
+                          type="button"
+                          className="row-action-btn"
+                          aria-label={`Cargar ${auction.name} en panel de endpoints`}
+                          onClick={() => setSelectedAuctionId(String(auction.id))}
+                        >
                           <span className="material-symbols-outlined">more_vert</span>
                         </button>
                       </td>
@@ -386,10 +459,135 @@ export default function GestionSubastas() {
               </div>
             </div>
           </section>
+
+          <AuctionAdminActions
+            initialAuctionId={selectedAuctionId}
+            onNotice={(message) => {
+              setNotice(message)
+            }}
+          />
         </section>
       </main>
 
       {loading ? <div className="auctions-loading">Sincronizando subastas...</div> : null}
+
+      {showCreateModal ? (
+        <div className="auction-modal-backdrop">
+          <dialog className="auction-modal" open aria-labelledby="create-auction-title">
+            <header className="auction-modal-header">
+              <h3 id="create-auction-title">Crear Nueva Subasta</h3>
+              <button type="button" className="auction-modal-close" onClick={handleCloseCreateModal} aria-label="Cerrar">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </header>
+
+            <form className="auction-modal-form" onSubmit={handleCreateAuction}>
+              <label>
+                <span>Medication ID</span>
+                <input
+                  type="number"
+                  min="1"
+                  name="medicationId"
+                  value={createForm.medicationId}
+                  onChange={handleCreateInputChange}
+                  required
+                />
+              </label>
+
+              <label>
+                <span>Branch ID</span>
+                <input
+                  type="number"
+                  min="1"
+                  name="branchId"
+                  value={createForm.branchId}
+                  onChange={handleCreateInputChange}
+                  required
+                />
+              </label>
+
+              <label>
+                <span>Base Price</span>
+                <input
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  name="basePrice"
+                  value={createForm.basePrice}
+                  onChange={handleCreateInputChange}
+                  required
+                />
+              </label>
+
+              <label>
+                <span>Start Time</span>
+                <input
+                  type="datetime-local"
+                  name="startTime"
+                  value={createForm.startTime}
+                  onChange={handleCreateInputChange}
+                  required
+                />
+              </label>
+
+              <label>
+                <span>End Time</span>
+                <input
+                  type="datetime-local"
+                  name="endTime"
+                  value={createForm.endTime}
+                  onChange={handleCreateInputChange}
+                  required
+                />
+              </label>
+
+              <label>
+                <span>Closure Type</span>
+                <select name="closureType" value={createForm.closureType} onChange={handleCreateInputChange}>
+                  <option value="FIXED_TIME">FIXED_TIME</option>
+                  <option value="INACTIVITY">INACTIVITY</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Max Price</span>
+                <input
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  name="maxPrice"
+                  value={createForm.maxPrice}
+                  onChange={handleCreateInputChange}
+                  required
+                />
+              </label>
+
+              <label>
+                <span>Inactivity Minutes</span>
+                <input
+                  type="number"
+                  min="0"
+                  name="inactivityMinutes"
+                  value={createForm.inactivityMinutes}
+                  onChange={handleCreateInputChange}
+                  required
+                />
+              </label>
+
+              {createError ? <p className="auction-modal-error">{createError}</p> : null}
+
+              <footer className="auction-modal-actions">
+                <button type="button" className="secondary" onClick={handleCloseCreateModal}>
+                  Cancelar
+                </button>
+                <button type="submit" className="primary" disabled={creating}>
+                  {creating ? 'Creando...' : 'Crear Subasta'}
+                </button>
+              </footer>
+            </form>
+          </dialog>
+        </div>
+      ) : null}
     </div>
   )
 }
