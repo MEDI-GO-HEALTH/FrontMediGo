@@ -8,12 +8,31 @@
 import client from './client';
 import { API_CONFIG, AUTH_ENDPOINTS } from '../config/api';
 
-const normalizeRole = (role = '') => {
-  const normalized = String(role).toUpperCase();
+const normalizeRole = (roleLike) => {
+  if (Array.isArray(roleLike)) {
+    for (const value of roleLike) {
+      const normalizedValue = normalizeRole(value);
+      if (normalizedValue) {
+        return normalizedValue;
+      }
+    }
+    return null;
+  }
+
+  if (roleLike && typeof roleLike === 'object') {
+    return normalizeRole(roleLike.authority || roleLike.role || roleLike.name || '');
+  }
+
+  const normalized = String(roleLike || '').trim().toUpperCase();
+  if (!normalized) return null;
+
   if (normalized.includes('ADMIN')) return 'ADMIN';
-  if (normalized.includes('REPART')) return 'REPARTIDOR';
-  if (normalized.includes('DELIVERY')) return 'REPARTIDOR';
-  return 'AFILIADO';
+  if (normalized.includes('REPART') || normalized.includes('DELIVERY') || normalized.includes('DRIVER')) {
+    return 'REPARTIDOR';
+  }
+  if (normalized.includes('AFILIADO') || normalized.includes('AFFILIATE')) return 'AFILIADO';
+
+  return null;
 };
 
 const normalizeLoginPayload = (payload, fallbackEmail = '') => {
@@ -29,12 +48,22 @@ const normalizeLoginPayload = (payload, fallbackEmail = '') => {
     '';
 
   const userSource = nested?.user || root?.user || nested || root || {};
+  const rawRole =
+    userSource?.role ??
+    userSource?.rol ??
+    userSource?.userRole ??
+    userSource?.authority ??
+    userSource?.authorities ??
+    root?.role ??
+    root?.rol ??
+    root?.authority ??
+    root?.authorities;
 
   const user = {
     id: userSource?.id ?? userSource?.user_id ?? null,
     name: userSource?.name || userSource?.username || 'Usuario',
     email: userSource?.email || fallbackEmail,
-    role: normalizeRole(userSource?.role),
+    role: normalizeRole(rawRole) || 'AFILIADO',
   };
 
   return { token, user, message: payload?.message || root?.message || '' };
@@ -45,9 +74,7 @@ const normalizeLoginPayload = (payload, fallbackEmail = '') => {
  * @param {{ email: string, password: string }} credentials
  */
 export const login = async (credentials) => {
-  const rawEmail = String(credentials?.email || '');
-  const email = rawEmail.trim().toLowerCase();
-  const password = credentials?.password;
+  const { email } = credentials;
 
   // 🧪 MOCK LOGIN para Desarrollo (Si se usa un correo específico)
   if (API_CONFIG.useAuthMock) {
@@ -63,7 +90,7 @@ export const login = async (credentials) => {
   }
 
   try {
-    const response = await client.post(AUTH_ENDPOINTS.login, { email, password });
+    const response = await client.post(AUTH_ENDPOINTS.login, credentials);
     const normalized = normalizeLoginPayload(response.data, email);
 
     if (!normalized.token) {
@@ -72,30 +99,6 @@ export const login = async (credentials) => {
 
     return normalized;
   } catch (error) {
-    // Fallback de compatibilidad: algunos backends esperan "username" en lugar de "email".
-    if (error?.response?.status === 400) {
-      try {
-        const fallbackResponse = await client.post(AUTH_ENDPOINTS.login, { username: email, password });
-        const fallbackNormalized = normalizeLoginPayload(fallbackResponse.data, email);
-
-        if (fallbackNormalized.token) {
-          return fallbackNormalized;
-        }
-      } catch {
-        // Si también falla fallback, se propaga el error original con mensaje parseado abajo.
-      }
-    }
-
-    const backendMessage =
-      error?.response?.data?.message ||
-      error?.response?.data?.data?.message ||
-      error?.response?.data?.error ||
-      '';
-
-    if (backendMessage) {
-      error.message = backendMessage;
-    }
-
     // Si falla la conexión (backend apagado), pero es una de nuestras cuentas de prueba rápidas
     console.error('Auth Error:', error);
     throw error;
