@@ -26,21 +26,25 @@ const toDateTimeLocal = (dateValue) => {
 
 const normalizeApiData = (source) => source?.data || source
 
+const toApiLocalDateTime = (dateTimeLocalValue) => {
+  if (!dateTimeLocalValue) {
+    return null
+  }
+
+  return `${dateTimeLocalValue}:00`
+}
+
 const buildEditFormFromDetail = (detail) => ({
-  medicationId: Number(detail?.medicationId ?? detail?.medication?.id ?? 0),
-  branchId: Number(detail?.branchId ?? detail?.branch?.id ?? 0),
   basePrice: Number(detail?.basePrice ?? detail?.precioBase ?? 0),
   startTime: toDateTimeLocal(detail?.startTime || detail?.inicio),
   endTime: toDateTimeLocal(detail?.endTime || detail?.fin),
-  closureType: String(detail?.closureType || detail?.tipoCierre || 'FIXED_TIME'),
-  maxPrice: Number(detail?.maxPrice ?? detail?.precioMaximo ?? 0),
-  inactivityMinutes: Number(detail?.inactivityMinutes ?? detail?.minutosInactividad ?? 0),
 })
 
 export default function AuctionAdminActions({ initialAuctionId = '', onNotice }) {
   const [auctionId, setAuctionId] = useState(String(initialAuctionId || ''))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
   const [auctionDetail, setAuctionDetail] = useState(null)
   const [auctionBids, setAuctionBids] = useState([])
@@ -48,17 +52,14 @@ export default function AuctionAdminActions({ initialAuctionId = '', onNotice })
   const [activeAuctions, setActiveAuctions] = useState([])
 
   const [editForm, setEditForm] = useState({
-    medicationId: 0,
-    branchId: 0,
     basePrice: 0,
     startTime: '',
     endTime: '',
-    closureType: 'FIXED_TIME',
-    maxPrice: 0,
-    inactivityMinutes: 0,
   })
 
   const [selectedOption, setSelectedOption] = useState('DETAIL')
+  const [bidUserId, setBidUserId] = useState('')
+  const [bidUserName, setBidUserName] = useState('')
   const [bidAmount, setBidAmount] = useState('')
 
   useEffect(() => {
@@ -70,6 +71,7 @@ export default function AuctionAdminActions({ initialAuctionId = '', onNotice })
   const runAction = async (fn, successMessage) => {
     setLoading(true)
     setError('')
+    setSuccess('')
 
     try {
       const result = await fn()
@@ -78,11 +80,17 @@ export default function AuctionAdminActions({ initialAuctionId = '', onNotice })
       }
       return result
     } catch (actionError) {
+      const errorCode = actionError?.response?.data?.errorCode
+      const details = actionError?.response?.data?.details
       const backendMessage =
         actionError?.response?.data?.message ||
         actionError?.response?.data?.error ||
         'No fue posible completar la operacion en backend.'
-      setError(backendMessage)
+      const normalizedMessage = [backendMessage, errorCode ? `(${errorCode})` : '', details || '']
+        .filter(Boolean)
+        .join(' ')
+      setError(normalizedMessage)
+      setSuccess('')
       return null
     } finally {
       setLoading(false)
@@ -127,14 +135,9 @@ export default function AuctionAdminActions({ initialAuctionId = '', onNotice })
     }
 
     const payload = {
-      medicationId: Number(editForm.medicationId),
-      branchId: Number(editForm.branchId),
       basePrice: Number(editForm.basePrice),
-      startTime: new Date(editForm.startTime).toISOString(),
-      endTime: new Date(editForm.endTime).toISOString(),
-      closureType: String(editForm.closureType),
-      maxPrice: Number(editForm.maxPrice),
-      inactivityMinutes: Number(editForm.inactivityMinutes),
+      startTime: toApiLocalDateTime(editForm.startTime),
+      endTime: toApiLocalDateTime(editForm.endTime),
     }
 
     const response = await runAction(
@@ -145,6 +148,10 @@ export default function AuctionAdminActions({ initialAuctionId = '', onNotice })
     const detail = normalizeApiData(response)
     if (detail) {
       setAuctionDetail(detail)
+    }
+
+    if (response !== null) {
+      setSuccess('Subasta modificada correctamente.')
     }
   }
 
@@ -167,14 +174,29 @@ export default function AuctionAdminActions({ initialAuctionId = '', onNotice })
       return
     }
 
+    const numericUserId = Number(bidUserId)
     const numericAmount = Number(bidAmount)
+    if (!Number.isFinite(numericUserId) || numericUserId <= 0) {
+      setError('El userId de la puja debe ser mayor a 0.')
+      return
+    }
+
+    if (!String(bidUserName).trim()) {
+      setError('El userName de la puja es obligatorio.')
+      return
+    }
+
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
       setError('El valor de la puja debe ser mayor a 0.')
       return
     }
 
     await runAction(
-      () => placeAuctionBid(String(auctionId).trim(), { amount: numericAmount }),
+      () => placeAuctionBid(String(auctionId).trim(), {
+        userId: numericUserId,
+        userName: String(bidUserName).trim(),
+        amount: numericAmount,
+      }),
       'Puja registrada correctamente.',
     )
   }
@@ -224,6 +246,7 @@ export default function AuctionAdminActions({ initialAuctionId = '', onNotice })
         </button>
       </div>
 
+      {success ? <p className="auction-admin-success">{success}</p> : null}
       {error ? <p className="auction-admin-error">{error}</p> : null}
 
       <div className="auction-admin-options-row">
@@ -260,29 +283,6 @@ export default function AuctionAdminActions({ initialAuctionId = '', onNotice })
 
             <form onSubmit={handleUpdateAuction} className="endpoint-form-grid">
               <label>
-                <span>Medication ID</span>
-                <input
-                  type="number"
-                  min="1"
-                  value={editForm.medicationId}
-                  onChange={(event) =>
-                    setEditForm((previous) => ({ ...previous, medicationId: Number(event.target.value) }))}
-                  required
-                />
-              </label>
-
-              <label>
-                <span>Branch ID</span>
-                <input
-                  type="number"
-                  min="1"
-                  value={editForm.branchId}
-                  onChange={(event) => setEditForm((previous) => ({ ...previous, branchId: Number(event.target.value) }))}
-                  required
-                />
-              </label>
-
-              <label>
                 <span>Base Price</span>
                 <input
                   type="number"
@@ -314,41 +314,6 @@ export default function AuctionAdminActions({ initialAuctionId = '', onNotice })
                 />
               </label>
 
-              <label>
-                <span>Closure Type</span>
-                <select
-                  value={editForm.closureType}
-                  onChange={(event) => setEditForm((previous) => ({ ...previous, closureType: event.target.value }))}
-                >
-                  <option value="FIXED_TIME">FIXED_TIME</option>
-                  <option value="INACTIVITY">INACTIVITY</option>
-                </select>
-              </label>
-
-              <label>
-                <span>Max Price</span>
-                <input
-                  type="number"
-                  min="1"
-                  step="0.01"
-                  value={editForm.maxPrice}
-                  onChange={(event) => setEditForm((previous) => ({ ...previous, maxPrice: Number(event.target.value) }))}
-                  required
-                />
-              </label>
-
-              <label>
-                <span>Inactivity Minutes</span>
-                <input
-                  type="number"
-                  min="0"
-                  value={editForm.inactivityMinutes}
-                  onChange={(event) =>
-                    setEditForm((previous) => ({ ...previous, inactivityMinutes: Number(event.target.value) }))}
-                  required
-                />
-              </label>
-
               <footer>
                 <button type="submit" disabled={loading || !hasAuctionId}>Guardar cambios</button>
               </footer>
@@ -371,6 +336,24 @@ export default function AuctionAdminActions({ initialAuctionId = '', onNotice })
             <header>
               <h4>Registrar nueva puja</h4>
             </header>
+            <label>
+              <span>User ID</span>
+              <input
+                type="number"
+                min="1"
+                value={bidUserId}
+                onChange={(event) => setBidUserId(event.target.value)}
+                placeholder="ID del usuario"
+              />
+            </label>
+            <label>
+              <span>User Name</span>
+              <input
+                value={bidUserName}
+                onChange={(event) => setBidUserName(event.target.value)}
+                placeholder="Nombre de usuario"
+              />
+            </label>
             <label>
               <span>Amount</span>
               <input
