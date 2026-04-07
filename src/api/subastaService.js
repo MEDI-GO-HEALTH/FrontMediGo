@@ -63,6 +63,13 @@ export const getAuctionWinner = async (id) => {
   return response.data;
 };
 
+/** GET /api/auctions/won — Subastas ganadas por el afiliado autenticado */
+export const getWonAuctions = async (params) => {
+  const requestParams = params || { page: 0, size: 20 };
+  const response = await client.get(`${AUCTIONS_BASE}/won`, { params: requestParams });
+  return response.data;
+};
+
 // Alias de compatibilidad para el resto de pantallas existentes
 // El backend actual no expone GET /api/auctions general; se usa active para evitar 404.
 export const getSubastas = async () => getActiveAuctions();
