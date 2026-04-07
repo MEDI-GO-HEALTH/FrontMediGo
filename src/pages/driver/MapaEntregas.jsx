@@ -185,7 +185,9 @@ export default function MapaEntregas() {
                 <span className="material-symbols-outlined">notifications</span>
               </button>
 
-              <div className="driver-top-avatar" aria-label="Avatar por defecto del repartidor">DR</div>
+              <div className="driver-top-avatar" aria-label="Avatar por defecto del repartidor">
+                <span className="material-symbols-outlined">local_shipping</span>
+              </div>
             </div>
           </header>
 

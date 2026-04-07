@@ -227,7 +227,7 @@ export default function GestionSedes() {
                 <small>Administrator</small>
               </div>
               <div className="profile-image-placeholder" aria-label="Placeholder de imagen de administrador">
-                IMG
+                <span className="material-symbols-outlined">account_circle</span>
               </div>
             </div>
           </div>

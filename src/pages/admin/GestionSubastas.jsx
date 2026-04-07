@@ -334,7 +334,7 @@ export default function GestionSubastas() {
                 <small>Administrator</small>
               </div>
               <div className="profile-image-placeholder" aria-label="Placeholder de perfil administrativo">
-                IMG
+                <span className="material-symbols-outlined">account_circle</span>
               </div>
             </div>
           </div>
