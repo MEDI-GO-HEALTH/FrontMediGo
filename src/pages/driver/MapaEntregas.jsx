@@ -208,10 +208,14 @@ export default function MapaEntregas() {
                 <span style={{ backgroundColor: isConnected ? '#00ff80' : '#ff4040' }} />
                 <span>{isConnected ? 'En Línea' : 'Desconectado'}</span>
               </div>
-              <div className="driver-gps-status" style={{ fontSize: '0.7rem', color: '#666' }}>
-                {isMock ? '📍 Simulador' : '📡 GPS OK'}
+
+              <button type="button" className="driver-icon-btn" aria-label="Notificaciones">
+                <span className="material-symbols-outlined">notifications</span>
+              </button>
+
+              <div className="driver-top-avatar" aria-label="Avatar por defecto del repartidor">
+                <span className="material-symbols-outlined">local_shipping</span>
               </div>
-              <div className="driver-top-avatar">DR</div>
             </div>
           </header>
 

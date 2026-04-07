@@ -230,7 +230,7 @@ export default function Inventario() {
                 <small>{adminData.roleLabel}</small>
               </div>
               <div className="admin-avatar-placeholder" aria-label="Placeholder de imagen de perfil">
-                IMG
+                <span className="material-symbols-outlined">account_circle</span>
               </div>
             </div>
           </div>
