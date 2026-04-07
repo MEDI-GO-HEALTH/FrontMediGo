@@ -3,6 +3,9 @@
    Clinical Sanctuary Design System
    ═══════════════════════════════════════════════════════════════════ */
 
+/* Material Symbols icons (local package, no external CDN dependency). */
+@import url('material-symbols/outlined.css');
+
 /* Import Design System Variables, Colors, and Components */
 @import url('./styles/design-system.css');
 

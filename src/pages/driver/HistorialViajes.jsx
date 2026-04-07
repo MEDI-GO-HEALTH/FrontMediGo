@@ -212,7 +212,7 @@ export default function HistorialViajes() {
               </button>
 
               <div className="driver-avatar" aria-label="Avatar por defecto del repartidor">
-                DR
+                <span className="material-symbols-outlined">local_shipping</span>
               </div>
             </div>
           </header>
