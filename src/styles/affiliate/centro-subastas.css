@@ -422,8 +422,73 @@
   color: #21815d;
 }
 
+.participation-main strong.winner {
+  color: #117a56;
+}
+
+.participation-main strong.loser {
+  color: #b6413a;
+}
+
 .participation-main strong.regular {
   color: #6e7888;
+}
+
+.winner-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 26, 43, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 1rem;
+}
+
+.winner-modal {
+  width: min(430px, 100%);
+  border-radius: 0.9rem;
+  border: 1px solid #d8e0ea;
+  background: #fff;
+  box-shadow: 0 22px 50px -28px rgba(7, 26, 43, 0.8);
+  padding: 1rem;
+  text-align: center;
+}
+
+.winner-modal .material-symbols-outlined {
+  font-size: 2rem;
+  color: #d08a17;
+}
+
+.winner-modal h3 {
+  margin: 0.35rem 0 0;
+  color: #0f2e47;
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+
+.winner-modal p {
+  margin: 0.55rem 0 0;
+  color: #425768;
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.winner-modal p strong {
+  color: #0f2e47;
+}
+
+.winner-modal button {
+  margin-top: 0.85rem;
+  border: none;
+  border-radius: 0.58rem;
+  min-width: 140px;
+  height: 2.2rem;
+  background: #072d50;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 900;
 }
 
 .bid-panel-card {
@@ -573,9 +638,105 @@
   font-weight: 700;
 }
 
+.won-auctions-section {
+  margin-top: 0.35rem;
+}
+
+.won-auctions-head {
+  margin-bottom: 0.62rem;
+}
+
+.won-auctions-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.won-auction-card {
+  border-radius: 0.85rem;
+  border: 1px solid #d8e0ea;
+  background: #fff;
+  box-shadow: 0 10px 24px -18px rgba(14, 39, 58, 0.4);
+  padding: 0.7rem;
+}
+
+.won-auction-card.empty {
+  grid-column: 1 / -1;
+}
+
+.won-auction-card.empty p {
+  margin: 0;
+  color: #69788a;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.won-auction-card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.won-auction-card header span {
+  border-radius: 999px;
+  background: #e3f3ec;
+  color: #297a58;
+  font-size: 0.6rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.18rem 0.45rem;
+}
+
+.won-auction-card header small {
+  color: #8a95a3;
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.won-auction-card h4 {
+  margin: 0.42rem 0 0;
+  color: #0f2e47;
+  font-size: 0.94rem;
+  font-weight: 900;
+}
+
+.won-auction-card p {
+  margin: 0.18rem 0 0;
+  color: #6f7e8f;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.won-auction-card footer {
+  margin-top: 0.56rem;
+  border-top: 1px solid #edf2f7;
+  padding-top: 0.46rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.won-auction-card footer span {
+  color: #7d8898;
+  font-size: 0.69rem;
+  font-weight: 700;
+}
+
+.won-auction-card footer strong {
+  color: #0f2e47;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
 @media (max-width: 1140px) {
   .auctions-v2-grid {
     grid-template-columns: 1fr;
+  }
+
+  .won-auctions-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -602,6 +763,10 @@
   }
 
   .participation-main {
+    grid-template-columns: 1fr;
+  }
+
+  .won-auctions-list {
     grid-template-columns: 1fr;
   }
 }

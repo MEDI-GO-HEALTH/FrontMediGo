@@ -1,10 +1,12 @@
 /* eslint-disable sonarjs/cognitive-complexity */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import AffiliateShell from '../../components/layout/AffiliateShell'
 import {
   getActiveAuctions,
   getAuctionBids,
   getAuctionById,
+  getAuctionWinner,
+  getWonAuctions,
   joinAuction,
   placeAuctionBid,
 } from '../../api/subastaService'
@@ -180,6 +182,9 @@ const getCategoryTone = (category) => {
 }
 
 const getParticipationStorageKey = (userId) => `medigo_affiliate_participations_${userId}`
+const getWinnerNotificationStorageKey = (userId) => `medigo_affiliate_winner_notifications_${userId}`
+const WINNER_CHECK_WINDOW_SECONDS = 20
+const WINNER_CHECK_THROTTLE_MS = 5000
 
 const readStoredParticipations = (userId) => {
   if (!userId) {
@@ -207,6 +212,54 @@ const storeParticipations = (userId, auctionIds) => {
   }
 }
 
+const readWinnerNotifications = (userId) => {
+  if (!userId) {
+    return []
+  }
+
+  try {
+    const raw = localStorage.getItem(getWinnerNotificationStorageKey(userId))
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed.map(String) : []
+  } catch {
+    return []
+  }
+}
+
+const storeWinnerNotifications = (userId, auctionIds) => {
+  if (!userId) {
+    return
+  }
+
+  try {
+    localStorage.setItem(getWinnerNotificationStorageKey(userId), JSON.stringify(auctionIds))
+  } catch {
+    // Ignore storage errors (private mode/quota), UI still works in-memory.
+  }
+}
+
+const mapWonAuctionFromApi = (item) => ({
+  auctionId: String(item?.auctionId ?? item?.id ?? ''),
+  medicationName: item?.medicationName || 'Medicamento sin nombre',
+  lotLabel: item?.lotLabel || `Lote #${item?.auctionId ?? item?.id ?? 'N/A'}`,
+  finalAmount: Number(item?.finalAmount ?? item?.amount ?? 0),
+  wonAt: item?.wonAt || item?.closedAt || new Date().toISOString(),
+})
+
+const resolveWinnerUserId = (rawWinnerResponse) => {
+  const winner = rawWinnerResponse?.data || rawWinnerResponse
+  const candidate =
+    winner?.userId ??
+    winner?.winnerUserId ??
+    winner?.winnerId ??
+    winner?.id ??
+    winner?.winner?.userId ??
+    winner?.winner?.id
+
+  const asNumber = Number(candidate)
+  return Number.isFinite(asNumber) && asNumber > 0 ? asNumber : null
+}
+
 export default function CentroSubastas() {
   const [auctions, setAuctions] = useState([])
   const [loading, setLoading] = useState(true)
@@ -219,6 +272,11 @@ export default function CentroSubastas() {
   const [selectedAuctionDetail, setSelectedAuctionDetail] = useState(null)
   const [selectedAuctionBids, setSelectedAuctionBids] = useState([])
   const [participantAuctionIds, setParticipantAuctionIds] = useState([])
+  const [auctionOutcomeById, setAuctionOutcomeById] = useState({})
+  const [winnerModalAuction, setWinnerModalAuction] = useState(null)
+  const [winnerNotifiedAuctionIds, setWinnerNotifiedAuctionIds] = useState([])
+  const [wonAuctionsHistory, setWonAuctionsHistory] = useState([])
+  const [wonAuctionsTotal, setWonAuctionsTotal] = useState(0)
   const [participationStorageReady, setParticipationStorageReady] = useState(false)
   const [participationsCount, setParticipationsCount] = useState(0)
   const [wonCount, setWonCount] = useState(0)
@@ -226,6 +284,7 @@ export default function CentroSubastas() {
   const [clock, setClock] = useState(new Date())
   const [lastBidAtMs, setLastBidAtMs] = useState(0)
   const [bidCooldownMs, setBidCooldownMs] = useState(5000)
+  const winnerCheckScheduleRef = useRef({})
 
   const currentUser = getCurrentAffiliateUser()
 
@@ -273,8 +332,16 @@ export default function CentroSubastas() {
 
   useEffect(() => {
     const storedIds = readStoredParticipations(currentUser?.id)
+    const notifiedIds = readWinnerNotifications(currentUser?.id)
     setParticipantAuctionIds(storedIds)
+    setWinnerNotifiedAuctionIds(notifiedIds)
+    setWonAuctionsHistory([])
+    setWonAuctionsTotal(0)
+    setAuctionOutcomeById({})
+    winnerCheckScheduleRef.current = {}
+    setWinnerModalAuction(null)
     setParticipationsCount(storedIds.length)
+    setWonCount(0)
     setParticipationStorageReady(true)
   }, [currentUser?.id])
 
@@ -285,6 +352,14 @@ export default function CentroSubastas() {
 
     storeParticipations(currentUser?.id, participantAuctionIds)
   }, [currentUser?.id, participantAuctionIds, participationStorageReady])
+
+  useEffect(() => {
+    if (!participationStorageReady) {
+      return
+    }
+
+    storeWinnerNotifications(currentUser?.id, winnerNotifiedAuctionIds)
+  }, [currentUser?.id, winnerNotifiedAuctionIds, participationStorageReady])
 
   useEffect(() => {
     const timerId = globalThis.setInterval(() => {
@@ -313,15 +388,54 @@ export default function CentroSubastas() {
       setAuctions([])
       setSelectedAuctionId('')
       setParticipantAuctionIds([])
+      setAuctionOutcomeById({})
       setParticipationsCount(0)
+      setWonAuctionsHistory([])
+      setWonAuctionsTotal(0)
       setWonCount(0)
     } finally {
       setLoading(false)
     }
   }
 
+  const loadWonAuctions = async () => {
+    try {
+      const response = await getWonAuctions({ page: 0, size: 20 })
+      let content = []
+      if (Array.isArray(response?.content)) {
+        content = response.content
+      } else if (Array.isArray(response)) {
+        content = response
+      }
+
+      const mapped = content
+        .map(mapWonAuctionFromApi)
+        .filter((item) => String(item.auctionId).trim() !== '')
+
+      const total = Number(
+        response?.totalElements ?? response?.total ?? response?.count ?? mapped.length,
+      )
+
+      setWonAuctionsHistory(mapped)
+      setWonAuctionsTotal(Number.isFinite(total) ? total : mapped.length)
+      setAuctionOutcomeById((previous) => {
+        const next = { ...previous }
+        for (const wonAuction of mapped) {
+          next[String(wonAuction.auctionId)] = 'WON'
+        }
+
+        return next
+      })
+    } catch (apiError) {
+      setError(extractErrorMessage(apiError))
+      setWonAuctionsHistory([])
+      setWonAuctionsTotal(0)
+    }
+  }
+
   useEffect(() => {
     loadActiveAuctions()
+    loadWonAuctions()
   }, [])
 
   const runAction = async (action) => {
@@ -407,6 +521,10 @@ export default function CentroSubastas() {
   )
 
   useEffect(() => {
+    setWonCount(wonAuctionsTotal)
+  }, [wonAuctionsTotal])
+
+  useEffect(() => {
     setParticipationsCount(participantAuctionIds.length)
   }, [participantAuctionIds])
 
@@ -441,6 +559,97 @@ export default function CentroSubastas() {
     () => panelAuction?.id && participantAuctionIds.includes(String(panelAuction.id)),
     [participantAuctionIds, panelAuction],
   )
+
+  const panelAuctionOutcome = auctionOutcomeById[String(panelAuction?.id || '')] || 'PENDING'
+
+  const evaluateAuctionWinner = async (auction) => {
+    const auctionId = String(auction?.id || '')
+    if (!auctionId || !currentUser?.id) {
+      return
+    }
+
+    const existingOutcome = auctionOutcomeById[auctionId]
+    if (existingOutcome === 'WON' || existingOutcome === 'LOST') {
+      return
+    }
+
+    const nowMs = Date.now()
+    const winnerCheckMeta = winnerCheckScheduleRef.current[auctionId]
+    if (winnerCheckMeta && nowMs < winnerCheckMeta.nextAllowedAt) {
+      return
+    }
+
+    winnerCheckScheduleRef.current[auctionId] = {
+      nextAllowedAt: nowMs + WINNER_CHECK_THROTTLE_MS,
+    }
+
+    try {
+      const winnerResponse = await getAuctionWinner(auctionId)
+      const winnerUserId = resolveWinnerUserId(winnerResponse)
+      if (!winnerUserId) {
+        return
+      }
+
+      const isWinner = Number(winnerUserId) === Number(currentUser.id)
+      setAuctionOutcomeById((previous) => ({
+        ...previous,
+        [auctionId]: isWinner ? 'WON' : 'LOST',
+      }))
+
+      if (isWinner) {
+        setNotice('Felicitaciones, acabas de ganar una subasta.')
+        await loadWonAuctions()
+
+        if (!winnerNotifiedAuctionIds.includes(auctionId)) {
+          setWinnerNotifiedAuctionIds((previous) => [...previous, auctionId])
+          setWinnerModalAuction(auction)
+        }
+      }
+    } catch {
+      // Winner can be unavailable before final close; retries are throttled.
+    }
+  }
+
+  useEffect(() => {
+    if (!currentUser?.id || participantAuctions.length === 0) {
+      return
+    }
+
+    const candidates = participantAuctions.filter((auction) => {
+      const outcome = auctionOutcomeById[String(auction.id)]
+      if (outcome === 'WON' || outcome === 'LOST') {
+        return false
+      }
+
+      const remainingSeconds = getAuctionRemainingSeconds(auction, clock)
+      return remainingSeconds <= WINNER_CHECK_WINDOW_SECONDS
+    })
+
+    if (candidates.length === 0) {
+      return
+    }
+
+    candidates.forEach((auction) => {
+      evaluateAuctionWinner(auction)
+    })
+  }, [clock, participantAuctions, auctionOutcomeById, currentUser?.id])
+
+  useEffect(() => {
+    if (!winnerModalAuction) {
+      return undefined
+    }
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setWinnerModalAuction(null)
+      }
+    }
+
+    globalThis.addEventListener('keydown', handleEscape)
+    return () => {
+      globalThis.removeEventListener('keydown', handleEscape)
+    }
+  }, [winnerModalAuction])
 
   const maxBidAmount = useMemo(() => {
     const detailAuctionId = String(selectedAuctionDetail?.id || '')
@@ -477,6 +686,38 @@ export default function CentroSubastas() {
   }, [currentUser, selectedAuctionBids])
 
   const isLeader = myTopBid !== null && Number(myTopBid) >= Number(maxBidAmount)
+
+  const panelStatusClass = (() => {
+    if (panelAuctionOutcome === 'WON') {
+      return 'winner'
+    }
+
+    if (panelAuctionOutcome === 'LOST') {
+      return 'loser'
+    }
+
+    if (isLeader) {
+      return 'leader'
+    }
+
+    return 'regular'
+  })()
+
+  const panelStatusLabel = (() => {
+    if (panelAuctionOutcome === 'WON') {
+      return 'Ganada'
+    }
+
+    if (panelAuctionOutcome === 'LOST') {
+      return 'No ganada'
+    }
+
+    if (isLeader) {
+      return 'Lider'
+    }
+
+    return 'Pendiente'
+  })()
 
   const handleJoinAuction = async (auctionId) => {
     if (!currentUser?.id) {
@@ -601,6 +842,14 @@ export default function CentroSubastas() {
     [clock],
   )
 
+  const wonAuctionsSorted = useMemo(
+    () =>
+      [...wonAuctionsHistory].sort(
+        (a, b) => new Date(b.wonAt).getTime() - new Date(a.wonAt).getTime(),
+      ),
+    [wonAuctionsHistory],
+  )
+
   return (
     <AffiliateShell active="auctions">
       <section className="affiliate-auctions-v2" aria-label="Centro de subastas afiliado">
@@ -655,7 +904,7 @@ export default function CentroSubastas() {
                 </article>
               ) : null}
 
-              {filteredAuctions.map((auction, index) => {
+              {filteredAuctions.map((auction) => {
                 const isSelected = String(selectedAuctionId) === String(auction.id)
                 const remainingSeconds = getAuctionRemainingSeconds(auction, clock)
                 const isCritical = remainingSeconds < 300
@@ -747,7 +996,7 @@ export default function CentroSubastas() {
                     </div>
                     <div>
                       <small>Estado</small>
-                      <strong className={isLeader ? 'leader' : 'regular'}>{isLeader ? 'Lider' : 'Pendiente'}</strong>
+                      <strong className={panelStatusClass}>{panelStatusLabel}</strong>
                     </div>
                   </>
                 ) : (
@@ -822,6 +1071,58 @@ export default function CentroSubastas() {
             </section>
           </aside>
         </div>
+
+        <section className="won-auctions-section" aria-label="Subastas ganadas">
+          <div className="auctions-v2-section-head won-auctions-head">
+            <h3>
+              <span />
+              {' '}Subastas Ganadas
+            </h3>
+            <small>{wonCount} registradas</small>
+          </div>
+
+          <div className="won-auctions-list">
+            {wonAuctionsSorted.length === 0 ? (
+              <article className="won-auction-card empty">
+                <p>Aun no tienes subastas ganadas registradas.</p>
+              </article>
+            ) : null}
+
+            {wonAuctionsSorted.map((wonAuction) => (
+              <article key={wonAuction.auctionId} className="won-auction-card">
+                <header>
+                  <span>Ganada</span>
+                  <small>{new Date(wonAuction.wonAt).toLocaleString('es-CO')}</small>
+                </header>
+                <h4>{wonAuction.medicationName}</h4>
+                <p>{wonAuction.lotLabel}</p>
+                <footer>
+                  <span>Monto final</span>
+                  <strong>{formatCurrency(wonAuction.finalAmount)}</strong>
+                </footer>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        {winnerModalAuction ? (
+          <div className="winner-modal-backdrop">
+            <dialog
+              className="winner-modal"
+              open
+              aria-labelledby="winner-modal-title"
+            >
+              <span className="material-symbols-outlined">emoji_events</span>
+              <h3 id="winner-modal-title">Ganaste la subasta</h3>
+              <p>
+                {`Felicitaciones. Tu oferta fue la seleccionada para ${winnerModalAuction.medicationName}.`}
+              </p>
+              <button type="button" onClick={() => setWinnerModalAuction(null)}>
+                Entendido
+              </button>
+            </dialog>
+          </div>
+        ) : null}
       </section>
     </AffiliateShell>
   )
