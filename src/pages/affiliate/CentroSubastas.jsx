@@ -8,6 +8,7 @@ import {
   joinAuction,
   placeAuctionBid,
 } from '../../api/subastaService'
+import useAuctionLivePrices from '../../hooks/useAuctionLivePrices'
 import '../../styles/affiliate/perfil-afiliado.css'
 import '../../styles/affiliate/centro-subastas.css'
 
@@ -227,6 +228,48 @@ export default function CentroSubastas() {
   const [bidCooldownMs, setBidCooldownMs] = useState(5000)
 
   const currentUser = getCurrentAffiliateUser()
+
+  // ── Tiempo real: actualización de "Monto actual" vía WebSocket STOMP ──
+  // Cuando cualquier usuario registra una puja, el backend publica en
+  // /topic/auctions y este hook actualiza el estado local de forma inmediata.
+  useAuctionLivePrices((auctionId, newPrice) => {
+    // 1. Actualiza el precio en la tarjeta de la lista de subastas
+    setAuctions((prev) =>
+      prev.map((a) =>
+        String(a.id) === auctionId ? { ...a, currentOffer: newPrice } : a,
+      ),
+    )
+    // 2. Actualiza el detalle abierto en el panel lateral (afecta "Oferta actual")
+    setSelectedAuctionDetail((prev) =>
+      prev && String(prev.id) === auctionId ? { ...prev, currentPrice: newPrice } : prev,
+    )
+  })
+
+  // ── Polling silencioso: fallback garantizado cada 5 s ──────────────────
+  // Asegura que User B vea cambios incluso si la conexión WebSocket falla
+  // o el mensaje no llega. No muestra spinner ni sobreescribe datos más
+  // recientes que el backend retorne.
+  useEffect(() => {
+    const pollId = globalThis.setInterval(async () => {
+      try {
+        const response = await getActiveAuctions()
+        const source = Array.isArray(response) ? response : response?.data
+        const list = Array.isArray(source) ? source : []
+        if (list.length === 0) return
+        setAuctions((prev) =>
+          prev.map((a) => {
+            const fresh = list.find((item) => String(item?.id) === String(a.id))
+            if (!fresh) return a
+            const freshPrice = readCurrentPrice(fresh)
+            return freshPrice !== a.currentOffer ? { ...a, currentOffer: freshPrice } : a
+          }),
+        )
+      } catch {
+        // Silencioso — no mostrar error por fallo de polling en segundo plano
+      }
+    }, 5000)
+    return () => globalThis.clearInterval(pollId)
+  }, [])
 
   useEffect(() => {
     const storedIds = readStoredParticipations(currentUser?.id)
