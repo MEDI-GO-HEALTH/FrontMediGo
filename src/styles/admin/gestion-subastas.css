@@ -1121,3 +1121,347 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== Estilos para visualizadores de datos (Nielsen UX) ===== */
+
+.empty-state {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #425157;
+  font-size: 0.85rem;
+  background: #f8f9fb;
+  border-radius: 0.56rem;
+  border: 1px dashed #d4dae2;
+}
+
+/* DETALLE DE SUBASTA */
+.detail-view {
+  padding: 1rem;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.detail-field span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #3d4551;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.detail-field p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #1b2430;
+  word-break: break-word;
+}
+
+.detail-field .currency {
+  font-weight: 700;
+  color: #0f5f95;
+  font-family: 'Courier New', monospace;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.32rem 0.62rem;
+  border-radius: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  width: fit-content;
+}
+
+.status-badge.status-en\ vivo,
+.status-badge.status-active {
+  background: #dff5e6;
+  color: #1d7a39;
+  border: 1px solid #b9ebc9;
+}
+
+.status-badge.status-pendiente,
+.status-badge.status-pending {
+  background: #fff3cd;
+  color: #664d03;
+  border: 1px solid #ffecb5;
+}
+
+.status-badge.status-finalizada,
+.status-badge.status-finished {
+  background: #e2e3e5;
+  color: #383d41;
+  border: 1px solid #d3d6d8;
+}
+
+/* PUJAS - TABLA */
+.bids-view {
+  padding: 1rem;
+}
+
+.bids-summary {
+  margin-bottom: 1.2rem;
+  padding: 0.8rem;
+  background: #f0f7ff;
+  border-left: 4px solid #0f5f95;
+  border-radius: 0.35rem;
+}
+
+.bids-summary p {
+  margin: 0.4rem 0;
+  font-size: 0.85rem;
+  color: #003358;
+}
+
+.bids-summary strong {
+  color: #003358;
+  font-weight: 700;
+}
+
+.bids-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.bids-table thead {
+  background: #f4f6f9;
+  border-bottom: 2px solid #e4e7ec;
+}
+
+.bids-table th {
+  padding: 0.7rem;
+  text-align: left;
+  font-weight: 700;
+  color: #69737f;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+}
+
+.bids-table td {
+  padding: 0.7rem;
+  border-bottom: 1px solid #edf1f5;
+  color: #1b2430;
+}
+
+.bids-table tbody tr:hover {
+  background: #fafbfc;
+}
+
+.bids-table .currency {
+  font-weight: 700;
+  color: #0f5f95;
+  font-family: 'Courier New', monospace;
+}
+
+/* GANADOR - TARJETA DESTACADA */
+.winner-view {
+  padding: 1rem;
+}
+
+.winner-card {
+  background: linear-gradient(135deg, #dff5e6 0%, #e9faef 100%);
+  border: 2px solid #b9ebc9;
+  border-radius: 0.56rem;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.winner-badge {
+  font-size: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.winner-info h5 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #69737f;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.winner-name {
+  margin: 0 0 1rem 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #1d7a39;
+}
+
+.winner-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.detail-item span:first-child {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #3d4551;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.detail-item span {
+  font-size: 0.95rem;
+  color: #1b2430;
+  font-weight: 600;
+}
+
+.detail-item span.currency {
+  color: #1d7a39;
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+}
+
+/* SUBASTAS ACTIVAS - TABLA */
+.active-auctions-view {
+  padding: 1rem;
+}
+
+.auctions-summary {
+  margin-bottom: 1.2rem;
+  padding: 0.8rem;
+  background: #f0f7ff;
+  border-left: 4px solid #0f5f95;
+  border-radius: 0.35rem;
+}
+
+.auctions-summary p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #003358;
+}
+
+.auctions-summary strong {
+  color: #003358;
+  font-weight: 700;
+}
+
+.auctions-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  overflow-x: auto;
+}
+
+.auctions-table thead {
+  background: #f4f6f9;
+  border-bottom: 2px solid #e4e7ec;
+  position: sticky;
+  top: 0;
+}
+
+.auctions-table th {
+  padding: 0.7rem;
+  text-align: left;
+  font-weight: 700;
+  color: #69737f;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.auctions-table td {
+  padding: 0.7rem;
+  border-bottom: 1px solid #edf1f5;
+  color: #1b2430;
+}
+
+.auctions-table tbody tr:hover {
+  background: #fafbfc;
+}
+
+.auctions-table .id-cell {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  color: #0f5f95;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auctions-table .currency {
+  font-weight: 700;
+  color: #0f5f95;
+  font-family: 'Courier New', monospace;
+}
+
+/* Responsivos */
+@media (max-width: 1024px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bids-table,
+  .auctions-table {
+    font-size: 0.75rem;
+  }
+
+  .winner-card {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .winner-details {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-item span {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .bids-table,
+  .auctions-table {
+    font-size: 0.7rem;
+  }
+
+  .bids-table th,
+  .auctions-table th {
+    padding: 0.5rem;
+    font-size: 0.65rem;
+  }
+
+  .bids-table td,
+  .auctions-table td {
+    padding: 0.5rem;
+  }
+
+  .winner-badge {
+    font-size: 2rem;
+  }
+
+  .winner-name {
+    font-size: 1rem;
+  }
+
+  .detail-field p,
+  .detail-item span {
+    font-size: 0.8rem;
+  }
+}
