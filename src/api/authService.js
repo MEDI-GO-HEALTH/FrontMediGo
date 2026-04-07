@@ -18,13 +18,13 @@ export const login = async (credentials) => {
   // 🧪 MOCK LOGIN para Desarrollo (Si se usa un correo específico)
   if (API_CONFIG.useAuthMock) {
     if (email.includes('admin@medigo.co')) {
-      return { token: 'mock-token-admin', user: { id: 1, name: 'Admin Demo', email, role: 'ADMIN' } };
+      return { token: 'fake-jwt.1.ADMIN.0', user: { id: 1, name: 'Admin Demo', email, role: 'ADMIN' } };
     }
     if (email.includes('afiliado@medigo.co')) {
-      return { token: 'mock-token-afiliado', user: { id: 2, name: 'Afiliado Demo', email, role: 'AFILIADO' } };
+      return { token: 'fake-jwt.2.AFFILIATE.0', user: { id: 2, name: 'Afiliado Demo', email, role: 'AFILIADO' } };
     }
     if (email.includes('repartidor@medigo.co')) {
-      return { token: 'mock-token-repartidor', user: { id: 3, name: 'Repartidor Demo', email, role: 'REPARTIDOR' } };
+      return { token: 'fake-jwt.3.DELIVERY.0', user: { id: 3, name: 'Repartidor Demo', email, role: 'REPARTIDOR' } };
     }
   }
 
