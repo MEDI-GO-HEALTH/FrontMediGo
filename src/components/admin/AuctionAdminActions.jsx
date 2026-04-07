@@ -270,7 +270,74 @@ export default function AuctionAdminActions({ initialAuctionId = '', onNotice })
               <h4>Consultar detalle de subasta</h4>
             </header>
             <button type="button" onClick={handleGetById} disabled={loading || !hasAuctionId}>Consultar</button>
-            <pre>{JSON.stringify(auctionDetail, null, 2)}</pre>
+            {auctionDetail ? (
+              <div className="detail-view">
+                <div className="detail-grid">
+                  <div className="detail-field">
+                    <span>ID</span>
+                    <p>{auctionDetail?.id || auctionDetail?.codigo || 'N/A'}</p>
+                  </div>
+                  <div className="detail-field">
+                    <span>Medicamento</span>
+                    <p>{auctionDetail?.medicationName || auctionDetail?.nombre || 'N/A'}</p>
+                  </div>
+                  <div className="detail-field">
+                    <span>Lote</span>
+                    <p>{auctionDetail?.lote || auctionDetail?.batch || 'N/A'}</p>
+                  </div>
+                  <div className="detail-field">
+                    <span>Estado</span>
+                    <p className={`status-badge status-${(auctionDetail?.status || auctionDetail?.estado || '').toLowerCase()}`}>
+                      {auctionDetail?.status || auctionDetail?.estado || 'N/A'}
+                    </p>
+                  </div>
+                  <div className="detail-field">
+                    <span>Precio Base</span>
+                    <p className="currency">${(Number(auctionDetail?.basePrice ?? auctionDetail?.precioBase ?? 0) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  </div>
+                  <div className="detail-field">
+                    <span>Precio Actual</span>
+                    <p className="currency">${(Number(auctionDetail?.montoActual ?? auctionDetail?.currentPrice ?? 0) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  </div>
+                  <div className="detail-field">
+                    <span>Inicio</span>
+                    <p>{auctionDetail?.startTime ? new Date(auctionDetail.startTime).toLocaleString('es-CO') : 'N/A'}</p>
+                  </div>
+                  <div className="detail-field">
+                    <span>Fin</span>
+                    <p>{auctionDetail?.endTime ? new Date(auctionDetail.endTime).toLocaleString('es-CO') : 'N/A'}</p>
+                  </div>
+                  <div className="detail-field">
+                    <span>Tipo Cierre</span>
+                    <p>{auctionDetail?.closureType || auctionDetail?.tipoCierre || 'N/A'}</p>
+                  </div>
+                  <div className="detail-field">
+                    <span>ID Sede</span>
+                    <p>{auctionDetail?.branchId || auctionDetail?.sedeId || 'N/A'}</p>
+                  </div>
+                  <div className="detail-field">
+                    <span>ID Medicamento</span>
+                    <p>{auctionDetail?.medicationId || auctionDetail?.medicamentoId || 'N/A'}</p>
+                  </div>
+                  {auctionDetail?.maxPrice ? (
+                    <div className="detail-field">
+                      <span>Precio Máximo</span>
+                      <p className="currency">${(Number(auctionDetail.maxPrice) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    </div>
+                  ) : null}
+                  {auctionDetail?.inactivityMinutes ? (
+                    <div className="detail-field">
+                      <span>Minutos Inactividad</span>
+                      <p>{auctionDetail.inactivityMinutes}</p>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <div className="empty-state">
+                <p>No hay datos. Presiona "Consultar" para cargar.</p>
+              </div>
+            )}
           </article>
         ) : null}
 
@@ -327,7 +394,45 @@ export default function AuctionAdminActions({ initialAuctionId = '', onNotice })
               <h4>Consultar pujas por subasta</h4>
             </header>
             <button type="button" onClick={handleGetBids} disabled={loading || !hasAuctionId}>Consultar pujas</button>
-            <pre>{JSON.stringify(auctionBids, null, 2)}</pre>
+            {Array.isArray(auctionBids) && auctionBids.length > 0 ? (
+              <div className="bids-view">
+                <div className="bids-summary">
+                  <p><strong>Total de pujas:</strong> {auctionBids.length}</p>
+                  {auctionBids.length > 0 && (
+                    <>
+                      <p><strong>Puja más alta:</strong> ${(Math.max(...auctionBids.map(b => Number(b?.amount ?? b?.monto ?? 0))).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</p>
+                      <p><strong>Puja más baja:</strong> ${(Math.min(...auctionBids.map(b => Number(b?.amount ?? b?.monto ?? 0))).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</p>
+                    </>
+                  )}
+                </div>
+                <table className="bids-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Usuario</th>
+                      <th>ID Usuario</th>
+                      <th>Monto</th>
+                      <th>Fecha</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auctionBids.map((bid, idx) => (
+                      <tr key={`bid-${bid?.userId}-${idx}`}>
+                        <td>{idx + 1}</td>
+                        <td>{bid?.userName || bid?.nombreUsuario || 'N/A'}</td>
+                        <td>{bid?.userId || bid?.usuarioId || 'N/A'}</td>
+                        <td className="currency">${(Number(bid?.amount ?? bid?.monto ?? 0) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td>{bid?.timestamp || bid?.fecha ? new Date(bid.timestamp || bid.fecha).toLocaleString('es-CO') : 'N/A'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="empty-state">
+                <p>No hay pujas registradas para esta subasta.</p>
+              </div>
+            )}
           </article>
         ) : null}
 
@@ -375,7 +480,37 @@ export default function AuctionAdminActions({ initialAuctionId = '', onNotice })
               <h4>Consultar ganador de subasta</h4>
             </header>
             <button type="button" onClick={handleGetWinner} disabled={loading || !hasAuctionId}>Consultar ganador</button>
-            <pre>{JSON.stringify(auctionWinner, null, 2)}</pre>
+            {auctionWinner ? (
+              <div className="winner-view">
+                <div className="winner-card">
+                  <div className="winner-badge">👑</div>
+                  <div className="winner-info">
+                    <h5>Ganador</h5>
+                    <p className="winner-name">{auctionWinner?.winnerName || auctionWinner?.userName || auctionWinner?.nombreUsuario || 'N/A'}</p>
+                    <div className="winner-details">
+                      <div className="detail-item">
+                        <span>ID Usuario</span>
+                        <span>{auctionWinner?.winnerId || auctionWinner?.userId || auctionWinner?.usuarioId || 'N/A'}</span>
+                      </div>
+                      <div className="detail-item">
+                        <span>Monto Ganador</span>
+                        <span className="currency">${(Number(auctionWinner?.winningAmount ?? auctionWinner?.montoGanador ?? 0) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                      {auctionWinner?.winTime || auctionWinner?.fechaGano ? (
+                        <div className="detail-item">
+                          <span>Hora de Victoria</span>
+                          <span>{new Date(auctionWinner.winTime || auctionWinner.fechaGano).toLocaleString('es-CO')}</span>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="empty-state">
+                <p>No hay ganador registrado para esta subasta.</p>
+              </div>
+            )}
           </article>
         ) : null}
 
@@ -385,8 +520,49 @@ export default function AuctionAdminActions({ initialAuctionId = '', onNotice })
               <h4>Consultar subastas activas</h4>
             </header>
             <button type="button" onClick={handleGetActive} disabled={loading}>Consultar activas</button>
-            <p>Total activas: {activeAuctions.length}</p>
-            <pre>{JSON.stringify(activeAuctions, null, 2)}</pre>
+            {Array.isArray(activeAuctions) && activeAuctions.length > 0 ? (
+              <div className="active-auctions-view">
+                <div className="auctions-summary">
+                  <p><strong>Total de subastas activas:</strong> {activeAuctions.length}</p>
+                </div>
+                <table className="auctions-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Medicamento</th>
+                      <th>Lote</th>
+                      <th>Estado</th>
+                      <th>Precio Base</th>
+                      <th>Precio Actual</th>
+                      <th>Inicio</th>
+                      <th>Fin</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activeAuctions.map((auction, idx) => (
+                      <tr key={`auction-${auction?.id || idx}`}>
+                        <td className="id-cell">{auction?.id || auction?.codigo || 'N/A'}</td>
+                        <td>{auction?.medicationName || auction?.nombre || 'N/A'}</td>
+                        <td>{auction?.lote || auction?.batch || 'N/A'}</td>
+                        <td>
+                          <span className={`status-badge status-${(auction?.status || auction?.estado || '').toLowerCase()}`}>
+                            {auction?.status || auction?.estado || 'N/A'}
+                          </span>
+                        </td>
+                        <td className="currency">${(Number(auction?.basePrice ?? auction?.precioBase ?? 0) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="currency">${(Number(auction?.montoActual ?? auction?.currentPrice ?? 0) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td>{auction?.startTime ? new Date(auction.startTime).toLocaleString('es-CO') : 'N/A'}</td>
+                        <td>{auction?.endTime ? new Date(auction.endTime).toLocaleString('es-CO') : 'N/A'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="empty-state">
+                <p>No hay subastas activas en este momento.</p>
+              </div>
+            )}
           </article>
         ) : null}
       </div>
