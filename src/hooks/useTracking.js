@@ -2,24 +2,21 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { Client } from '@stomp/stompjs';
 import { API_CONFIG } from '../config/api';
 
-export function useTracking({ deliveryId, enablePublishing = false } = {}) {
-  const [deliveries, setDeliveries] = useState([]);
+export function useTracking({ deliveryId, assignedOrderId, enablePublishing = false } = {}) {
+  const [deliveries, setDeliveries] = useState([]); // Ubicaciones de repartidores
+  const [branches, setBranches] = useState([]);     // Sedes/Farmacias
+  const [availableOrders, setAvailableOrders] = useState([]); // Mercado global de pedidos
+  const [activeOrder, setActiveOrder] = useState(null); // Estado de la orden actual (Afiliado)
   const [isConnected, setIsConnected] = useState(false);
-  const [status, setStatus] = useState('Iniciando...');
-  const [isMock, setIsMock] = useState(false);
+  const [status, setStatus] = useState('Desconectado');
 
   const stompClient = useRef(null);
 
   const BACKEND_URL = (() => {
-    // Usar VITE_WS_URL si está definido (apunta directo al backend, no al gateway)
-    // El API Gateway (8081) no hace proxy de WebSockets
     const envWsUrl = import.meta.env.VITE_WS_URL;
     if (envWsUrl) return envWsUrl;
-
-    // Fallback: derivar WS URL desde la base URL del API
     const baseUrl = API_CONFIG.baseURL;
     const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    if (!baseUrl || baseUrl.startsWith('/')) return `${wsProtocol}://${window.location.host}/ws`;
     try {
       const url = new URL(baseUrl);
       return `${wsProtocol}://${url.host}/ws`;
@@ -38,103 +35,93 @@ export function useTracking({ deliveryId, enablePublishing = false } = {}) {
   }, [deliveryId]);
 
   useEffect(() => {
-    // ── Crear y activar el cliente STOMP ──────────────────────────────────
     const createClient = () => {
       if (stompClient.current) return;
 
       const token = localStorage.getItem('medigo_token');
-      console.log('useTracking: Conectando a:', BACKEND_URL);
+      const userStr = localStorage.getItem('medigo_user');
+      const user = userStr ? JSON.parse(userStr) : null;
 
       const client = new Client({
         brokerURL: BACKEND_URL,
-        connectHeaders: {
-          Authorization: `Bearer ${token}` // Punto 2: Autenticación obligatoria
-        },
-        reconnectDelay: 0,
+        connectHeaders: { Authorization: `Bearer ${token}` },
+        debug: (msg) => console.log('STOMP:', msg),
+        reconnectDelay: 5000,
         heartbeatIncoming: 4000,
         heartbeatOutgoing: 4000,
         onConnect: () => {
-          console.log('STOMP: ¡Conectado y Autenticado!');
           setIsConnected(true);
+          setStatus('Conectado');
 
-          // Punto 3: Suscripción a ubicaciones globales
+          // 1. Repartidores (Global)
           client.subscribe('/topic/deliveries', (message) => {
-            if (message.body) {
-              const data = JSON.parse(message.body);
-              setDeliveries((prev) => {
-                const idx = prev.findIndex((d) => d.id === data.id);
-                if (idx >= 0) {
-                  const next = [...prev];
-                  next[idx] = data;
-                  return next;
-                }
-                return [...prev, data];
+            const data = JSON.parse(message.body);
+            setDeliveries(prev => {
+              const items = Array.isArray(data) ? data : [data];
+              let next = [...prev];
+              items.forEach(item => {
+                const idx = next.findIndex(d => d.id === item.id);
+                if (idx >= 0) next[idx] = item;
+                else next.push(item);
               });
-            }
+              return next;
+            });
           });
 
-          // Punto 5: Suscripción a errores de seguridad propios
-          client.subscribe('/user/queue/errors', (message) => {
-            console.error('Error de Seguridad STOMP:', message.body);
-            setStatus(`Error: ${message.body}`);
+          // 2. Sedes (Global)
+          client.subscribe('/topic/branches', (message) => {
+            setBranches(JSON.parse(message.body));
           });
+
+          // 3. Mercado Global de Pedidos (Para Repartidores)
+          const isDriver = user?.role === 'DELIVERY' || user?.role === 'REPARTIDOR';
+          if (isDriver) {
+            client.subscribe('/topic/available-orders', (message) => {
+              const order = JSON.parse(message.body);
+              setAvailableOrders(prev => {
+                if (prev.find(o => o.id === order.id)) return prev;
+                return [...prev, order];
+              });
+            });
+          }
+
+          // 4. Mi Orden Personal (Para Afiliados)
+          const userId = user?.user_id || user?.id;
+          const isAffiliate = user?.role === 'AFFILIATE' || user?.role === 'AFILIADO';
+          if (userId && isAffiliate) {
+            client.subscribe(`/topic/orders/${userId}`, (message) => {
+              setActiveOrder(JSON.parse(message.body));
+            });
+          }
         },
-        onDisconnect: () => setIsConnected(false),
-        onStompError: (frame) => {
-          console.error('STOMP Error:', frame.headers['message']);
-          setStatus('Error de conexión');
-        },
-        onWebSocketClose: (evt) => console.warn('WS Cerrado:', evt.code, evt.reason)
+        onDisconnect: () => {
+          setIsConnected(false);
+          setStatus('Desconectado');
+        }
       });
 
       stompClient.current = client;
       client.activate();
     };
 
-    // ── Destruir el cliente STOMP ─────────────────────────────────────────
-    const destroyClient = () => {
+    createClient();
+    return () => {
       if (stompClient.current) {
         stompClient.current.deactivate();
         stompClient.current = null;
-        setIsConnected(false);
       }
     };
+  }, [BACKEND_URL]);
 
-    // Conectar solo si la pestaña ya está visible al montar
-    if (!document.hidden) {
-      createClient();
-    }
+  useEffect(() => {
+    if (!enablePublishing || !isConnected) return;
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => sendLocation(pos.coords.latitude, pos.coords.longitude),
+      (err) => console.error('GPS Error:', err),
+      { enableHighAccuracy: true }
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [enablePublishing, isConnected, sendLocation]);
 
-    // ── Visibility API: cerrar WS al cambiar de pestaña/ventana ──────────
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        console.log('useTracking: Pestaña oculta — cerrando WS');
-        destroyClient();
-      } else {
-        console.log('useTracking: Pestaña visible — reconectando WS');
-        createClient();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    // ── Geolocalización (solo si enablePublishing) ────────────────────────
-    let watchId = null;
-    if (enablePublishing && 'geolocation' in navigator) {
-      watchId = navigator.geolocation.watchPosition(
-        (pos) => sendLocation(pos.coords.latitude, pos.coords.longitude),
-        (err) => { console.warn('GPS Error:', err.message); setIsMock(true); },
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-    }
-
-    // ── Cleanup al desmontar el componente ────────────────────────────────
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (watchId) navigator.geolocation.clearWatch(watchId);
-      destroyClient();
-    };
-  }, [BACKEND_URL, enablePublishing, sendLocation]);
-
-  return { deliveries, status, isMock, isConnected };
+  return { deliveries, branches, availableOrders, setAvailableOrders, activeOrder, status, isConnected };
 }

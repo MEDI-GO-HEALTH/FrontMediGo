@@ -164,7 +164,7 @@ export default function App() {
         <Route
           path={ROUTES.AFFILIATE.MAP}
           element={
-            <ProtectedRoute allowedRoles={['AFILIADO']}>
+            <ProtectedRoute allowedRoles={['AFILIADO', 'AFFILIATE']}>
               <MapaPedidos />
             </ProtectedRoute>
           }
@@ -172,7 +172,7 @@ export default function App() {
         <Route
           path={ROUTES.AFFILIATE.AUCTIONS}
           element={
-            <ProtectedRoute allowedRoles={['AFILIADO']}>
+            <ProtectedRoute allowedRoles={['AFILIADO', 'AFFILIATE']}>
               <CentroSubastas />
             </ProtectedRoute>
           }
@@ -180,7 +180,7 @@ export default function App() {
         <Route
           path={ROUTES.AFFILIATE.PROFILE}
           element={
-            <ProtectedRoute allowedRoles={['AFILIADO']}>
+            <ProtectedRoute allowedRoles={['AFILIADO', 'AFFILIATE']}>
               <PerfilAfiliado />
             </ProtectedRoute>
           }
@@ -192,7 +192,7 @@ export default function App() {
         <Route
           path={ROUTES.DRIVER.MAP}
           element={
-            <ProtectedRoute allowedRoles={['REPARTIDOR']}>
+            <ProtectedRoute allowedRoles={['REPARTIDOR', 'DELIVERY']}>
               <MapaEntregas />
             </ProtectedRoute>
           }
@@ -200,7 +200,7 @@ export default function App() {
         <Route
           path={ROUTES.DRIVER.HISTORY}
           element={
-            <ProtectedRoute allowedRoles={['REPARTIDOR']}>
+            <ProtectedRoute allowedRoles={['REPARTIDOR', 'DELIVERY']}>
               <HistorialViajes />
             </ProtectedRoute>
           }
@@ -208,7 +208,7 @@ export default function App() {
         <Route
           path={ROUTES.DRIVER.PROFILE}
           element={
-            <ProtectedRoute allowedRoles={['REPARTIDOR']}>
+            <ProtectedRoute allowedRoles={['REPARTIDOR', 'DELIVERY']}>
               <PerfilRepartidor />
             </ProtectedRoute>
           }

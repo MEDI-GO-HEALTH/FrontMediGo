@@ -24,6 +24,8 @@ const ROLE_REDIRECTS = {
   ADMIN: '/admin/inventario',
   AFILIADO: '/afiliado/mapa',
   REPARTIDOR: '/repartidor/mapa',
+  AFFILIATE: '/afiliado/mapa',
+  DELIVERY: '/repartidor/mapa',
 }
 
 export default function Login() {
@@ -70,8 +72,8 @@ export default function Login() {
     // Roles para el frontend (UI e interna)
     const quickUsers = {
       ADMIN: { id: 1, name: 'Admin Demo', email: 'admin@medigo.co', role: 'ADMIN' },
-      AFILIADO: { id: 2, name: 'Afiliado Demo', email: 'afiliado@medigo.co', role: 'AFILIADO' },
-      REPARTIDOR: { id: 3, name: 'Repartidor Demo', email: 'repartidor@medigo.co', role: 'REPARTIDOR' },
+      AFILIADO: { id: 2, name: 'Afiliado Demo', email: 'afiliado@medigo.co', role: 'AFFILIATE' },
+      REPARTIDOR: { id: 3, name: 'Repartidor Demo', email: 'repartidor@medigo.co', role: 'DELIVERY' },
     }
 
     // Role para el JWT (Backend compatible)
