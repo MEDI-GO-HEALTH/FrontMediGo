@@ -18,11 +18,22 @@ const PROD_API_BASE_URL = 'https://ezequiel-gateway-etcrh9dxg9dwhng4.canadacentr
 
 const isLocalhostUrl = (value = '') => /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(value);
 
+let traceIdCounter = 0;
+
 const createTraceId = () => {
   if (globalThis?.crypto?.randomUUID) {
     return globalThis.crypto.randomUUID();
   }
-  return `trace-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+  if (globalThis?.crypto?.getRandomValues) {
+    const bytes = new Uint8Array(12);
+    globalThis.crypto.getRandomValues(bytes);
+    const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+    return `trace-${hex}`;
+  }
+
+  traceIdCounter += 1;
+  return `trace-${Date.now().toString(36)}-${traceIdCounter.toString(36)}`;
 };
 
 const isRunningOnLocalhost = () => {

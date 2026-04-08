@@ -80,7 +80,7 @@ export default function InventarioAfiliado() {
         }
 
         const parsed = (Array.isArray(result) ? result : [])
-          .map(mapStock)
+          .map((item, index) => mapStock(item, index))
           .filter((item) => item.isAvailable && item.quantity > CRITICAL_STOCK_THRESHOLD)
 
         setRows(parsed)
