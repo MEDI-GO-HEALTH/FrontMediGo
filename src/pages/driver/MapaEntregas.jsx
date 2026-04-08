@@ -6,6 +6,9 @@ import {
   getDriverMapSnapshot,
   startDriverShift,
 } from '../../api/driverDeliveryService';
+import MedigoSidebarBrand from '../../components/common/MedigoSidebarBrand';
+import PageLoadingOverlay from '../../components/common/PageLoadingOverlay';
+import useCappedLoading from '../../hooks/useCappedLoading';
 import '../../styles/driver/mapa-entregas.css';
 
 const FALLBACK_DATA = {
@@ -33,11 +36,13 @@ export default function MapaEntregas() {
   const [dashboardData, setDashboardData] = useState(FALLBACK_DATA);
   const [loading, setLoading] = useState(false);
   const [actionError, setActionError] = useState('');
+  const showLoader = useCappedLoading(loading, 3000);
 
   useEffect(() => {
     let mounted = true;
 
     const loadDashboard = async () => {
+      setLoading(true);
       try {
         const [mapSnapshot, currentOrder] = await Promise.all([
           getDriverMapSnapshot(),
@@ -62,6 +67,10 @@ export default function MapaEntregas() {
         }
 
         setDashboardData(FALLBACK_DATA);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -108,20 +117,17 @@ export default function MapaEntregas() {
 
   return (
     <div className="driver-map-page">
+      <PageLoadingOverlay visible={showLoader} message="Cargando mapa de entregas..." />
       <div className="driver-layout">
         <aside className="driver-sidenav" aria-label="Navegacion de repartidor">
           <div className="driver-side-head">
-            <div className="driver-side-brand">
-              <div className="driver-side-logo">
-                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  local_shipping
-                </span>
-              </div>
-              <div className="driver-side-brand-text">
-                <h1>Driver Portal</h1>
-                <p>Clinical Logistics Unit</p>
-              </div>
-            </div>
+            <MedigoSidebarBrand
+              containerClassName="driver-side-brand"
+              logoContainerClassName="driver-side-logo"
+              textContainerClassName="driver-side-brand-text"
+              title="Driver Portal"
+              subtitle="Clinical Logistics Unit"
+            />
           </div>
 
           <nav>

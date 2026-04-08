@@ -1,6 +1,8 @@
 /* eslint-disable sonarjs/cognitive-complexity */
 import { useEffect, useMemo, useRef, useState } from 'react'
+import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
 import AffiliateShell from '../../components/layout/AffiliateShell'
+import useCappedLoading from '../../hooks/useCappedLoading'
 import {
   getActiveAuctions,
   getAuctionBids,
@@ -284,6 +286,7 @@ export default function CentroSubastas() {
   const [clock, setClock] = useState(new Date())
   const [lastBidAtMs, setLastBidAtMs] = useState(0)
   const [bidCooldownMs, setBidCooldownMs] = useState(5000)
+  const showLoader = useCappedLoading(loading, 3000)
   const winnerCheckScheduleRef = useRef({})
 
   const currentUser = getCurrentAffiliateUser()
@@ -852,6 +855,7 @@ export default function CentroSubastas() {
 
   return (
     <AffiliateShell active="auctions">
+      <PageLoadingOverlay visible={showLoader} message="Cargando subastas activas..." />
       <section className="affiliate-auctions-v2" aria-label="Centro de subastas afiliado">
         <header className="auctions-v2-head">
           <h2>Centro de Subastas</h2>

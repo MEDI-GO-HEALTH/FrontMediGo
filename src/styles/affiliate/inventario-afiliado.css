@@ -1,0 +1,86 @@
+.affiliate-inventory-header {
+  margin-bottom: 1rem;
+}
+
+.affiliate-inventory-header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  color: #0f2d3f;
+}
+
+.affiliate-inventory-header p {
+  margin-top: 0.35rem;
+  color: #496275;
+}
+
+.affiliate-inventory-toolbar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.affiliate-inventory-toolbar label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-weight: 600;
+  color: #274759;
+}
+
+.affiliate-inventory-toolbar select,
+.affiliate-inventory-toolbar input {
+  border: 1px solid #d0dae2;
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  background: #fff;
+  color: #163041;
+}
+
+.affiliate-inventory-table-wrap {
+  border: 1px solid #d5e0e8;
+  border-radius: 14px;
+  background: #fff;
+  overflow-x: auto;
+}
+
+.affiliate-inventory-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.affiliate-inventory-table th,
+.affiliate-inventory-table td {
+  text-align: left;
+  padding: 0.8rem;
+  border-bottom: 1px solid #eef3f6;
+}
+
+.affiliate-inventory-table th {
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  color: #3d5b6d;
+  text-transform: uppercase;
+}
+
+.affiliate-inventory-state {
+  padding: 1rem;
+  color: #4b6272;
+}
+
+.affiliate-inventory-error {
+  margin: 0 0 0.9rem;
+  color: #b42318;
+  font-weight: 600;
+}
+
+.affiliate-inventory-ok {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #166534;
+  background: #dcfce7;
+}

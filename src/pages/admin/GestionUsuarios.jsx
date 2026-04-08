@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { cambiarRolUsuario, deleteUsuario, getUsuarios, toggleEstadoUsuario } from '../../api/usuariosService'
+import MedigoSidebarBrand from '../../components/common/MedigoSidebarBrand'
+import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
 import { ROUTES } from '../../constants/routes'
+import useCappedLoading from '../../hooks/useCappedLoading'
 import '../../styles/admin/gestion-usuarios.css'
 
 const FALLBACK_USERS = [
@@ -65,6 +68,7 @@ export default function GestionUsuarios() {
   const [search, setSearch] = useState('')
   const [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(true)
+  const showLoader = useCappedLoading(loading, 3000)
 
   useEffect(() => {
     let mounted = true
@@ -160,18 +164,14 @@ export default function GestionUsuarios() {
 
   return (
     <div className="admin-users-shell">
+      <PageLoadingOverlay visible={showLoader} message="Cargando usuarios..." />
       <aside className="users-side">
-        <div className="users-brand">
-          <div className="users-brand-icon">
-            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
-              clinical_notes
-            </span>
-          </div>
-          <div>
-            <h1>MediGo Admin</h1>
-            <p>CLINICAL PRECISION</p>
-          </div>
-        </div>
+        <MedigoSidebarBrand
+          containerClassName="users-brand"
+          logoContainerClassName="users-brand-icon"
+          title="MediGo Admin"
+          subtitle="CLINICAL PRECISION"
+        />
 
         <nav className="users-nav" aria-label="Navegacion administrador">
           <button type="button" onClick={() => navigate(ROUTES.ADMIN.AUCTIONS)}>

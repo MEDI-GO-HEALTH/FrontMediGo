@@ -23,6 +23,7 @@ export const ROUTES = {
   },
   AFFILIATE: {
     MAP: '/afiliado/mapa',
+    INVENTORY: '/afiliado/inventario',
     AUCTIONS: '/afiliado/subastas',
     PROFILE: '/afiliado/perfil',
   },
@@ -63,6 +64,11 @@ export const AFFILIATE_MENU = [
     label: 'Logistics Map',
     icon: 'map',
     path: ROUTES.AFFILIATE.MAP,
+  },
+  {
+    label: 'Branch Inventory',
+    icon: 'inventory_2',
+    path: ROUTES.AFFILIATE.INVENTORY,
   },
   {
     label: 'Live Auctions',

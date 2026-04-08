@@ -68,10 +68,15 @@ const normalizeLoginPayload = (payload, fallbackEmail = '') => {
 
   const token =
     nested?.jwtToken ||
+    nested?.accessToken ||
+    nested?.access_token ||
+    nested?.jwt ||
     nested?.token ||
     root?.jwtToken ||
-    root?.token ||
     root?.accessToken ||
+    root?.access_token ||
+    root?.jwt ||
+    root?.token ||
     '';
 
   const userSource = nested?.user || root?.user || nested || root || {};
@@ -149,6 +154,68 @@ const normalizeRegisterPayload = (payload) => {
     message: nested?.message || root?.message || 'Registro exitoso.',
   };
 };
+
+const normalizeRegisterErrorMessage = (error) => {
+  const status = Number(error?.response?.status || 0)
+
+  const backendMessage = String(
+    error?.response?.data?.message ||
+      error?.response?.data?.data?.message ||
+      error?.response?.data?.error ||
+      error?.response?.data?.details ||
+      ''
+  ).trim()
+
+  const source = backendMessage.toLowerCase()
+
+  if (!backendMessage && !status) {
+    return 'No se pudo conectar con el servicio de registro. Verifique que API Gateway y backend estén activos.'
+  }
+
+  if (source.includes('ya se encuentra registrado') || source.includes('ya existe') || status === 409) {
+    if (source.includes('email')) {
+      return 'El correo ya está registrado. Intenta iniciar sesión o usa otro email.'
+    }
+    if (source.includes('usuario') || source.includes('username') || source.includes('name')) {
+      return 'El nombre de usuario ya está registrado. Intenta con otro nombre.'
+    }
+    return 'La cuenta ya existe con esos datos. Verifica correo y nombre de usuario.'
+  }
+
+  if (source.includes('contraseña') || source.includes('password') || source.includes('weak')) {
+    return 'La contraseña es débil. Debe tener mínimo 8 caracteres, una mayúscula, una minúscula y un número.'
+  }
+
+  if (source.includes('email') && (source.includes('válido') || source.includes('valido') || source.includes('formato'))) {
+    return 'El correo no tiene un formato válido.'
+  }
+
+  if (source.includes('teléfono') || source.includes('telefono') || source.includes('phone')) {
+    return 'El teléfono no es válido. Usa el formato +57-322-5555555.'
+  }
+
+  if (source.includes('rol') || source.includes('role') || source.includes('affiliate') || source.includes('delivery')) {
+    return 'El rol enviado no es válido. Solo se permiten AFFILIATE o DELIVERY.'
+  }
+
+  if (source.includes('campo') || source.includes('required') || source.includes('validation failed') || status === 400) {
+    return backendMessage || 'Hay campos inválidos o incompletos en el formulario de registro.'
+  }
+
+  if (status === 401 || status === 403) {
+    return 'No autorizado para crear la cuenta con los datos enviados.'
+  }
+
+  if (status === 503 || status === 502 || status === 504) {
+    return 'El servicio no está disponible temporalmente. Intenta nuevamente en unos minutos.'
+  }
+
+  if (backendMessage) {
+    return backendMessage
+  }
+
+  return 'No fue posible crear la cuenta por un error inesperado. Intenta nuevamente.'
+}
 
 /**
  * Iniciar sesión
@@ -315,11 +382,10 @@ export const registerUser = async (payload) => {
     lastError?.response?.headers?.['X-Trace-Id'] ||
     '';
 
-  if (backendMessage) {
-    lastError.message = traceId
-      ? `${backendMessage} (traceId: ${traceId})`
-      : backendMessage;
-  }
+  const normalizedErrorMessage = normalizeRegisterErrorMessage(lastError)
+  lastError.message = traceId
+    ? `${normalizedErrorMessage} (traceId: ${traceId})`
+    : normalizedErrorMessage
 
   throw lastError;
 };

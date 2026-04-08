@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { getAffiliateLogisticsDashboard } from '../../api/affiliateLogisticsService'
+import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
 import AffiliateShell from '../../components/layout/AffiliateShell'
+import useCappedLoading from '../../hooks/useCappedLoading'
 import '../../styles/affiliate/perfil-afiliado.css'
 import '../../styles/affiliate/mapa-pedidos.css'
 
@@ -13,6 +15,8 @@ const INITIAL_ROUTE = {
 
 export default function MapaPedidos() {
   const [routeData, setRouteData] = useState(INITIAL_ROUTE)
+  const [loading, setLoading] = useState(true)
+  const showLoader = useCappedLoading(loading, 3000)
 
   useEffect(() => {
     let mounted = true
@@ -27,6 +31,10 @@ export default function MapaPedidos() {
         }
       } catch (_error) {
         // Keep local fallback while backend endpoint is not yet available.
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
       }
     }
 
@@ -38,6 +46,7 @@ export default function MapaPedidos() {
 
   return (
     <AffiliateShell active="map" contentMode="fluid">
+      <PageLoadingOverlay visible={showLoader} message="Sincronizando mapa logistico..." />
       <div className="affiliate-map-workspace">
         <section className="map-viewport">
           <div className="map-surface" role="img" aria-label="Mapa logistico temporal">

@@ -1,7 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { getInventario, getInventarioStats } from '../../api/inventarioService'
+import {
+  createMedicamento,
+  getBranchesWithMedications,
+  getInventario,
+  getInventarioStats,
+  getMedicationAvailabilityByBranch,
+  updateMedicamentoStock,
+} from '../../api/inventarioService'
+import MedigoSidebarBrand from '../../components/common/MedigoSidebarBrand'
+import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
 import { ROUTES } from '../../constants/routes'
+import useCappedLoading from '../../hooks/useCappedLoading'
 import '../../styles/admin/inventario.css'
 
 const FALLBACK_ITEMS = [
@@ -70,10 +80,11 @@ const getStockTone = (row) => {
 }
 
 const mapInventoryFromApi = (item, index) => ({
-  id: item?.id || item?.sku || `SKU-${String(index + 1).padStart(5, '0')}`,
-  name: item?.nombre || item?.medicamento || item?.name || 'Medicamento',
+  medicationId: Number(item?.medicationId ?? item?.id ?? 0),
+  id: item?.id || item?.medicationId || item?.sku || `SKU-${String(index + 1).padStart(5, '0')}`,
+  name: item?.medicationName || item?.nombre || item?.medicamento || item?.name || 'Medicamento',
   category: String(item?.categoria || item?.category || 'GENERAL').toUpperCase(),
-  stock: Number(item?.stock ?? item?.existencias ?? item?.cantidad ?? 0),
+  stock: Number(item?.stock ?? item?.quantity ?? item?.existencias ?? item?.cantidad ?? 0),
   unitPrice: Number(item?.precioUnitario ?? item?.precio ?? item?.unitPrice ?? 0),
   minStock: Number(item?.stockMinimo ?? item?.minStock ?? 100),
   icon: item?.icon || 'medication',
@@ -86,15 +97,53 @@ export default function Inventario() {
   const [adminData, setAdminData] = useState(FALLBACK_ADMIN)
   const [loading, setLoading] = useState(true)
   const [backendNotice, setBackendNotice] = useState('')
+  const [branches, setBranches] = useState([])
+  const [selectedBranchId, setSelectedBranchId] = useState('')
+  const showLoader = useCappedLoading(loading, 3000)
+
+  const applyInventoryStats = (stats) => {
+    const source = stats || {}
+    setAdminData((previous) => ({
+      ...previous,
+      totalInventoryValue: Number(source.totalInventoryValue ?? source.valorTotal ?? previous.totalInventoryValue),
+      valueDeltaPct: Number(source.deltaPct ?? source.porcentajeCambio ?? previous.valueDeltaPct),
+      activeLots: Number(source.activeLots ?? source.lotesActivos ?? previous.activeLots),
+      allVerified: Boolean(source.allVerified ?? previous.allVerified),
+    }))
+  }
 
   useEffect(() => {
     let mounted = true
 
     const loadInventory = async () => {
       try {
+        const branchesRes = await getBranchesWithMedications()
+
+        const normalizedBranches = (Array.isArray(branchesRes) ? branchesRes : [])
+          .map((branch) => ({
+            id: Number(branch?.branchId || 0),
+            name: branch?.branchName || `Sede ${branch?.branchId || ''}`,
+          }))
+          .filter((branch) => branch.id > 0)
+
+        if (mounted) {
+          setBranches(normalizedBranches)
+        }
+
+        const resolvedBranchId = Number(selectedBranchId || normalizedBranches[0]?.id || 0)
+
+        if (mounted && !selectedBranchId && resolvedBranchId > 0) {
+          setSelectedBranchId(String(resolvedBranchId))
+        }
+
         const [statsRes, listRes] = await Promise.allSettled([
-          getInventarioStats(),
-          getInventario({ page: 1, limit: 12 }),
+          getInventarioStats({
+            branchId: resolvedBranchId > 0 ? resolvedBranchId : undefined,
+          }),
+          getInventario({
+            branchId: resolvedBranchId > 0 ? resolvedBranchId : undefined,
+            name: search,
+          }),
         ])
 
         if (!mounted) {
@@ -102,21 +151,38 @@ export default function Inventario() {
         }
 
         if (listRes.status === 'fulfilled') {
-          const source = listRes.value?.data || listRes.value
-          if (Array.isArray(source) && source.length > 0) {
-            setItems(source.map((item, index) => mapInventoryFromApi(item, index)))
+          const source = Array.isArray(listRes.value) ? listRes.value : []
+
+          let rows = source
+          if (search.trim() && resolvedBranchId > 0) {
+            rows = await Promise.all(
+              source.map(async (item) => {
+                const medicationId = Number(item?.id || item?.medicationId || 0)
+                if (!medicationId) {
+                  return item
+                }
+
+                try {
+                  const availability = await getMedicationAvailabilityByBranch(medicationId, resolvedBranchId)
+                  return {
+                    ...item,
+                    medicationId,
+                    quantity: Number(availability?.quantity ?? item?.quantity ?? 0),
+                  }
+                } catch {
+                  return item
+                }
+              })
+            )
+          }
+
+          if (rows.length > 0) {
+            setItems(rows.map((item, index) => mapInventoryFromApi(item, index)))
           }
         }
 
         if (statsRes.status === 'fulfilled') {
-          const stats = statsRes.value || {}
-          setAdminData((previous) => ({
-            ...previous,
-            totalInventoryValue: Number(stats.totalInventoryValue ?? stats.valorTotal ?? previous.totalInventoryValue),
-            valueDeltaPct: Number(stats.deltaPct ?? stats.porcentajeCambio ?? previous.valueDeltaPct),
-            activeLots: Number(stats.activeLots ?? stats.lotesActivos ?? previous.activeLots),
-            allVerified: Boolean(stats.allVerified ?? previous.allVerified),
-          }))
+          applyInventoryStats(statsRes.value)
         }
 
         if (statsRes.status === 'rejected' || listRes.status === 'rejected') {
@@ -140,6 +206,72 @@ export default function Inventario() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!selectedBranchId) {
+      return
+    }
+
+    let mounted = true
+
+    const refreshStock = async () => {
+      try {
+        const source = await getInventario({
+          branchId: Number(selectedBranchId),
+          name: search,
+        })
+
+        if (!mounted) {
+          return
+        }
+
+        if (Array.isArray(source) && source.length > 0) {
+          setItems(source.map((item, index) => mapInventoryFromApi(item, index)))
+          return
+        }
+
+        if (!search.trim()) {
+          setItems(FALLBACK_ITEMS)
+        }
+      } catch {
+        if (mounted && !search.trim()) {
+          setItems(FALLBACK_ITEMS)
+        }
+      }
+    }
+
+    refreshStock()
+
+    return () => {
+      mounted = false
+    }
+  }, [selectedBranchId, search])
+
+  useEffect(() => {
+    if (!selectedBranchId) {
+      return
+    }
+
+    let mounted = true
+
+    const refreshStatsByBranch = async () => {
+      try {
+        const stats = await getInventarioStats({ branchId: Number(selectedBranchId) })
+        if (!mounted) {
+          return
+        }
+        applyInventoryStats(stats)
+      } catch {
+        // Mantener las métricas previas si falla el backend.
+      }
+    }
+
+    refreshStatsByBranch()
+
+    return () => {
+      mounted = false
+    }
+  }, [selectedBranchId])
+
   const criticalItems = useMemo(() => items.filter((row) => getStockTone(row).tone === 'critical').slice(0, 2), [items])
 
   const filteredRows = useMemo(() => {
@@ -157,20 +289,102 @@ export default function Inventario() {
     navigate(ROUTES.AUTH.LOGIN, { replace: true })
   }
 
+  const refreshCurrentBranch = async () => {
+    const branchId = Number(selectedBranchId || 0)
+    if (!branchId) {
+      return
+    }
+
+    const [inventoryRes, statsRes] = await Promise.allSettled([
+      getInventario({ branchId, name: search }),
+      getInventarioStats({ branchId }),
+    ])
+
+    if (inventoryRes.status === 'fulfilled') {
+      const source = inventoryRes.value
+      if (Array.isArray(source) && source.length > 0) {
+        setItems(source.map((item, index) => mapInventoryFromApi(item, index)))
+      }
+    }
+
+    if (statsRes.status === 'fulfilled') {
+      applyInventoryStats(statsRes.value)
+    }
+  }
+
+  const handleCreateMedication = async () => {
+    const branchId = Number(selectedBranchId || 0)
+    if (!branchId) {
+      setBackendNotice('Seleccione una sede antes de crear un medicamento.')
+      return
+    }
+
+    const name = globalThis.prompt('Nombre del medicamento:')?.trim() || ''
+    if (!name) {
+      return
+    }
+
+    const unit = globalThis.prompt('Unidad/presentacion (ej. tableta):')?.trim() || ''
+    if (!unit) {
+      return
+    }
+
+    const priceValue = Number(globalThis.prompt('Precio unitario (ej. 5000):') || 0)
+    const initialStockValue = Number(globalThis.prompt('Stock inicial (ej. 100):') || 0)
+
+    try {
+      await createMedicamento({
+        name,
+        description: 'Creado desde panel MVP',
+        unit,
+        price: priceValue,
+        branchId,
+        initialStock: initialStockValue,
+      })
+
+      setBackendNotice('Medicamento creado correctamente.')
+      await refreshCurrentBranch()
+    } catch {
+      setBackendNotice('No fue posible crear el medicamento. Verifique los datos requeridos por backend.')
+    }
+  }
+
+  const handleUpdateStock = async (row) => {
+    const branchId = Number(selectedBranchId || 0)
+    const medicationId = Number(row?.medicationId || row?.id || 0)
+
+    if (!branchId || !medicationId) {
+      setBackendNotice('No se pudo identificar sede o medicamento para actualizar stock.')
+      return
+    }
+
+    const requestedQuantity = Number(globalThis.prompt(`Nuevo stock para ${row.name}:`, String(row.stock || 0)))
+    if (!Number.isFinite(requestedQuantity) || requestedQuantity < 0) {
+      setBackendNotice('El stock debe ser un numero mayor o igual a 0.')
+      return
+    }
+
+    try {
+      await updateMedicamentoStock({ medicationId, branchId, quantity: requestedQuantity })
+      setBackendNotice('Stock actualizado correctamente.')
+      await refreshCurrentBranch()
+    } catch {
+      setBackendNotice('No fue posible actualizar stock en backend.')
+    }
+  }
+
   const totalRows = new Intl.NumberFormat('en-US').format(items.length)
 
   return (
     <div className="admin-inventory-shell">
+      <PageLoadingOverlay visible={showLoader} message="Cargando inventario..." />
       <aside className="admin-side">
-        <div className="admin-side-brand">
-          <div className="admin-side-logo-icon">
-            <span className="material-symbols-outlined">clinical_notes</span>
-          </div>
-          <div>
-            <h1>MediGo Admin</h1>
-            <p>CLINICAL PRECISION</p>
-          </div>
-        </div>
+        <MedigoSidebarBrand
+          containerClassName="admin-side-brand"
+          logoContainerClassName="admin-side-logo-icon"
+          title="MediGo Admin"
+          subtitle="CLINICAL PRECISION"
+        />
 
         <nav className="admin-side-nav" aria-label="Navegacion de administrador">
           <button type="button" onClick={() => navigate(ROUTES.ADMIN.AUCTIONS)}>
@@ -245,11 +459,24 @@ export default function Inventario() {
                 tiempo real y disparadores de adquisicion automatizados.
               </p>
             </div>
-
-            <button type="button" className="new-entry-btn">
-              <span className="material-symbols-outlined">add</span>
-              Nueva Entrada
-            </button>
+            <div className="inventory-table-actions">
+              <select
+                value={selectedBranchId}
+                onChange={(event) => setSelectedBranchId(event.target.value)}
+                aria-label="Seleccionar sede para inventario"
+              >
+                {branches.length === 0 ? <option value="">Sedes no disponibles</option> : null}
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </option>
+                ))}
+              </select>
+              <button type="button" className="new-entry-btn" onClick={handleCreateMedication}>
+                <span className="material-symbols-outlined">add</span>
+                Nueva Entrada
+              </button>
+            </div>
           </section>
 
           {backendNotice ? <p className="inventory-notice">{backendNotice}</p> : null}
@@ -373,7 +600,7 @@ export default function Inventario() {
                         </td>
                         <td>
                           <div className="action-btns">
-                            <button type="button" aria-label={`Editar ${row.name}`}>
+                            <button type="button" aria-label={`Editar ${row.name}`} onClick={() => handleUpdateStock(row)}>
                               <span className="material-symbols-outlined">edit</span>
                             </button>
                             <button type="button" aria-label={`Mas opciones ${row.name}`}>

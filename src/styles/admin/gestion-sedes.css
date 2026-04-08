@@ -675,6 +675,54 @@
   font-weight: 700;
 }
 
+.branch-inline-input {
+  border: 1px solid #d8dee5;
+  border-radius: 0.42rem;
+  height: 1.8rem;
+  background: #f8fafc;
+  color: #1d2229;
+  padding: 0 0.52rem;
+  font-size: 0.68rem;
+  width: 100%;
+}
+
+.branch-inline-small {
+  margin-top: 0.2rem;
+}
+
+.branch-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+}
+
+.branch-action-btn {
+  border: 1px solid #d9e0e7;
+  border-radius: 0.42rem;
+  height: 1.75rem;
+  padding: 0 0.48rem;
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: #5a6775;
+  background: #fff;
+}
+
+.branch-action-btn.primary {
+  background: #0f5f95;
+  border-color: #0f5f95;
+  color: #fff;
+}
+
+.branch-action-btn.danger {
+  color: #ba1a1a;
+  border-color: #f1d4d4;
+  background: #fff6f6;
+}
+
+.branch-action-btn:disabled {
+  opacity: 0.65;
+}
+
 .branch-report-btn {
   border: none;
   width: 1.75rem;

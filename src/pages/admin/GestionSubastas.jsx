@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { createSubasta, getActiveAuctions } from '../../api/subastaService'
 import AuctionAdminActions from '../../components/admin/AuctionAdminActions'
+import MedigoSidebarBrand from '../../components/common/MedigoSidebarBrand'
+import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
 import { ROUTES } from '../../constants/routes'
+import useCappedLoading from '../../hooks/useCappedLoading'
 import '../../styles/admin/gestion-subastas.css'
 
 const FALLBACK_AUCTIONS = [
@@ -115,6 +118,7 @@ export default function GestionSubastas() {
   const [createError, setCreateError] = useState('')
   const [createForm, setCreateForm] = useState(initialCreateForm)
   const [selectedAuctionId, setSelectedAuctionId] = useState('')
+  const showLoader = useCappedLoading(loading, 3000)
 
   useEffect(() => {
     let mounted = true
@@ -267,16 +271,14 @@ export default function GestionSubastas() {
 
   return (
     <div className="admin-auctions-shell">
+      <PageLoadingOverlay visible={showLoader} message="Cargando subastas del administrador..." />
       <aside className="auctions-side">
-        <div className="auctions-brand">
-          <div className="auctions-brand-icon">
-            <span className="material-symbols-outlined">medical_services</span>
-          </div>
-          <div>
-            <h1>MediGo Admin</h1>
-            <p>CLINICAL PRECISION</p>
-          </div>
-        </div>
+        <MedigoSidebarBrand
+          containerClassName="auctions-brand"
+          logoContainerClassName="auctions-brand-icon"
+          title="MediGo Admin"
+          subtitle="CLINICAL PRECISION"
+        />
 
         <nav className="auctions-nav" aria-label="Navegacion administrador">
           <button type="button" className="active" onClick={() => navigate(ROUTES.ADMIN.AUCTIONS)}>

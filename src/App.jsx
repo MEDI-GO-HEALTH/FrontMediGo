@@ -28,6 +28,7 @@ import GestionUsuarios from './pages/admin/GestionUsuarios'
 // PÁGINAS DE AFILIADO
 // ═════════════════════════════════════════════════════════════════
 import MapaPedidos from './pages/affiliate/MapaPedidos'
+import InventarioAfiliado from './pages/affiliate/InventarioAfiliado'
 import CentroSubastas from './pages/affiliate/CentroSubastas'
 import PerfilAfiliado from './pages/affiliate/PerfilAfiliado'
 
@@ -166,6 +167,14 @@ export default function App() {
           element={
             <ProtectedRoute allowedRoles={['AFILIADO']}>
               <MapaPedidos />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.AFFILIATE.INVENTORY}
+          element={
+            <ProtectedRoute allowedRoles={['AFILIADO']}>
+              <InventarioAfiliado />
             </ProtectedRoute>
           }
         />

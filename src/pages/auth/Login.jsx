@@ -196,7 +196,7 @@ export default function Login() {
                 onChange={handleLoginChange}
                 onBlur={handleBlur}
                 placeholder="dr.name@healthcare.com"
-                autoComplete="email"
+                autoComplete="username"
                 className={`form-input ${touched.email && !form.email ? 'error' : ''}`}
                 disabled={loading}
               />
