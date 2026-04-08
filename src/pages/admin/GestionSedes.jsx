@@ -513,6 +513,18 @@ export default function GestionSedes() {
     }
   }
 
+  const handleBranchCardKeyDown = (event, branch) => {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return
+    }
+
+    event.preventDefault()
+    if (hasValidCoordinates(branch)) {
+      setSelectedBranchId(branch.id)
+      setMapZoom(14)
+    }
+  }
+
   return (
     <div className="admin-branches-shell">
       <PageLoadingOverlay visible={showLoader} message="Cargando sedes..." />
@@ -810,12 +822,15 @@ export default function GestionSedes() {
                     <article
                       key={branch.id}
                       className={`branch-item ${String(selectedBranchId) === String(branch.id) ? 'selected' : ''}`}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => {
                         if (hasValidCoordinates(branch)) {
                           setSelectedBranchId(branch.id)
                           setMapZoom(14)
                         }
                       }}
+                      onKeyDown={(event) => handleBranchCardKeyDown(event, branch)}
                     >
                       <div className="branch-main">
                         <div className="branch-icon">
@@ -982,13 +997,28 @@ export default function GestionSedes() {
       </main>
 
       {mapModalOpen ? (
-        <div className="map-create-modal-backdrop" role="presentation" onClick={() => setMapModalOpen(false)}>
+        <div
+          className="map-create-modal-backdrop"
+          role="button"
+          tabIndex={0}
+          aria-label="Cerrar modal"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setMapModalOpen(false)
+            }
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              setMapModalOpen(false)
+            }
+          }}
+        >
           <section
             className="map-create-modal"
             role="dialog"
             aria-modal="true"
             aria-label="Completar datos de nueva sede"
-            onClick={(event) => event.stopPropagation()}
           >
             <header>
               <h3>Nueva sede desde mapa</h3>
