@@ -5,6 +5,9 @@ import {
   getDriverTrips,
   requestDriverEmergencySupport,
 } from '../../api/driverHistoryService'
+import MedigoSidebarBrand from '../../components/common/MedigoSidebarBrand'
+import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
+import useCappedLoading from '../../hooks/useCappedLoading'
 import '../../styles/driver/historial-viajes.css'
 
 const FALLBACK_SUMMARY = {
@@ -71,11 +74,14 @@ export default function HistorialViajes() {
   const [searchTerm, setSearchTerm] = useState('')
   const [dateRange, setDateRange] = useState(DATE_RANGE_OPTIONS[0])
   const [actionError, setActionError] = useState('')
+  const [loading, setLoading] = useState(true)
+  const showLoader = useCappedLoading(loading, 3000)
 
   useEffect(() => {
     let mounted = true
 
     const loadHistory = async () => {
+      setLoading(true)
       try {
         const [summaryResponse, tripsResponse] = await Promise.all([
           getDriverHistorySummary({ range: dateRange }),
@@ -105,6 +111,10 @@ export default function HistorialViajes() {
 
         setSummary(FALLBACK_SUMMARY)
         setTrips(FALLBACK_TRIPS)
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
       }
     }
 
@@ -144,20 +154,17 @@ export default function HistorialViajes() {
 
   return (
     <div className="driver-history-page">
+      <PageLoadingOverlay visible={showLoader} message="Cargando historial de viajes..." />
       <div className="driver-history-shell">
         <aside className="driver-history-sidebar" aria-label="Navegacion repartidor">
           <div className="driver-history-side-head">
-            <div className="driver-history-side-brand">
-              <div className="driver-history-side-logo">
-                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  local_shipping
-                </span>
-              </div>
-              <div className="driver-history-side-brand-text">
-                <h1>Driver Portal</h1>
-                <p>Clinical Logistics Unit</p>
-              </div>
-            </div>
+            <MedigoSidebarBrand
+              containerClassName="driver-history-side-brand"
+              logoContainerClassName="driver-history-side-logo"
+              textContainerClassName="driver-history-side-brand-text"
+              title="Driver Portal"
+              subtitle="Clinical Logistics Unit"
+            />
           </div>
 
           <nav className="driver-history-nav">

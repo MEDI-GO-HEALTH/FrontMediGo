@@ -1,42 +1,109 @@
 /**
- * inventarioService.js — Gestión de Inventario
- * 📡 BACKEND endpoints: /inventario
+ * inventarioService.js — Gestión de Inventario (MVP)
+ *
+ * Endpoints reales vía API Gateway:
+ * - GET  /api/medications/search?name={name}
+ * - GET  /api/medications/branch/{branchId}/stock
+ * - GET  /api/medications/branches
+ * - GET  /api/medications/{medicationId}/availability/branch/{branchId}
+ * - POST /api/medications
+ * - PUT  /api/medications/{medicationId}/branch/{branchId}/stock
  */
 
-import client from './client';
+import client from './client'
 
-/** GET /inventario — Listar todos los medicamentos */
+const MEDICATIONS_BASE = '/api/medications'
+
+const toArray = (payload) => {
+  if (Array.isArray(payload)) {
+    return payload
+  }
+
+  if (Array.isArray(payload?.data)) {
+    return payload.data
+  }
+
+  if (Array.isArray(payload?.items)) {
+    return payload.items
+  }
+
+  return []
+}
+
+export const searchMedicationsByName = async (name) => {
+  const response = await client.get(`${MEDICATIONS_BASE}/search`, {
+    params: { name: String(name || '').trim() },
+  })
+  return toArray(response.data)
+}
+
+export const getBranchStock = async (branchId) => {
+  const response = await client.get(`${MEDICATIONS_BASE}/branch/${branchId}/stock`)
+  return toArray(response.data)
+}
+
+export const getBranchesWithMedications = async () => {
+  const response = await client.get(`${MEDICATIONS_BASE}/branches`)
+  return toArray(response.data)
+}
+
+export const getMedicationAvailabilityByBranch = async (medicationId, branchId) => {
+  const response = await client.get(`${MEDICATIONS_BASE}/${medicationId}/availability/branch/${branchId}`)
+  return response.data
+}
+
+export const createMedicamento = async (payload) => {
+  const response = await client.post(`${MEDICATIONS_BASE}`, payload)
+  return response.data
+}
+
+export const updateMedicamentoStock = async ({ medicationId, branchId, quantity }) => {
+  const response = await client.put(`${MEDICATIONS_BASE}/${medicationId}/branch/${branchId}/stock`, {
+    medicationId,
+    quantity,
+  })
+  return response.data
+}
+
+/**
+ * Compatibilidad con pantalla actual de Inventario.
+ * Permite consultar stock por sede o búsqueda por nombre.
+ */
 export const getInventario = async (params = {}) => {
-  const response = await client.get('/inventario', { params });
-  return response.data;
-};
+  const response = await client.get(`${MEDICATIONS_BASE}`, {
+    params: {
+      branchId: params?.branchId,
+      q: params?.name,
+      page: params?.page || 1,
+      limit: params?.limit || 20,
+    },
+  })
 
-/** GET /inventario/:id — Obtener un medicamento por ID */
-export const getMedicamento = async (id) => {
-  const response = await client.get(`/inventario/${id}`);
-  return response.data;
-};
+  const payload = response?.data
+  if (Array.isArray(payload)) {
+    return payload
+  }
 
-/** POST /inventario — Crear nuevo medicamento */
-export const createMedicamento = async (data) => {
-  const response = await client.post('/inventario', data);
-  return response.data;
-};
+  if (Array.isArray(payload?.items)) {
+    return payload.items
+  }
 
-/** PUT /inventario/:id — Actualizar medicamento */
-export const updateMedicamento = async (id, data) => {
-  const response = await client.put(`/inventario/${id}`, data);
-  return response.data;
-};
+  return []
+}
 
-/** DELETE /inventario/:id — Eliminar medicamento */
-export const deleteMedicamento = async (id) => {
-  const response = await client.delete(`/inventario/${id}`);
-  return response.data;
-};
+/**
+ * No existe endpoint dedicado de métricas en backend/gateway.
+ * Se construyen métricas básicas a partir del inventario consolidado.
+ */
+export const getInventarioStats = async (params = {}) => {
+  const response = await client.get(`${MEDICATIONS_BASE}/stats`, {
+    params: {
+      branchId: params?.branchId,
+    },
+  })
+  return response.data
+}
 
-/** GET /inventario/stats — Estadísticas del inventario */
-export const getInventarioStats = async () => {
-  const response = await client.get('/inventario/stats');
-  return response.data;
-};
+// Alias para compatibilidad con código legado.
+export const updateMedicamento = async (id, data) =>
+  updateMedicamentoStock({ medicationId: id, branchId: data?.branchId, quantity: data?.quantity })

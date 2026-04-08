@@ -200,6 +200,7 @@ export default function Register() {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 placeholder="John Doe"
+                autoComplete="name"
                 className={`form-input ${touched.name && !form.name ? 'error' : ''}`}
                 disabled={loading}
               />
@@ -216,6 +217,7 @@ export default function Register() {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 placeholder="name@medigo.co"
+                autoComplete="email"
                 className={`form-input ${touched.email && !form.email ? 'error' : ''}`}
                 disabled={loading}
               />
@@ -231,6 +233,7 @@ export default function Register() {
                 value={form.phone}
                 onChange={handleChange}
                 placeholder="+57 300 000 0000"
+                autoComplete="tel"
                 className="form-input"
                 disabled={loading}
               />
@@ -248,6 +251,7 @@ export default function Register() {
                   onChange={handleChange}
                   onBlur={handleBlur}
                   placeholder="••••••••"
+                  autoComplete="new-password"
                   className={`form-input ${touched.password && !form.password ? 'error' : ''}`}
                   disabled={loading}
                 />
@@ -273,6 +277,7 @@ export default function Register() {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 placeholder="••••••••"
+                autoComplete="new-password"
                 className={`form-input ${touched.confirmPassword && !form.confirmPassword ? 'error' : ''}`}
                 disabled={loading}
               />

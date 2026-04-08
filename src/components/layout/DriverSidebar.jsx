@@ -8,6 +8,7 @@
 
 import { useNavigate, useLocation } from 'react-router'
 import { DRIVER_MENU, ROUTES } from '../../constants/routes'
+import MedigoSidebarBrand from '../common/MedigoSidebarBrand'
 
 export default function DriverSidebar() {
   const navigate = useNavigate()
@@ -25,8 +26,14 @@ export default function DriverSidebar() {
     <aside className="bg-slate-50 dark:bg-slate-950 flex flex-col h-full border-r border-slate-100/10 w-72 fixed left-0 top-0 z-50 shadow-md">
       {/* Header */}
       <div className="px-8 py-10">
-        <h1 className="text-lg font-black text-sky-900 dark:text-sky-100 mb-1">Driver Portal</h1>
-        <p className="text-xs text-slate-500 font-medium tracking-wide">Clinical Logistics Unit</p>
+        <MedigoSidebarBrand
+          containerClassName="flex items-center gap-3"
+          logoContainerClassName="w-10 h-10 rounded-xl overflow-hidden"
+          title="Driver Portal"
+          subtitle="Clinical Logistics Unit"
+          titleClassName="text-lg font-black text-sky-900 dark:text-sky-100 mb-1"
+          subtitleClassName="text-xs text-slate-500 font-medium tracking-wide"
+        />
       </div>
 
       {/* Menú de Navegación */}

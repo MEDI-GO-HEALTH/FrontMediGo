@@ -9,6 +9,7 @@
 
 import { useNavigate, useLocation } from 'react-router'
 import { ADMIN_MENU, ROUTES } from '../../constants/routes'
+import MedigoSidebarBrand from '../common/MedigoSidebarBrand'
 
 export default function AdminSidebar() {
   const navigate = useNavigate()
@@ -26,17 +27,14 @@ export default function AdminSidebar() {
     <aside className="h-screen w-64 fixed left-0 top-0 bg-slate-100 flex flex-col py-6 px-4 z-50 shadow-lg">
       {/* Logo */}
       <div className="mb-10 px-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-container flex items-center justify-center text-white">
-            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
-              medical_services
-            </span>
-          </div>
-          <div>
-            <h1 className="text-xl font-extrabold text-primary tracking-tight">MediGo Admin</h1>
-            <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Clinical Precision</p>
-          </div>
-        </div>
+        <MedigoSidebarBrand
+          containerClassName="flex items-center gap-3"
+          logoContainerClassName="w-10 h-10 rounded-xl overflow-hidden"
+          title="MediGo Admin"
+          subtitle="Clinical Precision"
+          titleClassName="text-xl font-extrabold text-primary tracking-tight"
+          subtitleClassName="text-[10px] uppercase tracking-widest text-slate-500 font-bold"
+        />
       </div>
 
       {/* Menú de Navegación */}

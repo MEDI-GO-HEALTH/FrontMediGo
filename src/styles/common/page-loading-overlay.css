@@ -1,0 +1,44 @@
+.page-loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.32);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.page-loading-overlay-card {
+  min-width: 220px;
+  max-width: 360px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #d5dde7;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.16);
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.page-loading-overlay-card p {
+  margin: 0;
+  color: #223a4c;
+  font-weight: 600;
+}
+
+.page-loading-overlay-icon {
+  font-size: 22px;
+  color: #1d4ed8;
+  animation: page-loading-overlay-spin 1s linear infinite;
+}
+
+@keyframes page-loading-overlay-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
