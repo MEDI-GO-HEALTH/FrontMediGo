@@ -1,7 +1,7 @@
 const trimTrailingSlash = (value = '') => value.replace(/\/$/, '')
 
 const DEFAULT_PROD_API_BASE_URL = 'https://ezequiel-gateway-etcrh9dxg9dwhng4.canadacentral-01.azurewebsites.net'
-const DEFAULT_DEV_API_BASE_URL = 'http://localhost:8080/api'
+const DEFAULT_DEV_API_BASE_URL = 'http://localhost:8081'
 const DEFAULT_API_BASE_URL = import.meta.env.DEV ? DEFAULT_DEV_API_BASE_URL : DEFAULT_PROD_API_BASE_URL
 
 const isLocalhostUrl = (value = '') => /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(value)
@@ -19,6 +19,7 @@ const resolveApiBaseUrl = () => {
 export const API_CONFIG = {
   baseURL: resolveApiBaseUrl(),
   timeoutMs: Number(import.meta.env.VITE_API_TIMEOUT_MS || 15000),
+  enableTraceIdHeader: String(import.meta.env.VITE_ENABLE_TRACE_ID_HEADER || 'false').toLowerCase() === 'true',
   useAuthMock: String(import.meta.env.VITE_USE_AUTH_MOCK || 'false').toLowerCase() === 'true',
   showDevLoginButtons:
     String(import.meta.env.VITE_SHOW_DEV_LOGIN_BUTTONS || String(import.meta.env.DEV)).toLowerCase() === 'true',

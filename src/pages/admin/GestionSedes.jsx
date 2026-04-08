@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { createSede, getSedes } from '../../api/sedesService'
+import { createSede, deleteSede, getSedes, updateSede } from '../../api/sedesService'
 import { ROUTES } from '../../constants/routes'
 import '../../styles/admin/gestion-sedes.css'
 
@@ -52,12 +52,35 @@ const mapBranchFromApi = (item, index) => ({
   icon: item?.icon || 'apartment',
 })
 
+const getBranchCollection = (payload) => {
+  if (Array.isArray(payload)) {
+    return payload
+  }
+  if (Array.isArray(payload?.items)) {
+    return payload.items
+  }
+  if (Array.isArray(payload?.results)) {
+    return payload.results
+  }
+  return []
+}
+
 export default function GestionSedes() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [branches, setBranches] = useState(FALLBACK_BRANCHES)
   const [formData, setFormData] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
+  const [updatingId, setUpdatingId] = useState('')
+  const [deletingId, setDeletingId] = useState('')
+  const [editingId, setEditingId] = useState('')
+  const [editDraft, setEditDraft] = useState({
+    name: '',
+    address: '',
+    specialty: '',
+    phone: '',
+    capacity: '',
+  })
   const [syncNotice, setSyncNotice] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -71,13 +94,17 @@ export default function GestionSedes() {
           return
         }
 
-        const source = response?.data || response
-        if (Array.isArray(source) && source.length > 0) {
+        const source = getBranchCollection(response?.data)
+        if (source.length > 0) {
           setBranches(source.map((item, index) => mapBranchFromApi(item, index)))
         }
-      } catch {
+
+        if (response?.message) {
+          setSyncNotice(response.message)
+        }
+      } catch (error) {
         if (mounted) {
-          setSyncNotice('Backend no disponible para sedes. Visualizando datos de respaldo.')
+          setSyncNotice(error?.message || 'Backend no disponible para sedes. Visualizando datos de respaldo.')
         }
       } finally {
         if (mounted) {
@@ -113,8 +140,8 @@ export default function GestionSedes() {
   }
 
   const handleRegisterBranch = async () => {
-    if (!formData.name.trim() || !formData.address.trim()) {
-      setSyncNotice('Completa nombre y direccion para registrar la sede.')
+    if (!formData.name.trim() || !formData.address.trim() || !formData.specialty.trim()) {
+      setSyncNotice('Completa nombre, direccion y especialidad para registrar la sede.')
       return
     }
 
@@ -131,11 +158,19 @@ export default function GestionSedes() {
 
     try {
       const created = await createSede(payload)
-      const branch = mapBranchFromApi(created, 0)
+      const createdPayload = created?.data || created
+      const branch = mapBranchFromApi(createdPayload, 0)
       setBranches((previous) => [branch, ...previous])
       setFormData(EMPTY_FORM)
-      setSyncNotice('Sede registrada en backend correctamente.')
-    } catch {
+      setSyncNotice(created?.message || 'Sede registrada en backend correctamente.')
+    } catch (error) {
+      const status = Number(error?.status || 0)
+
+      if (status === 400 || status === 404 || status === 409 || status === 500) {
+        setSyncNotice(error.message)
+        return
+      }
+
       const localBranch = {
         id: `SED-LOCAL-${Date.now()}`,
         name: formData.name,
@@ -147,9 +182,112 @@ export default function GestionSedes() {
       }
       setBranches((previous) => [localBranch, ...previous])
       setFormData(EMPTY_FORM)
-      setSyncNotice('Sede registrada en modo local. Lista para conectar al endpoint cuando este disponible.')
+      setSyncNotice(error?.message || 'Sede registrada en modo local. Lista para conectar al endpoint cuando este disponible.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const startEditBranch = (branch) => {
+    setEditingId(branch.id)
+    setEditDraft({
+      name: branch.name,
+      address: branch.address,
+      specialty: branch.specialization,
+      phone: branch.phone,
+      capacity: String(branch.team || ''),
+    })
+  }
+
+  const cancelEditBranch = () => {
+    setEditingId('')
+    setEditDraft({
+      name: '',
+      address: '',
+      specialty: '',
+      phone: '',
+      capacity: '',
+    })
+  }
+
+  const handleEditDraftChange = (field, value) => {
+    setEditDraft((previous) => ({ ...previous, [field]: value }))
+  }
+
+  const handleSaveBranch = async (branch) => {
+    const payload = {}
+
+    if (editDraft.name.trim() && editDraft.name.trim() !== branch.name) {
+      payload.nombre = editDraft.name.trim()
+    }
+    if (editDraft.address.trim() && editDraft.address.trim() !== branch.address) {
+      payload.direccion = editDraft.address.trim()
+    }
+    if (editDraft.specialty.trim() && editDraft.specialty.trim().toUpperCase() !== branch.specialization.toUpperCase()) {
+      payload.especialidad = editDraft.specialty.trim()
+    }
+    if ((editDraft.phone || '').trim() !== (branch.phone || '').trim()) {
+      payload.telefono = editDraft.phone.trim()
+    }
+
+    const normalizedCapacity = Number(editDraft.capacity || 0)
+    if (!Number.isNaN(normalizedCapacity) && normalizedCapacity !== Number(branch.team || 0)) {
+      payload.capacidad = normalizedCapacity
+    }
+
+    if (Object.keys(payload).length === 0) {
+      setSyncNotice('No hay cambios para guardar en la sede seleccionada.')
+      cancelEditBranch()
+      return
+    }
+
+    setUpdatingId(branch.id)
+    setSyncNotice('')
+
+    try {
+      const response = await updateSede(branch.id, payload)
+      const updated = mapBranchFromApi(response?.data || response, 0)
+
+      setBranches((previous) => previous.map((item) => (item.id === branch.id ? { ...item, ...updated } : item)))
+      setSyncNotice(response?.message || 'Sede actualizada correctamente.')
+      cancelEditBranch()
+    } catch (error) {
+      setSyncNotice(error?.message || 'No se pudo actualizar la sede seleccionada.')
+    } finally {
+      setUpdatingId('')
+    }
+  }
+
+  const handleDeleteBranch = async (branch) => {
+    const confirmed = globalThis.confirm(`Deseas eliminar la sede ${branch.name}?`)
+    if (!confirmed) {
+      return
+    }
+
+    setDeletingId(branch.id)
+    setSyncNotice('')
+
+    try {
+      const response = await deleteSede(branch.id)
+      setBranches((previous) => previous.filter((item) => item.id !== branch.id))
+      setSyncNotice(response?.message || 'Sede eliminada correctamente.')
+      if (editingId === branch.id) {
+        cancelEditBranch()
+      }
+    } catch (error) {
+      const localBranch = String(branch.id).startsWith('SED-LOCAL-')
+
+      if (localBranch) {
+        setBranches((previous) => previous.filter((item) => item.id !== branch.id))
+        setSyncNotice('Sede local eliminada correctamente.')
+        if (editingId === branch.id) {
+          cancelEditBranch()
+        }
+      } else {
+        setSyncNotice(error?.message || 'No se pudo eliminar la sede seleccionada.')
+      }
+    } finally {
+      setDeletingId('')
     }
   }
 
@@ -369,28 +507,103 @@ export default function GestionSedes() {
                           <span className="material-symbols-outlined">{branch.icon}</span>
                         </div>
                         <div>
-                          <h4>{branch.name}</h4>
+                          {editingId === branch.id ? (
+                            <input
+                              className="branch-inline-input"
+                              value={editDraft.name}
+                              onChange={(event) => handleEditDraftChange('name', event.target.value)}
+                              placeholder="Nombre"
+                            />
+                          ) : (
+                            <h4>{branch.name}</h4>
+                          )}
                           <div className="branch-meta">
                             <span>
                               <span className="material-symbols-outlined">location_on</span>
-                              {branch.address}
+                              {editingId === branch.id ? (
+                                <input
+                                  className="branch-inline-input"
+                                  value={editDraft.address}
+                                  onChange={(event) => handleEditDraftChange('address', event.target.value)}
+                                  placeholder="Direccion"
+                                />
+                              ) : (
+                                branch.address
+                              )}
                             </span>
                             <span>
                               <span className="material-symbols-outlined">call</span>
-                              {branch.phone}
+                              {editingId === branch.id ? (
+                                <input
+                                  className="branch-inline-input"
+                                  value={editDraft.phone}
+                                  onChange={(event) => handleEditDraftChange('phone', event.target.value)}
+                                  placeholder="Telefono"
+                                />
+                              ) : (
+                                branch.phone
+                              )}
                             </span>
                           </div>
                         </div>
                       </div>
 
                       <div className="branch-side">
-                        <span>{branch.specialization}</span>
-                        <small>{branch.team} Miembros del personal</small>
+                        {editingId === branch.id ? (
+                          <>
+                            <input
+                              className="branch-inline-input branch-inline-small"
+                              value={editDraft.specialty}
+                              onChange={(event) => handleEditDraftChange('specialty', event.target.value)}
+                              placeholder="Especialidad"
+                            />
+                            <input
+                              className="branch-inline-input branch-inline-small"
+                              value={editDraft.capacity}
+                              onChange={(event) => handleEditDraftChange('capacity', event.target.value)}
+                              placeholder="Capacidad"
+                              type="number"
+                            />
+                          </>
+                        ) : (
+                          <>
+                            <span>{branch.specialization}</span>
+                            <small>{branch.team} Miembros del personal</small>
+                          </>
+                        )}
                       </div>
 
-                      <button type="button" className="branch-report-btn" aria-label={`Ver reportes de ${branch.name}`}>
-                        <span className="material-symbols-outlined">arrow_forward</span>
-                      </button>
+                      <div className="branch-actions">
+                        {editingId === branch.id ? (
+                          <>
+                            <button
+                              type="button"
+                              className="branch-action-btn primary"
+                              onClick={() => handleSaveBranch(branch)}
+                              disabled={updatingId === branch.id}
+                            >
+                              {updatingId === branch.id ? 'Guardando...' : 'Guardar'}
+                            </button>
+                            <button type="button" className="branch-action-btn" onClick={cancelEditBranch}>
+                              Cancelar
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button type="button" className="branch-action-btn" onClick={() => startEditBranch(branch)}>
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              className="branch-action-btn danger"
+                              onClick={() => handleDeleteBranch(branch)}
+                              disabled={deletingId === branch.id}
+                            >
+                              {deletingId === branch.id ? 'Eliminando...' : 'Eliminar'}
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </article>
                   ))}
                 </div>
