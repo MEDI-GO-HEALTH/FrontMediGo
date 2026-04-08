@@ -56,11 +56,23 @@ const normalizeApiError = (error, fallbackMessage) => {
 };
 
 const pickAllowedFields = (source = {}) => {
-  const allowed = ['nombre', 'direccion', 'especialidad', 'telefono', 'capacidad'];
+  const aliases = {
+    lat: 'latitude',
+    lng: 'longitude',
+  };
+
+  const normalizedSource = { ...source };
+  Object.entries(aliases).forEach(([from, to]) => {
+    if (normalizedSource[to] === undefined && normalizedSource[from] !== undefined) {
+      normalizedSource[to] = normalizedSource[from];
+    }
+  });
+
+  const allowed = ['nombre', 'direccion', 'especialidad', 'telefono', 'capacidad', 'latitude', 'longitude'];
 
   return allowed.reduce((accumulator, key) => {
-    if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
-      accumulator[key] = source[key];
+    if (Object.prototype.hasOwnProperty.call(normalizedSource, key) && normalizedSource[key] !== undefined) {
+      accumulator[key] = normalizedSource[key];
     }
     return accumulator;
   }, {});

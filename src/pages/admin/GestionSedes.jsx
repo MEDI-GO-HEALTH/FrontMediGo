@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { CircleMarker, MapContainer, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import { useNavigate } from 'react-router'
 import { createSede, deleteSede, getSedes, updateSede } from '../../api/sedesService'
 import MedigoSidebarBrand from '../../components/common/MedigoSidebarBrand'
 import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
 import { ROUTES } from '../../constants/routes'
 import useCappedLoading from '../../hooks/useCappedLoading'
+import 'leaflet/dist/leaflet.css'
 import '../../styles/admin/gestion-sedes.css'
 
 const FALLBACK_BRANCHES = [
@@ -43,7 +45,28 @@ const EMPTY_FORM = {
   address: '',
   phone: '',
   capacity: '',
+  latitude: '',
+  longitude: '',
 }
+
+const DEFAULT_CENTER = [4.711, -74.0721]
+
+const toCoordinateNumber = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+const hasValidCoordinates = (branch) => {
+  const lat = Number(branch?.latitude)
+  const lng = Number(branch?.longitude)
+  return Number.isFinite(lat) && Number.isFinite(lng)
+}
+
+const buildApproxAddress = (lat, lng) => `Ubicacion aproximada (${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)})`
 
 const mapBranchFromApi = (item, index) => ({
   id: item?.id || item?.codigo || `SED-${String(index + 1).padStart(3, '0')}`,
@@ -52,8 +75,34 @@ const mapBranchFromApi = (item, index) => ({
   phone: item?.telefono || item?.phone || '(000) 000-0000',
   specialization: String(item?.especialidad || item?.specialization || 'GENERAL').toUpperCase(),
   team: Number(item?.miembros || item?.personal || item?.team || 0),
+  latitude: toCoordinateNumber(item?.latitude ?? item?.lat),
+  longitude: toCoordinateNumber(item?.longitude ?? item?.lng),
   icon: item?.icon || 'apartment',
 })
+
+function MapViewportController({ center, zoom }) {
+  const map = useMap()
+
+  useEffect(() => {
+    map.setView(center, zoom, { animate: true })
+  }, [center, map, zoom])
+
+  return null
+}
+
+function MapClickCapture({ enabled, onPick }) {
+  useMapEvents({
+    click: (event) => {
+      if (!enabled) {
+        return
+      }
+
+      onPick(event.latlng.lat, event.latlng.lng)
+    },
+  })
+
+  return null
+}
 
 const getBranchCollection = (payload) => {
   if (Array.isArray(payload)) {
@@ -83,9 +132,26 @@ export default function GestionSedes() {
     specialty: '',
     phone: '',
     capacity: '',
+    latitude: '',
+    longitude: '',
+  })
+  const [selectedBranchId, setSelectedBranchId] = useState(null)
+  const [mapZoom, setMapZoom] = useState(12)
+  const [creationMode, setCreationMode] = useState('manual')
+  const [mapModalOpen, setMapModalOpen] = useState(false)
+  const [mapLookupLoading, setMapLookupLoading] = useState(false)
+  const [mapDraft, setMapDraft] = useState({
+    name: '',
+    specialty: 'Medicina General',
+    address: '',
+    phone: '',
+    capacity: '',
+    latitude: '',
+    longitude: '',
   })
   const [syncNotice, setSyncNotice] = useState('')
   const [loading, setLoading] = useState(true)
+  const reverseLookupRequestIdRef = useRef(0)
   const showLoader = useCappedLoading(loading, 3000)
 
   useEffect(() => {
@@ -133,6 +199,19 @@ export default function GestionSedes() {
     return branches.filter((item) => `${item.name} ${item.address} ${item.specialization}`.toLowerCase().includes(query))
   }, [branches, search])
 
+  const geolocatedBranches = useMemo(() => filteredBranches.filter((branch) => hasValidCoordinates(branch)), [filteredBranches])
+
+  const selectedBranch = useMemo(
+    () => geolocatedBranches.find((branch) => String(branch.id) === String(selectedBranchId)) || null,
+    [geolocatedBranches, selectedBranchId],
+  )
+
+  const mapCenter = selectedBranch
+    ? [selectedBranch.latitude, selectedBranch.longitude]
+    : geolocatedBranches.length > 0
+      ? [geolocatedBranches[0].latitude, geolocatedBranches[0].longitude]
+      : DEFAULT_CENTER
+
   const handleLogout = () => {
     localStorage.removeItem('medigo_token')
     localStorage.removeItem('medigo_user')
@@ -143,21 +222,27 @@ export default function GestionSedes() {
     setFormData((previous) => ({ ...previous, [field]: value }))
   }
 
-  const handleRegisterBranch = async () => {
-    if (!formData.name.trim() || !formData.address.trim() || !formData.specialty.trim()) {
+  const buildCreatePayload = (source) => ({
+    nombre: source.name,
+    especialidad: source.specialty,
+    direccion: source.address,
+    telefono: source.phone,
+    capacidad: Number(source.capacity || 0),
+    latitude: toCoordinateNumber(source.latitude),
+    longitude: toCoordinateNumber(source.longitude),
+  })
+
+  const createBranchWithPayload = async (source, successMessage) => {
+    if (!source.name.trim() || !source.address.trim() || !source.specialty.trim()) {
       setSyncNotice('Completa nombre, direccion y especialidad para registrar la sede.')
-      return
+      return false
     }
 
-    setSaving(true)
-    setSyncNotice('')
+    const payload = buildCreatePayload(source)
 
-    const payload = {
-      nombre: formData.name,
-      especialidad: formData.specialty,
-      direccion: formData.address,
-      telefono: formData.phone,
-      capacidad: Number(formData.capacity || 0),
+    if (payload.latitude === null || payload.longitude === null) {
+      setSyncNotice('Debes ingresar latitud y longitud validas para ubicar la sede en el mapa.')
+      return false
     }
 
     try {
@@ -165,31 +250,142 @@ export default function GestionSedes() {
       const createdPayload = created?.data || created
       const branch = mapBranchFromApi(createdPayload, 0)
       setBranches((previous) => [branch, ...previous])
-      setFormData(EMPTY_FORM)
-      setSyncNotice(created?.message || 'Sede registrada en backend correctamente.')
+      setSelectedBranchId(branch.id)
+      setSyncNotice(created?.message || successMessage || 'Sede registrada en backend correctamente.')
+      return true
     } catch (error) {
       const status = Number(error?.status || 0)
 
       if (status === 400 || status === 404 || status === 409 || status === 500) {
         setSyncNotice(error.message)
-        return
+        return false
       }
 
       const localBranch = {
         id: `SED-LOCAL-${Date.now()}`,
-        name: formData.name,
-        address: formData.address,
-        phone: formData.phone || '(000) 000-0000',
-        specialization: formData.specialty.toUpperCase(),
-        team: Number(formData.capacity || 0),
+        name: source.name,
+        address: source.address,
+        phone: source.phone || '(000) 000-0000',
+        specialization: source.specialty.toUpperCase(),
+        team: Number(source.capacity || 0),
+        latitude: payload.latitude,
+        longitude: payload.longitude,
         icon: 'domain',
       }
       setBranches((previous) => [localBranch, ...previous])
-      setFormData(EMPTY_FORM)
+      setSelectedBranchId(localBranch.id)
       setSyncNotice(error?.message || 'Sede registrada en modo local. Lista para conectar al endpoint cuando este disponible.')
-    } finally {
-      setSaving(false)
+      return true
     }
+  }
+
+  const handleRegisterBranch = async () => {
+    setSaving(true)
+    setSyncNotice('')
+
+    const ok = await createBranchWithPayload(formData, 'Sede registrada en backend correctamente.')
+
+    if (ok) {
+      setFormData(EMPTY_FORM)
+    }
+
+    setSaving(false)
+  }
+
+  const handleMapDraftChange = (field, value) => {
+    setMapDraft((previous) => ({ ...previous, [field]: value }))
+  }
+
+  const resolveAddressFromCoordinates = async (lat, lng) => {
+    const endpoint = new URL('https://nominatim.openstreetmap.org/reverse')
+    endpoint.searchParams.set('format', 'jsonv2')
+    endpoint.searchParams.set('lat', String(lat))
+    endpoint.searchParams.set('lon', String(lng))
+    endpoint.searchParams.set('zoom', '18')
+    endpoint.searchParams.set('addressdetails', '1')
+
+    const response = await fetch(endpoint.toString(), {
+      headers: {
+        Accept: 'application/json',
+        'Accept-Language': 'es',
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error('No se pudo resolver direccion desde el mapa.')
+    }
+
+    const payload = await response.json()
+    return typeof payload?.display_name === 'string' && payload.display_name.trim()
+      ? payload.display_name
+      : null
+  }
+
+  const handleMapPick = async (lat, lng) => {
+    const fallbackAddress = buildApproxAddress(lat, lng)
+
+    setMapDraft({
+      name: '',
+      specialty: 'Medicina General',
+      address: fallbackAddress,
+      phone: '',
+      capacity: '',
+      latitude: String(lat.toFixed(6)),
+      longitude: String(lng.toFixed(6)),
+    })
+    setMapModalOpen(true)
+
+    const requestId = reverseLookupRequestIdRef.current + 1
+    reverseLookupRequestIdRef.current = requestId
+    setMapLookupLoading(true)
+
+    try {
+      const resolvedAddress = await resolveAddressFromCoordinates(lat, lng)
+      if (reverseLookupRequestIdRef.current !== requestId) {
+        return
+      }
+
+      if (resolvedAddress) {
+        setMapDraft((previous) => ({ ...previous, address: resolvedAddress }))
+      }
+    } catch {
+      if (reverseLookupRequestIdRef.current !== requestId) {
+        return
+      }
+
+      setMapDraft((previous) => ({
+        ...previous,
+        address: previous.address?.trim() ? previous.address : fallbackAddress,
+      }))
+    } finally {
+      if (reverseLookupRequestIdRef.current === requestId) {
+        setMapLookupLoading(false)
+      }
+    }
+  }
+
+  const handleRegisterFromMap = async () => {
+    setSaving(true)
+    setSyncNotice('')
+
+    const ok = await createBranchWithPayload(mapDraft, 'Sede agregada desde el mapa correctamente.')
+
+    if (ok) {
+      setMapModalOpen(false)
+      setCreationMode('manual')
+      setMapLookupLoading(false)
+      setMapDraft({
+        name: '',
+        specialty: 'Medicina General',
+        address: '',
+        phone: '',
+        capacity: '',
+        latitude: '',
+        longitude: '',
+      })
+    }
+
+    setSaving(false)
   }
 
   const startEditBranch = (branch) => {
@@ -200,7 +396,11 @@ export default function GestionSedes() {
       specialty: branch.specialization,
       phone: branch.phone,
       capacity: String(branch.team || ''),
+      latitude: String(branch.latitude ?? ''),
+      longitude: String(branch.longitude ?? ''),
     })
+    setSelectedBranchId(branch.id)
+    setMapZoom(14)
   }
 
   const cancelEditBranch = () => {
@@ -211,6 +411,8 @@ export default function GestionSedes() {
       specialty: '',
       phone: '',
       capacity: '',
+      latitude: '',
+      longitude: '',
     })
   }
 
@@ -237,6 +439,16 @@ export default function GestionSedes() {
     const normalizedCapacity = Number(editDraft.capacity || 0)
     if (!Number.isNaN(normalizedCapacity) && normalizedCapacity !== Number(branch.team || 0)) {
       payload.capacidad = normalizedCapacity
+    }
+
+    const normalizedLatitude = toCoordinateNumber(editDraft.latitude)
+    if (normalizedLatitude !== null && normalizedLatitude !== branch.latitude) {
+      payload.latitude = normalizedLatitude
+    }
+
+    const normalizedLongitude = toCoordinateNumber(editDraft.longitude)
+    if (normalizedLongitude !== null && normalizedLongitude !== branch.longitude) {
+      payload.longitude = normalizedLongitude
     }
 
     if (Object.keys(payload).length === 0) {
@@ -278,6 +490,9 @@ export default function GestionSedes() {
       if (editingId === branch.id) {
         cancelEditBranch()
       }
+      if (String(selectedBranchId) === String(branch.id)) {
+        setSelectedBranchId(null)
+      }
     } catch (error) {
       const localBranch = String(branch.id).startsWith('SED-LOCAL-')
 
@@ -286,6 +501,9 @@ export default function GestionSedes() {
         setSyncNotice('Sede local eliminada correctamente.')
         if (editingId === branch.id) {
           cancelEditBranch()
+        }
+        if (String(selectedBranchId) === String(branch.id)) {
+          setSelectedBranchId(null)
         }
       } else {
         setSyncNotice(error?.message || 'No se pudo eliminar la sede seleccionada.')
@@ -394,8 +612,32 @@ export default function GestionSedes() {
               <article className="register-card">
                 <header>
                   <h3>Agregar Nueva Sede</h3>
-                  <p>Registrar una nueva instalacion clinica</p>
+                  <p>Registrar por formulario o seleccionando ubicacion en el mapa</p>
                 </header>
+
+                <div className="creation-mode-switch" role="tablist" aria-label="Modo de creacion de sede">
+                  <button
+                    type="button"
+                    className={creationMode === 'manual' ? 'active' : ''}
+                    onClick={() => setCreationMode('manual')}
+                  >
+                    Formulario manual
+                  </button>
+                  <button
+                    type="button"
+                    className={creationMode === 'map' ? 'active' : ''}
+                    onClick={() => setCreationMode('map')}
+                  >
+                    Clic en mapa
+                  </button>
+                </div>
+
+                {creationMode === 'map' ? (
+                  <div className="map-pick-helper">
+                    <strong>Modo mapa activo</strong>
+                    <p>Haz clic en el mapa para fijar ubicacion y abrir el formulario de datos faltantes.</p>
+                  </div>
+                ) : null}
 
                 <form className="register-form" onSubmit={(event) => event.preventDefault()}>
                   <label>
@@ -450,6 +692,30 @@ export default function GestionSedes() {
                     </label>
                   </div>
 
+                  <div className="form-row-split">
+                    <label>
+                      <span>LATITUD</span>
+                      <input
+                        value={formData.latitude}
+                        onChange={(event) => handleFormChange('latitude', event.target.value)}
+                        placeholder="4.7110"
+                        type="number"
+                        step="0.000001"
+                      />
+                    </label>
+
+                    <label>
+                      <span>LONGITUD</span>
+                      <input
+                        value={formData.longitude}
+                        onChange={(event) => handleFormChange('longitude', event.target.value)}
+                        placeholder="-74.0721"
+                        type="number"
+                        step="0.000001"
+                      />
+                    </label>
+                  </div>
+
                   <button type="button" className="confirm-btn" onClick={handleRegisterBranch} disabled={saving}>
                     <span className="material-symbols-outlined">domain_add</span>
                     {' '}{saving ? 'Guardando...' : 'Confirmar Registro de Sede'}
@@ -469,22 +735,62 @@ export default function GestionSedes() {
 
             <div className="right-column">
               <article className="map-panel" aria-label="Mapa de sedes">
-                <div className="map-surface" aria-hidden="true">
-                  <div className="map-noise" />
-                  <div className="map-glow" />
-                  <div className="map-grid" />
-                </div>
+                <MapContainer
+                  center={mapCenter}
+                  zoom={mapZoom}
+                  className={`branches-map ${creationMode === 'map' ? 'pick-mode' : ''}`}
+                  scrollWheelZoom
+                  attributionControl={false}
+                >
+                  <MapViewportController center={mapCenter} zoom={mapZoom} />
+                  <MapClickCapture enabled={creationMode === 'map'} onPick={handleMapPick} />
+                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                  {geolocatedBranches.map((branch) => (
+                    <CircleMarker
+                      key={branch.id}
+                      center={[branch.latitude, branch.longitude]}
+                      radius={String(selectedBranchId) === String(branch.id) ? 10 : 8}
+                      pathOptions={{
+                        color: '#003358',
+                        weight: 2,
+                        fillColor: String(selectedBranchId) === String(branch.id) ? '#00a3bf' : '#0f5f95',
+                        fillOpacity: 0.8,
+                      }}
+                      eventHandlers={{
+                        click: () => {
+                          setSelectedBranchId(branch.id)
+                          setMapZoom(14)
+                        },
+                      }}
+                    >
+                      <Popup>
+                        <strong>{branch.name}</strong>
+                        <br />
+                        {branch.address}
+                        <br />
+                        Lat: {Number(branch.latitude).toFixed(5)} | Lng: {Number(branch.longitude).toFixed(5)}
+                      </Popup>
+                    </CircleMarker>
+                  ))}
+                </MapContainer>
 
                 <div className="map-live-tag">
                   <i />
-                  {' '}Cobertura de Red en Vivo: 94%
+                  {' '}Sedes geolocalizadas: {geolocatedBranches.length}/{filteredBranches.length}
                 </div>
 
+                {creationMode === 'map' ? (
+                  <div className="map-mode-indicator">
+                    <span className="material-symbols-outlined">touch_app</span>
+                    {' '}Selecciona un punto en el mapa para crear sede
+                  </div>
+                ) : null}
+
                 <div className="map-zoom-actions">
-                  <button type="button" aria-label="Acercar">
+                  <button type="button" aria-label="Acercar" onClick={() => setMapZoom((prev) => Math.min(prev + 1, 18))}>
                     <span className="material-symbols-outlined">add</span>
                   </button>
-                  <button type="button" aria-label="Alejar">
+                  <button type="button" aria-label="Alejar" onClick={() => setMapZoom((prev) => Math.max(prev - 1, 4))}>
                     <span className="material-symbols-outlined">remove</span>
                   </button>
                 </div>
@@ -501,7 +807,16 @@ export default function GestionSedes() {
 
                 <div className="directory-list">
                   {filteredBranches.map((branch) => (
-                    <article key={branch.id} className="branch-item">
+                    <article
+                      key={branch.id}
+                      className={`branch-item ${String(selectedBranchId) === String(branch.id) ? 'selected' : ''}`}
+                      onClick={() => {
+                        if (hasValidCoordinates(branch)) {
+                          setSelectedBranchId(branch.id)
+                          setMapZoom(14)
+                        }
+                      }}
+                    >
                       <div className="branch-main">
                         <div className="branch-icon">
                           <span className="material-symbols-outlined">{branch.icon}</span>
@@ -544,6 +859,12 @@ export default function GestionSedes() {
                                 branch.phone
                               )}
                             </span>
+                            {hasValidCoordinates(branch) ? (
+                              <span>
+                                <span className="material-symbols-outlined">my_location</span>
+                                {Number(branch.latitude).toFixed(4)}, {Number(branch.longitude).toFixed(4)}
+                              </span>
+                            ) : null}
                           </div>
                         </div>
                       </div>
@@ -564,6 +885,22 @@ export default function GestionSedes() {
                               placeholder="Capacidad"
                               type="number"
                             />
+                            <input
+                              className="branch-inline-input branch-inline-small"
+                              value={editDraft.latitude}
+                              onChange={(event) => handleEditDraftChange('latitude', event.target.value)}
+                              placeholder="Latitud"
+                              type="number"
+                              step="0.000001"
+                            />
+                            <input
+                              className="branch-inline-input branch-inline-small"
+                              value={editDraft.longitude}
+                              onChange={(event) => handleEditDraftChange('longitude', event.target.value)}
+                              placeholder="Longitud"
+                              type="number"
+                              step="0.000001"
+                            />
                           </>
                         ) : (
                           <>
@@ -579,24 +916,44 @@ export default function GestionSedes() {
                             <button
                               type="button"
                               className="branch-action-btn primary"
-                              onClick={() => handleSaveBranch(branch)}
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                handleSaveBranch(branch)
+                              }}
                               disabled={updatingId === branch.id}
                             >
                               {updatingId === branch.id ? 'Guardando...' : 'Guardar'}
                             </button>
-                            <button type="button" className="branch-action-btn" onClick={cancelEditBranch}>
+                            <button
+                              type="button"
+                              className="branch-action-btn"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                cancelEditBranch()
+                              }}
+                            >
                               Cancelar
                             </button>
                           </>
                         ) : (
                           <>
-                            <button type="button" className="branch-action-btn" onClick={() => startEditBranch(branch)}>
+                            <button
+                              type="button"
+                              className="branch-action-btn"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                startEditBranch(branch)
+                              }}
+                            >
                               Editar
                             </button>
                             <button
                               type="button"
                               className="branch-action-btn danger"
-                              onClick={() => handleDeleteBranch(branch)}
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                handleDeleteBranch(branch)
+                              }}
                               disabled={deletingId === branch.id}
                             >
                               {deletingId === branch.id ? 'Eliminando...' : 'Eliminar'}
@@ -623,6 +980,79 @@ export default function GestionSedes() {
           <small>© 2024 MediGo Systems - Todos los derechos reservados</small>
         </footer>
       </main>
+
+      {mapModalOpen ? (
+        <div className="map-create-modal-backdrop" role="presentation" onClick={() => setMapModalOpen(false)}>
+          <section
+            className="map-create-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Completar datos de nueva sede"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header>
+              <h3>Nueva sede desde mapa</h3>
+              <p>Completa los datos clinicos. La ubicacion ya fue tomada del mapa.</p>
+              {mapLookupLoading ? <small>Buscando direccion sugerida...</small> : null}
+            </header>
+
+            <div className="map-create-grid">
+              <label>
+                <span>NOMBRE</span>
+                <input value={mapDraft.name} onChange={(event) => handleMapDraftChange('name', event.target.value)} />
+              </label>
+
+              <label>
+                <span>ESPECIALIDAD</span>
+                <select value={mapDraft.specialty} onChange={(event) => handleMapDraftChange('specialty', event.target.value)}>
+                  <option>Medicina General</option>
+                  <option>Pediatria y Maternidad</option>
+                  <option>Centro Quirurgico</option>
+                  <option>Imagenes Diagnosticas</option>
+                </select>
+              </label>
+
+              <label className="full">
+                <span>DIRECCION</span>
+                <input value={mapDraft.address} onChange={(event) => handleMapDraftChange('address', event.target.value)} />
+              </label>
+
+              <label>
+                <span>TELEFONO</span>
+                <input value={mapDraft.phone} onChange={(event) => handleMapDraftChange('phone', event.target.value)} />
+              </label>
+
+              <label>
+                <span>CAPACIDAD</span>
+                <input
+                  type="number"
+                  value={mapDraft.capacity}
+                  onChange={(event) => handleMapDraftChange('capacity', event.target.value)}
+                />
+              </label>
+
+              <label>
+                <span>LATITUD</span>
+                <input value={mapDraft.latitude} readOnly />
+              </label>
+
+              <label>
+                <span>LONGITUD</span>
+                <input value={mapDraft.longitude} readOnly />
+              </label>
+            </div>
+
+            <div className="map-create-actions">
+              <button type="button" className="branch-action-btn" onClick={() => setMapModalOpen(false)}>
+                Cancelar
+              </button>
+              <button type="button" className="branch-action-btn primary" onClick={handleRegisterFromMap} disabled={saving}>
+                {saving ? 'Guardando...' : 'Guardar sede'}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       {loading ? <div className="branches-loading">Sincronizando sedes...</div> : null}
     </div>
