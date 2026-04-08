@@ -30,7 +30,18 @@ export const login = async (credentials) => {
 
   try {
     const response = await client.post(AUTH_ENDPOINTS.login, credentials);
-    return response.data;
+    const data = response.data.data // Extraer del envelope 'data' del Gateway
+    
+    // Normalizar para el frontend: data.jwtToken -> token, el resto -> user
+    return {
+      token: data.jwtToken,
+      user: {
+        id: data.id,
+        username: data.username,
+        email: data.email,
+        role: data.role
+      }
+    };
   } catch (error) {
     // Si falla la conexión (backend apagado), pero es una de nuestras cuentas de prueba rápidas
     console.error('Auth Error:', error);
@@ -59,11 +70,15 @@ export const logout = async () => {
   return response.data;
 };
 
-/**
- * Obtener usuario actual (validar sesión activa)
- * 📡 BACKEND: GET /auth/me
- */
 export const getMe = async () => {
-  const response = await client.get(AUTH_ENDPOINTS.me);
-  return response.data;
+  // Obtener el ID del usuario desde localStorage como fallback si es necesario
+  const storedUser = JSON.parse(localStorage.getItem('medigo_user') || '{}');
+  const userId = storedUser.id || storedUser.user_id;
+
+  // Ambos Gateway y Backend actuales requieren user_id como query param
+  const response = await client.get(`${AUTH_ENDPOINTS.me}${userId ? `?user_id=${userId}` : ''}`);
+  
+  // Normalizar respuesta del Gateway (success/data envelope)
+  const userData = response.data.data || response.data;
+  return userData;
 };
