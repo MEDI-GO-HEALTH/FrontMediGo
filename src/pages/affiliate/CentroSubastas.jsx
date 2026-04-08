@@ -1,7 +1,6 @@
 /* eslint-disable sonarjs/cognitive-complexity */
-import { useEffect, useMemo, useState } from 'react'
-import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
 import AffiliateShell from '../../components/layout/AffiliateShell'
 import useCappedLoading from '../../hooks/useCappedLoading'
 import {
