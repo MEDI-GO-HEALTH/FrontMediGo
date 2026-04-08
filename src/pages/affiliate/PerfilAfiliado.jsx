@@ -9,7 +9,9 @@ import {
   updateAffiliatePreferences,
   updateAffiliateProfile,
 } from '../../api/affiliateProfileService'
+import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
 import AffiliateShell from '../../components/layout/AffiliateShell'
+import useCappedLoading from '../../hooks/useCappedLoading'
 import '../../styles/affiliate/perfil-afiliado.css'
 
 const FALLBACK_PROFILE = {
@@ -60,8 +62,10 @@ export default function PerfilAfiliado() {
     preferences: FALLBACK_PREFERENCES,
   })
   const [isSaving, setIsSaving] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const showLoader = useCappedLoading(loading, 3000)
 
   useEffect(() => {
     let mounted = true
@@ -115,6 +119,10 @@ export default function PerfilAfiliado() {
         setPreferences(FALLBACK_PREFERENCES)
         setPaymentMethods(FALLBACK_PAYMENT_METHODS)
         setAccountStatus(FALLBACK_ACCOUNT_STATUS)
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
       }
     }
 
@@ -208,6 +216,7 @@ export default function PerfilAfiliado() {
 
   return (
     <AffiliateShell active="profile">
+            <PageLoadingOverlay visible={showLoader} message="Cargando perfil del afiliado..." />
             <header>
               <h2 className="affiliate-title">Perfil del Afiliado</h2>
               <p className="affiliate-subtitle">Gestione su identidad profesional y preferencias clinicas.</p>

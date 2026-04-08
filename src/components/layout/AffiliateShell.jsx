@@ -1,15 +1,18 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router'
 import { ROUTES } from '../../constants/routes'
+import MedigoSidebarBrand from '../common/MedigoSidebarBrand'
 
 const SIDE_LINKS = [
   { key: 'map', label: 'Logistics Map', icon: 'map', path: ROUTES.AFFILIATE.MAP },
+  { key: 'inventory', label: 'Branch Inventory', icon: 'inventory_2', path: ROUTES.AFFILIATE.INVENTORY },
   { key: 'auctions', label: 'Live Auctions', icon: 'gavel', path: ROUTES.AFFILIATE.AUCTIONS },
   { key: 'profile', label: 'Profile Settings', icon: 'account_circle', path: ROUTES.AFFILIATE.PROFILE },
 ]
 
 const MOBILE_LINKS = [
   { key: 'map', label: 'Map', icon: 'explore', path: ROUTES.AFFILIATE.MAP },
+  { key: 'inventory', label: 'Inventory', icon: 'inventory_2', path: ROUTES.AFFILIATE.INVENTORY },
   { key: 'auctions', label: 'Auctions', icon: 'payments', path: ROUTES.AFFILIATE.AUCTIONS },
   { key: 'profile', label: 'Profile', icon: 'person', path: ROUTES.AFFILIATE.PROFILE },
 ]
@@ -59,17 +62,13 @@ export default function AffiliateShell({ active = 'map', contentMode = 'containe
       <div className="affiliate-shell">
         <aside className="affiliate-sidebar" aria-label="Navegacion lateral afiliado">
           <div className="affiliate-side-head">
-            <div className="affiliate-side-brand">
-              <div className="affiliate-side-logo">
-                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  clinical_notes
-                </span>
-              </div>
-              <div className="affiliate-side-brand-text">
-                <h1>Affiliate Portal</h1>
-                <p>Clinical Logistics Unit</p>
-              </div>
-            </div>
+            <MedigoSidebarBrand
+              containerClassName="affiliate-side-brand"
+              logoContainerClassName="affiliate-side-logo"
+              textContainerClassName="affiliate-side-brand-text"
+              title="Affiliate Portal"
+              subtitle="Clinical Logistics Unit"
+            />
             <h2>Configuracion</h2>
           </div>
 

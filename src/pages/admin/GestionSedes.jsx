@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { createSede, deleteSede, getSedes, updateSede } from '../../api/sedesService'
+import MedigoSidebarBrand from '../../components/common/MedigoSidebarBrand'
+import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
 import { ROUTES } from '../../constants/routes'
+import useCappedLoading from '../../hooks/useCappedLoading'
 import '../../styles/admin/gestion-sedes.css'
 
 const FALLBACK_BRANCHES = [
@@ -83,6 +86,7 @@ export default function GestionSedes() {
   })
   const [syncNotice, setSyncNotice] = useState('')
   const [loading, setLoading] = useState(true)
+  const showLoader = useCappedLoading(loading, 3000)
 
   useEffect(() => {
     let mounted = true
@@ -293,18 +297,14 @@ export default function GestionSedes() {
 
   return (
     <div className="admin-branches-shell">
+      <PageLoadingOverlay visible={showLoader} message="Cargando sedes..." />
       <aside className="branches-side">
-        <div className="branches-brand">
-          <div className="branches-brand-icon">
-            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
-              medical_services
-            </span>
-          </div>
-          <div>
-            <h1>MediGo Admin</h1>
-            <p>CLINICAL PRECISION</p>
-          </div>
-        </div>
+        <MedigoSidebarBrand
+          containerClassName="branches-brand"
+          logoContainerClassName="branches-brand-icon"
+          title="MediGo Admin"
+          subtitle="CLINICAL PRECISION"
+        />
 
         <nav className="branches-nav" aria-label="Navegacion administrador">
           <button type="button" onClick={() => navigate(ROUTES.ADMIN.AUCTIONS)}>

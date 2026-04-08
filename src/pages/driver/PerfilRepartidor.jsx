@@ -5,6 +5,9 @@ import {
   updateDriverAvailability,
   updateDriverProfile,
 } from '../../api/driverProfileService'
+import MedigoSidebarBrand from '../../components/common/MedigoSidebarBrand'
+import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
+import useCappedLoading from '../../hooks/useCappedLoading'
 import '../../styles/driver/perfil-repartidor.css'
 
 const FALLBACK_PROFILE = {
@@ -34,6 +37,7 @@ export default function PerfilRepartidor() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const showLoader = useCappedLoading(loading, 3000)
 
   useEffect(() => {
     let mounted = true
@@ -130,20 +134,17 @@ export default function PerfilRepartidor() {
 
   return (
     <div className="driver-profile-page">
+      <PageLoadingOverlay visible={showLoader} message="Cargando perfil del repartidor..." />
       <div className="driver-profile-shell">
         <aside className="driver-profile-sidebar" aria-label="Navegacion repartidor">
           <div className="driver-profile-side-head">
-            <div className="driver-profile-side-brand">
-              <div className="driver-profile-side-logo">
-                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  local_shipping
-                </span>
-              </div>
-              <div className="driver-profile-side-brand-text">
-                <h1>Driver Portal</h1>
-                <p>Clinical Logistics Unit</p>
-              </div>
-            </div>
+            <MedigoSidebarBrand
+              containerClassName="driver-profile-side-brand"
+              logoContainerClassName="driver-profile-side-logo"
+              textContainerClassName="driver-profile-side-brand-text"
+              title="Driver Portal"
+              subtitle="Clinical Logistics Unit"
+            />
           </div>
 
           <nav className="driver-profile-nav">

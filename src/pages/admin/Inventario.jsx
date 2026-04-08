@@ -8,7 +8,10 @@ import {
   getMedicationAvailabilityByBranch,
   updateMedicamentoStock,
 } from '../../api/inventarioService'
+import MedigoSidebarBrand from '../../components/common/MedigoSidebarBrand'
+import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
 import { ROUTES } from '../../constants/routes'
+import useCappedLoading from '../../hooks/useCappedLoading'
 import '../../styles/admin/inventario.css'
 
 const FALLBACK_ITEMS = [
@@ -96,6 +99,7 @@ export default function Inventario() {
   const [backendNotice, setBackendNotice] = useState('')
   const [branches, setBranches] = useState([])
   const [selectedBranchId, setSelectedBranchId] = useState('')
+  const showLoader = useCappedLoading(loading, 3000)
 
   const applyInventoryStats = (stats) => {
     const source = stats || {}
@@ -373,16 +377,14 @@ export default function Inventario() {
 
   return (
     <div className="admin-inventory-shell">
+      <PageLoadingOverlay visible={showLoader} message="Cargando inventario..." />
       <aside className="admin-side">
-        <div className="admin-side-brand">
-          <div className="admin-side-logo-icon">
-            <span className="material-symbols-outlined">clinical_notes</span>
-          </div>
-          <div>
-            <h1>MediGo Admin</h1>
-            <p>CLINICAL PRECISION</p>
-          </div>
-        </div>
+        <MedigoSidebarBrand
+          containerClassName="admin-side-brand"
+          logoContainerClassName="admin-side-logo-icon"
+          title="MediGo Admin"
+          subtitle="CLINICAL PRECISION"
+        />
 
         <nav className="admin-side-nav" aria-label="Navegacion de administrador">
           <button type="button" onClick={() => navigate(ROUTES.ADMIN.AUCTIONS)}>
