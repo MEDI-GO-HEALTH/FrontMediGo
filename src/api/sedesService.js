@@ -1,42 +1,41 @@
-/**
- * sedesService.js — Gestión de Sedes / Farmacias
- * 📡 BACKEND endpoints: /sedes
- */
-
 import client from './client';
 
-/** GET /sedes — Listar todas las sedes */
-export const getSedes = async (params = {}) => {
-  const response = await client.get('/sedes', { params });
+/** 
+ * Lista todas las farmacias/sedes reales de la base de datos.
+ */
+export const getSedes = async () => {
+  const response = await client.get('/api/medications/branches');
   return response.data;
 };
 
-/** GET /sedes/:id — Detalle de una sede */
+/**
+ * Obtiene los medicamentos reales de una sede específica.
+ */
+export const getSedeMedications = async (id) => {
+  const response = await client.get(`/api/medications/branch/${id}/medications`);
+  return response.data;
+};
+
+/** GET /api/medications/branch/:id — Detalle de una sede */
 export const getSede = async (id) => {
-  const response = await client.get(`/sedes/${id}`);
+  const response = await client.get(`/api/medications/branch/${id}`);
   return response.data;
 };
 
-/** GET /sedes/:id/usuarios — Usuarios de una sede */
-export const getSedeUsuarios = async (id) => {
-  const response = await client.get(`/sedes/${id}/usuarios`);
-  return response.data;
-};
-
-/** POST /sedes — Crear nueva sede */
+/** POST /api/medications/branch — Crear nueva sede (Ruta estimada para ADMIN) */
 export const createSede = async (data) => {
-  const response = await client.post('/sedes', data);
+  const response = await client.post('/api/medications/branch', data);
   return response.data;
 };
 
-/** PUT /sedes/:id — Actualizar sede */
+/** PUT /api/medications/branch/:id — Actualizar sede */
 export const updateSede = async (id, data) => {
-  const response = await client.put(`/sedes/${id}`, data);
+  const response = await client.put(`/api/medications/branch/${id}`, data);
   return response.data;
 };
 
-/** DELETE /sedes/:id — Eliminar sede */
+/** DELETE /api/medications/branch/:id — Eliminar sede */
 export const deleteSede = async (id) => {
-  const response = await client.delete(`/sedes/${id}`);
+  const response = await client.delete(`/api/medications/branch/${id}`);
   return response.data;
 };
