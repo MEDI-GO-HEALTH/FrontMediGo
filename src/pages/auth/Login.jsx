@@ -26,6 +26,28 @@ const ROLE_REDIRECTS = {
   REPARTIDOR: '/repartidor/mapa',
 }
 
+const normalizeLoginErrorMessage = (err) => {
+  const status = Number(err?.response?.status || 0)
+
+  if (!status) {
+    return 'No se pudo conectar con el servicio de inicio de sesión. Intenta nuevamente.'
+  }
+
+  if (status === 401 || status === 403 || status === 404) {
+    return 'Correo o contraseña incorrectos.'
+  }
+
+  if (status === 400) {
+    return 'Verifica el correo y la contraseña e intenta nuevamente.'
+  }
+
+  if (status === 429) {
+    return 'Demasiados intentos. Espera un momento e inténtalo de nuevo.'
+  }
+
+  return 'No fue posible iniciar sesión en este momento. Intenta nuevamente.'
+}
+
 export default function Login() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -106,8 +128,7 @@ export default function Login() {
       const redirect = ROLE_REDIRECTS[data.user.role] || '/login'
       navigate(redirect, { replace: true })
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Credenciales incorrectas. Intenta de nuevo.'
-      setError(msg)
+      setError(normalizeLoginErrorMessage(err))
     } finally {
       setLoading(false)
     }

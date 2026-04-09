@@ -169,17 +169,11 @@ const normalizeRegisterErrorMessage = (error) => {
   const source = backendMessage.toLowerCase()
 
   if (!backendMessage && !status) {
-    return 'No se pudo conectar con el servicio de registro. Verifique que API Gateway y backend estén activos.'
+    return 'No se pudo conectar con el servicio de registro. Intenta nuevamente en unos minutos.'
   }
 
   if (source.includes('ya se encuentra registrado') || source.includes('ya existe') || status === 409) {
-    if (source.includes('email')) {
-      return 'El correo ya está registrado. Intenta iniciar sesión o usa otro email.'
-    }
-    if (source.includes('usuario') || source.includes('username') || source.includes('name')) {
-      return 'El nombre de usuario ya está registrado. Intenta con otro nombre.'
-    }
-    return 'La cuenta ya existe con esos datos. Verifica correo y nombre de usuario.'
+    return 'No fue posible crear la cuenta con los datos ingresados.'
   }
 
   if (source.includes('contraseña') || source.includes('password') || source.includes('weak')) {
@@ -199,7 +193,7 @@ const normalizeRegisterErrorMessage = (error) => {
   }
 
   if (source.includes('campo') || source.includes('required') || source.includes('validation failed') || status === 400) {
-    return backendMessage || 'Hay campos inválidos o incompletos en el formulario de registro.'
+    return 'Hay campos inválidos o incompletos en el formulario de registro.'
   }
 
   if (status === 401 || status === 403) {
@@ -208,10 +202,6 @@ const normalizeRegisterErrorMessage = (error) => {
 
   if (status === 503 || status === 502 || status === 504) {
     return 'El servicio no está disponible temporalmente. Intenta nuevamente en unos minutos.'
-  }
-
-  if (backendMessage) {
-    return backendMessage
   }
 
   return 'No fue posible crear la cuenta por un error inesperado. Intenta nuevamente.'
@@ -260,7 +250,7 @@ export const login = async (credentials) => {
  */
 export const registerUser = async (payload) => {
   const name = String(payload?.name || '').trim();
-  const email = String(payload?.email || '').trim().toLowerCase();
+  const email = String(payload?.email || '').trim();
   const password = String(payload?.password || '');
   const role = normalizeRegisterRoleForApi(payload?.role);
   const rawPhone = String(payload?.phone || '').trim();
