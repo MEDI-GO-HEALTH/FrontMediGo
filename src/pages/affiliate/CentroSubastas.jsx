@@ -5,6 +5,7 @@ import AffiliateShell from '../../components/layout/AffiliateShell'
 import useCappedLoading from '../../hooks/useCappedLoading'
 import {
   getActiveAuctions,
+  getAuctionErrorMessage,
   getAuctionBids,
   getAuctionById,
   getAuctionWinner,
@@ -146,10 +147,7 @@ const getCurrentAffiliateUser = () => {
 }
 
 const extractErrorMessage = (apiError) => {
-  const data = apiError?.response?.data
-  const message = data?.message || 'No se pudo completar la operacion en subastas.'
-  const details = data?.details ? ` ${data.details}` : ''
-  return `${message}${details}`
+  return getAuctionErrorMessage(apiError, 'No se pudo completar la operacion en subastas.')
 }
 
 const parseRetryAfterMs = (apiError) => {
@@ -306,32 +304,6 @@ export default function CentroSubastas() {
       prev && String(prev.id) === auctionId ? { ...prev, currentPrice: newPrice } : prev,
     )
   })
-
-  // ── Polling silencioso: fallback garantizado cada 5 s ──────────────────
-  // Asegura que User B vea cambios incluso si la conexión WebSocket falla
-  // o el mensaje no llega. No muestra spinner ni sobreescribe datos más
-  // recientes que el backend retorne.
-  useEffect(() => {
-    const pollId = globalThis.setInterval(async () => {
-      try {
-        const response = await getActiveAuctions()
-        const source = Array.isArray(response) ? response : response?.data
-        const list = Array.isArray(source) ? source : []
-        if (list.length === 0) return
-        setAuctions((prev) =>
-          prev.map((a) => {
-            const fresh = list.find((item) => String(item?.id) === String(a.id))
-            if (!fresh) return a
-            const freshPrice = readCurrentPrice(fresh)
-            return freshPrice !== a.currentOffer ? { ...a, currentOffer: freshPrice } : a
-          }),
-        )
-      } catch {
-        // Silencioso — no mostrar error por fallo de polling en segundo plano
-      }
-    }, 5000)
-    return () => globalThis.clearInterval(pollId)
-  }, [])
 
   useEffect(() => {
     const storedIds = readStoredParticipations(currentUser?.id)
