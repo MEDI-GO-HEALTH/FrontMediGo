@@ -8,9 +8,8 @@
  *   /topic/auction/{id}        → estado completo de una subasta concreta
  *   /topic/auction/{id}/bids   → nueva puja registrada en esa subasta
  *
- * La URL de WebSocket se deriva automáticamente de API_CONFIG.baseURL:
- *   http://localhost:8080/api  →  ws://localhost:8080/ws
- *   https://gateway.azure.com  →  wss://gateway.azure.com/ws
+ * La URL de WebSocket se toma de API_CONFIG.auctionWsURL para desacoplar
+ * el canal realtime de subastas del baseURL REST del gateway.
  *
  * @param {object} options
  * @param {string|number|null} options.auctionId  – ID de la subasta seleccionada
@@ -24,9 +23,7 @@ import { Client } from '@stomp/stompjs'
 import { API_CONFIG } from '../config/api'
 
 function getWsUrl() {
-  // Elimina el sufijo /api y cambia http(s) por ws(s)
-  const httpBase = API_CONFIG.baseURL.replace(/\/api\/?$/, '')
-  return httpBase.replace(/^http/, 'ws') + '/ws'
+  return API_CONFIG.auctionWsURL
 }
 
 function safeParse(body) {
