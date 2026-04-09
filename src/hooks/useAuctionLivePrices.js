@@ -10,9 +10,9 @@
  *  - Compatible con React StrictMode: el flag `active` descarta mensajes
  *    de la instancia descartada durante el doble-montaje de desarrollo.
  *
- * URL WebSocket derivada de API_CONFIG.baseURL:
- *   http://localhost:8080/api  →  ws://localhost:8080/ws
- *   https://gateway.azure.com  →  wss://gateway.azure.com/ws
+ * URL WebSocket tomada de API_CONFIG.auctionWsURL:
+ *   Desarrollo por defecto: ws://localhost:8080/ws
+ *   Producción: configurar VITE_AUCTION_WS_URL según infraestructura
  *
  * @param {(auctionId: string, newPrice: number) => void} onPriceUpdate
  */
@@ -22,8 +22,7 @@ import { Client } from '@stomp/stompjs'
 import { API_CONFIG } from '../config/api'
 
 function getWsUrl() {
-  const base = API_CONFIG.baseURL.replace(/\/api\/?$/, '')
-  return base.replace(/^http/, 'ws') + '/ws'
+  return API_CONFIG.auctionWsURL
 }
 
 export default function useAuctionLivePrices(onPriceUpdate) {
