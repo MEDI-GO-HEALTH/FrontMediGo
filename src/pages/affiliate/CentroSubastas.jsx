@@ -5,6 +5,7 @@ import AffiliateShell from '../../components/layout/AffiliateShell'
 import useCappedLoading from '../../hooks/useCappedLoading'
 import {
   getActiveAuctions,
+  getAuctionErrorMessage,
   getAuctionBids,
   getAuctionById,
   getAuctionWinner,
@@ -146,10 +147,7 @@ const getCurrentAffiliateUser = () => {
 }
 
 const extractErrorMessage = (apiError) => {
-  const data = apiError?.response?.data
-  const message = data?.message || 'No se pudo completar la operacion en subastas.'
-  const details = data?.details ? ` ${data.details}` : ''
-  return `${message}${details}`
+  return getAuctionErrorMessage(apiError, 'No se pudo completar la operacion en subastas.')
 }
 
 const parseRetryAfterMs = (apiError) => {

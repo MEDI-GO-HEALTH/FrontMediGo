@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { createSubasta, getActiveAuctions } from '../../api/subastaService'
+import { createSubasta, getActiveAuctions, getAuctionErrorMessage } from '../../api/subastaService'
 import AuctionAdminActions from '../../components/admin/AuctionAdminActions'
 import MedigoSidebarBrand from '../../components/common/MedigoSidebarBrand'
 import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
@@ -79,8 +79,6 @@ const mapAuctionFromApi = (item, index) => ({
 
 export default function GestionSubastas() {
   const navigate = useNavigate()
-  const now = new Date()
-  const plusOneHour = new Date(now.getTime() + 60 * 60 * 1000)
 
   const toDateTimeLocal = (dateValue) => {
     const value = new Date(dateValue)
@@ -97,12 +95,14 @@ export default function GestionSubastas() {
     return `${dateTimeLocalValue}:00`
   }
 
+  const getMinStartDate = () => new Date(Date.now() + 60 * 1000)
+
   const initialCreateForm = {
     medicationId: 0,
     branchId: 0,
     basePrice: 0,
-    startTime: toDateTimeLocal(now),
-    endTime: toDateTimeLocal(plusOneHour),
+    startTime: toDateTimeLocal(getMinStartDate()),
+    endTime: toDateTimeLocal(new Date(Date.now() + (61 * 60 * 1000))),
     closureType: 'FIXED_TIME',
     maxPrice: 0,
     inactivityMinutes: 0,
@@ -147,9 +147,10 @@ export default function GestionSubastas() {
         }
       } catch (error) {
         if (mounted) {
-          const message =
-            error?.response?.data?.message ||
+          const message = getAuctionErrorMessage(
+            error,
             'No fue posible sincronizar subastas con backend. Se muestran datos de respaldo.'
+          )
           setNotice(message)
         }
       } finally {
@@ -182,12 +183,12 @@ export default function GestionSubastas() {
   }
 
   const handleOpenCreateModal = () => {
-    const freshNow = new Date()
-    const freshPlusOneHour = new Date(freshNow.getTime() + 60 * 60 * 1000)
+    const freshMinStart = getMinStartDate()
+    const freshPlusOneHour = new Date(freshMinStart.getTime() + 60 * 60 * 1000)
     setCreateError('')
     setCreateForm((previous) => ({
       ...previous,
-      startTime: toDateTimeLocal(freshNow),
+      startTime: toDateTimeLocal(freshMinStart),
       endTime: toDateTimeLocal(freshPlusOneHour),
     }))
     setShowCreateModal(true)
@@ -213,7 +214,16 @@ export default function GestionSubastas() {
     setNotice('')
     setCreateError('')
 
-    if (new Date(createForm.endTime) <= new Date(createForm.startTime)) {
+    const startDate = new Date(createForm.startTime)
+    const endDate = new Date(createForm.endTime)
+
+    if (startDate < getMinStartDate()) {
+      setCreateError('La fecha/hora de inicio debe ser al menos 1 minuto en el futuro.')
+      setCreating(false)
+      return
+    }
+
+    if (endDate <= startDate) {
       setCreateError('La fecha/hora de fin debe ser posterior a la fecha/hora de inicio.')
       setCreating(false)
       return
@@ -247,23 +257,12 @@ export default function GestionSubastas() {
       const item = mapAuctionFromApi(created, 0)
       setAuctions((previous) => [item, ...previous])
       setNotice('Subasta creada en backend correctamente.')
+      setCreateError('')
       setShowCreateModal(false)
     } catch (error) {
-      const local = {
-        id: `SUB-LOCAL-${Date.now()}`,
-        name: `Medicamento #${payload.medicationId}`,
-        batch: `SEDE-${payload.branchId}`,
-        status: 'PENDIENTE',
-        startPrice: payload.basePrice,
-        reserveNote: 'Puja Min. Requerida',
-        remaining: 'Empieza en 3d',
-        icon: 'medication',
-        active: false,
-      }
-      setAuctions((previous) => [local, ...previous])
-      const message = error?.response?.data?.message || 'No se pudo crear en backend. Se agregó una vista previa local de la subasta.'
+      const message = getAuctionErrorMessage(error, 'No se pudo crear la subasta.')
+      setCreateError(message)
       setNotice(message)
-      setShowCreateModal(false)
     } finally {
       setCreating(false)
     }
@@ -548,6 +547,7 @@ export default function GestionSubastas() {
                   type="datetime-local"
                   name="startTime"
                   value={createForm.startTime}
+                  min={toDateTimeLocal(getMinStartDate())}
                   onChange={handleCreateInputChange}
                   required
                 />
