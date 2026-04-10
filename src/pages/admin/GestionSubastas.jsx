@@ -92,7 +92,19 @@ export default function GestionSubastas() {
       return null
     }
 
-    return `${dateTimeLocalValue}:00`
+    const date = new Date(dateTimeLocalValue)
+    if (Number.isNaN(date.getTime())) {
+      return null
+    }
+
+    const yyyy = date.getUTCFullYear()
+    const mm = String(date.getUTCMonth() + 1).padStart(2, '0')
+    const dd = String(date.getUTCDate()).padStart(2, '0')
+    const hh = String(date.getUTCHours()).padStart(2, '0')
+    const min = String(date.getUTCMinutes()).padStart(2, '0')
+    const ss = String(date.getUTCSeconds()).padStart(2, '0')
+
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}`
   }
 
   const getMinStartDate = () => new Date(Date.now() + 60 * 1000)
