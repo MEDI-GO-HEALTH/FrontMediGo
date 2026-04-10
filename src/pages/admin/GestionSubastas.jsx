@@ -81,6 +81,10 @@ export default function GestionSubastas() {
   const navigate = useNavigate()
   const START_PAST_TOLERANCE_SECONDS = 15
   const SAFE_START_BUFFER_SECONDS = 60
+  const ENV_AUCTION_HOURS_OFFSET = Number(import.meta.env.VITE_AUCTION_HOURS_OFFSET)
+  const FRONTEND_TO_BACKEND_HOURS_OFFSET = Number.isFinite(ENV_AUCTION_HOURS_OFFSET)
+    ? ENV_AUCTION_HOURS_OFFSET
+    : -5
 
   const toDateTimeLocal = (dateValue) => {
     const value = new Date(dateValue)
@@ -94,19 +98,24 @@ export default function GestionSubastas() {
       return null
     }
 
-    // Mantener hora local seleccionada por el usuario (sin conversión UTC).
-    if (dateTimeLocalValue instanceof Date) {
-      const yyyy = dateTimeLocalValue.getFullYear()
-      const mm = String(dateTimeLocalValue.getMonth() + 1).padStart(2, '0')
-      const dd = String(dateTimeLocalValue.getDate()).padStart(2, '0')
-      const hh = String(dateTimeLocalValue.getHours()).padStart(2, '0')
-      const min = String(dateTimeLocalValue.getMinutes()).padStart(2, '0')
-      const ss = String(dateTimeLocalValue.getSeconds()).padStart(2, '0')
-      return `${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}`
+    const parsedDate = dateTimeLocalValue instanceof Date
+      ? new Date(dateTimeLocalValue.getTime())
+      : new Date(String(dateTimeLocalValue))
+
+    if (Number.isNaN(parsedDate.getTime())) {
+      return null
     }
 
-    const localValue = String(dateTimeLocalValue)
-    return localValue.length === 16 ? `${localValue}:00` : localValue
+    // Ajuste solicitado: restar 5 horas antes de enviar al backend.
+    parsedDate.setHours(parsedDate.getHours() + FRONTEND_TO_BACKEND_HOURS_OFFSET)
+
+    const yyyy = parsedDate.getFullYear()
+    const mm = String(parsedDate.getMonth() + 1).padStart(2, '0')
+    const dd = String(parsedDate.getDate()).padStart(2, '0')
+    const hh = String(parsedDate.getHours()).padStart(2, '0')
+    const min = String(parsedDate.getMinutes()).padStart(2, '0')
+    const ss = String(parsedDate.getSeconds()).padStart(2, '0')
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}`
   }
 
   const getDefaultStartDate = () => new Date(Date.now() + SAFE_START_BUFFER_SECONDS * 1000)
