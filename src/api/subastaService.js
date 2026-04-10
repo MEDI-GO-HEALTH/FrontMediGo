@@ -7,38 +7,6 @@ import client from './client';
 
 const AUCTIONS_BASE = '/api/auctions';
 
-export const getAuctionErrorMessage = (error, fallbackMessage = 'No se pudo completar la operacion en subastas.') => {
-  const status = Number(error?.response?.status || 0)
-  const data = error?.response?.data || {}
-  const message = String(data?.message || data?.error || '').trim()
-
-  if (!status) {
-    return 'No se pudo conectar con el servicio de subastas. Intenta nuevamente.'
-  }
-
-  if (message.toLowerCase().includes('error interno del gateway')) {
-    return 'El servicio de subastas no está disponible temporalmente. Intenta de nuevo en unos minutos.'
-  }
-
-  if (status === 401 || status === 403) {
-    return 'No tienes permisos para realizar esta operación.'
-  }
-
-  if (status === 404) {
-    return 'La subasta solicitada no fue encontrada.'
-  }
-
-  if (status === 409) {
-    return message || 'No fue posible completar la operación por conflicto de estado en la subasta.'
-  }
-
-  if (status >= 500) {
-    return 'El servicio de subastas no está disponible temporalmente. Intenta de nuevo en unos minutos.'
-  }
-
-  return message || fallbackMessage
-}
-
 /** GET /api/auctions — Listar subastas */
 export const getAuctions = async (params = {}) => {
   const response = await client.get(AUCTIONS_BASE, { params });

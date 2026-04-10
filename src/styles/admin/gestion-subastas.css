@@ -732,10 +732,6 @@
 }
 
 .auction-modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
   width: min(780px, 100%);
   margin: 0;
   padding: 0;
@@ -743,8 +739,6 @@
   background: #fff;
   border: 1px solid #dce3ec;
   box-shadow: 0 32px 72px -36px rgba(3, 22, 40, 0.8);
-  max-height: calc(100vh - 2rem);
-  overflow-y: auto;
 }
 
 .auction-modal-header {

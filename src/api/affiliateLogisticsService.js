@@ -2,9 +2,9 @@ import client from './client'
 
 // NOTE: Replace these endpoint paths when backend contracts are finalized.
 const ENDPOINTS = {
-  dashboard: '/affiliate/logistics/dashboard',
-  createOrder: '/affiliate/logistics/orders',
-  assignCourier: '/affiliate/logistics/assignments',
+  dashboard: '/api/logistics/affiliate/dashboard',
+  createOrder: '/api/logistics/orders',
+  assignCourier: '/api/logistics/assignments',
 }
 
 export async function getAffiliateLogisticsDashboard() {

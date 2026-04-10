@@ -1,148 +1,41 @@
-/**
- * sedesService.js — Gestión de Sedes / Farmacias
- * 📡 BACKEND endpoint base: /api/sedes
- */
-
 import client from './client';
 
-const SEDES_ENDPOINT = '/api/sedes';
-
-const normalizeEnvelope = (responseData) => {
-  if (!responseData || typeof responseData !== 'object') {
-    return {
-      success: true,
-      message: '',
-      data: responseData,
-      traceId: '',
-      apiVersion: '',
-      timestamp: '',
-    };
-  }
-
-  if (Object.prototype.hasOwnProperty.call(responseData, 'success')) {
-    return {
-      success: Boolean(responseData.success),
-      message: String(responseData.message || ''),
-      data: Object.prototype.hasOwnProperty.call(responseData, 'data') ? responseData.data : null,
-      traceId: String(responseData.traceId || ''),
-      apiVersion: String(responseData.apiVersion || ''),
-      timestamp: String(responseData.timestamp || ''),
-    };
-  }
-
-  return {
-    success: true,
-    message: '',
-    data: responseData,
-    traceId: '',
-    apiVersion: '',
-    timestamp: '',
-  };
+/** 
+ * Lista todas las farmacias/sedes reales de la base de datos.
+ */
+export const getSedes = async () => {
+  const response = await client.get('/api/medications/branches');
+  return response.data;
 };
 
-const normalizeApiError = (error, fallbackMessage) => {
-  const status = error?.response?.status || 0;
-  const envelope = normalizeEnvelope(error?.response?.data);
-  const message = envelope.message || fallbackMessage;
-
-  const normalized = new Error(message);
-  normalized.status = status;
-  normalized.traceId = envelope.traceId || '';
-  normalized.apiVersion = envelope.apiVersion || '';
-  normalized.timestamp = envelope.timestamp || '';
-  normalized.payload = envelope.data;
-
-  throw normalized;
+/**
+ * Obtiene los medicamentos reales de una sede específica.
+ */
+export const getSedeMedications = async (id) => {
+  const response = await client.get(`/api/medications/branch/${id}/medications`);
+  return response.data;
 };
 
-const pickAllowedFields = (source = {}) => {
-  const aliases = {
-    lat: 'latitude',
-    lng: 'longitude',
-  };
-
-  const normalizedSource = { ...source };
-  Object.entries(aliases).forEach(([from, to]) => {
-    if (normalizedSource[to] === undefined && normalizedSource[from] !== undefined) {
-      normalizedSource[to] = normalizedSource[from];
-    }
-  });
-
-  const allowed = ['nombre', 'direccion', 'especialidad', 'telefono', 'capacidad', 'latitude', 'longitude'];
-
-  return allowed.reduce((accumulator, key) => {
-    if (Object.prototype.hasOwnProperty.call(normalizedSource, key) && normalizedSource[key] !== undefined) {
-      accumulator[key] = normalizedSource[key];
-    }
-    return accumulator;
-  }, {});
-};
-
-/** GET /api/sedes — Listar sedes */
-export const getSedes = async (params = {}) => {
-  try {
-    const response = await client.get(SEDES_ENDPOINT, {
-      params: {
-        page: 1,
-        limit: 20,
-        q: '',
-        ...params,
-      },
-    });
-    return normalizeEnvelope(response.data);
-  } catch (error) {
-    normalizeApiError(error, 'No se pudo consultar el listado de sedes.');
-  }
-};
-
-/** GET /api/sedes/:id — Detalle de una sede */
+/** GET /api/medications/branch/:id — Detalle de una sede */
 export const getSede = async (id) => {
-  try {
-    const response = await client.get(`${SEDES_ENDPOINT}/${id}`);
-    return normalizeEnvelope(response.data);
-  } catch (error) {
-    normalizeApiError(error, 'No se pudo consultar la sede solicitada.');
-  }
+  const response = await client.get(`/api/medications/branch/${id}`);
+  return response.data;
 };
 
-/** GET /api/sedes/:id/usuarios — Usuarios de una sede */
-export const getSedeUsuarios = async (id) => {
-  try {
-    const response = await client.get(`${SEDES_ENDPOINT}/${id}/usuarios`);
-    return normalizeEnvelope(response.data);
-  } catch (error) {
-    normalizeApiError(error, 'No se pudo consultar los usuarios de la sede.');
-  }
-};
-
-/** POST /api/sedes — Crear sede */
+/** POST /api/medications/branch — Crear nueva sede (Ruta estimada para ADMIN) */
 export const createSede = async (data) => {
-  try {
-    const payload = pickAllowedFields(data);
-    const response = await client.post(SEDES_ENDPOINT, payload);
-    return normalizeEnvelope(response.data);
-  } catch (error) {
-    normalizeApiError(error, 'No se pudo crear la sede.');
-  }
+  const response = await client.post('/api/medications/branch', data);
+  return response.data;
 };
 
-/** PUT /api/sedes/:id — Actualización parcial permitida por contrato */
+/** PUT /api/medications/branch/:id — Actualizar sede */
 export const updateSede = async (id, data) => {
-  try {
-    const payload = pickAllowedFields(data);
-    const response = await client.put(`${SEDES_ENDPOINT}/${id}`, payload);
-    return normalizeEnvelope(response.data);
-  } catch (error) {
-    normalizeApiError(error, 'No se pudo actualizar la sede.');
-  }
+  const response = await client.put(`/api/medications/branch/${id}`, data);
+  return response.data;
 };
 
-/** DELETE /api/sedes/:id — Eliminación lógica */
+/** DELETE /api/medications/branch/:id — Eliminar sede */
 export const deleteSede = async (id) => {
-  try {
-    const response = await client.delete(`${SEDES_ENDPOINT}/${id}`);
-    return normalizeEnvelope(response.data);
-  } catch (error) {
-    normalizeApiError(error, 'No se pudo eliminar la sede.');
-  }
+  const response = await client.delete(`/api/medications/branch/${id}`);
+  return response.data;
 };

@@ -1,11 +1,8 @@
 /* eslint-disable sonarjs/cognitive-complexity */
 import { useEffect, useMemo, useRef, useState } from 'react'
-import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
 import AffiliateShell from '../../components/layout/AffiliateShell'
-import useCappedLoading from '../../hooks/useCappedLoading'
 import {
   getActiveAuctions,
-  getAuctionErrorMessage,
   getAuctionBids,
   getAuctionById,
   getAuctionWinner,
@@ -13,7 +10,7 @@ import {
   joinAuction,
   placeAuctionBid,
 } from '../../api/subastaService'
-import useAuctionWebSocket from '../../hooks/useAuctionWebSocket'
+import useAuctionLivePrices from '../../hooks/useAuctionLivePrices'
 import '../../styles/affiliate/perfil-afiliado.css'
 import '../../styles/affiliate/centro-subastas.css'
 
@@ -147,7 +144,10 @@ const getCurrentAffiliateUser = () => {
 }
 
 const extractErrorMessage = (apiError) => {
-  return getAuctionErrorMessage(apiError, 'No se pudo completar la operacion en subastas.')
+  const data = apiError?.response?.data
+  const message = data?.message || 'No se pudo completar la operacion en subastas.'
+  const details = data?.details ? ` ${data.details}` : ''
+  return `${message}${details}`
 }
 
 const parseRetryAfterMs = (apiError) => {
@@ -284,61 +284,51 @@ export default function CentroSubastas() {
   const [clock, setClock] = useState(new Date())
   const [lastBidAtMs, setLastBidAtMs] = useState(0)
   const [bidCooldownMs, setBidCooldownMs] = useState(5000)
-  const showLoader = useCappedLoading(loading, 3000)
   const winnerCheckScheduleRef = useRef({})
 
   const currentUser = getCurrentAffiliateUser()
-  const liveAuctionId = String(selectedBidAuctionId || selectedAuctionId || '')
 
-  useAuctionWebSocket({
-    auctionId: liveAuctionId || null,
-    onGlobalUpdate: (msg) => {
-      const auctionId = String(msg?.auctionId || '')
-      const newPrice = Number(msg?.currentPrice)
-      if (!auctionId || !Number.isFinite(newPrice)) {
-        return
-      }
-
-      setAuctions((prev) =>
-        prev.map((a) =>
-          String(a.id) === auctionId ? { ...a, currentOffer: newPrice } : a,
-        ),
-      )
-
-      setSelectedAuctionDetail((prev) =>
-        prev && String(prev.id) === auctionId ? { ...prev, currentPrice: newPrice } : prev,
-      )
-    },
-    onBidPlaced: (auctionId, bidMsg) => {
-      const targetAuctionId = String(auctionId || '')
-      if (!targetAuctionId || targetAuctionId !== liveAuctionId) {
-        return
-      }
-
-      const normalizedBid = {
-        id: `${bidMsg?.bidderId || 'U'}-${bidMsg?.amount || '0'}-${bidMsg?.placedAt || Date.now()}`,
-        auctionId: Number(bidMsg?.auctionId || targetAuctionId),
-        userId: Number(bidMsg?.bidderId || 0),
-        userName: bidMsg?.bidderName || `Usuario #${bidMsg?.bidderId || '?'}`,
-        amount: Number(bidMsg?.amount || 0),
-        placedAt: bidMsg?.placedAt || new Date().toISOString(),
-      }
-
-      setSelectedAuctionBids((previous) => {
-        const alreadyExists = previous.some((bid) =>
-          String(bid?.userId) === String(normalizedBid.userId)
-          && Number(bid?.amount) === Number(normalizedBid.amount)
-          && String(bid?.placedAt) === String(normalizedBid.placedAt)
-        )
-
-        if (alreadyExists) {
-          return previous
-        }
-
-        return [normalizedBid, ...previous]
-      })
-    },
+  // ── Tiempo real: actualización de "Monto actual" vía WebSocket STOMP ──
+  // Cuando cualquier usuario registra una puja, el backend publica en
+  // /topic/auctions y este hook actualiza el estado local de forma inmediata.
+  useAuctionLivePrices((auctionId, newPrice) => {
+    // 1. Actualiza el precio en la tarjeta de la lista de subastas
+    setAuctions((prev) =>
+      prev.map((a) =>
+        String(a.id) === auctionId ? { ...a, currentOffer: newPrice } : a,
+      ),
+    )
+    // 2. Actualiza el detalle abierto en el panel lateral (afecta "Oferta actual")
+    setSelectedAuctionDetail((prev) =>
+      prev && String(prev.id) === auctionId ? { ...prev, currentPrice: newPrice } : prev,
+    )
   })
+
+  // ── Polling silencioso: fallback garantizado cada 5 s ──────────────────
+  // Asegura que User B vea cambios incluso si la conexión WebSocket falla
+  // o el mensaje no llega. No muestra spinner ni sobreescribe datos más
+  // recientes que el backend retorne.
+  useEffect(() => {
+    const pollId = globalThis.setInterval(async () => {
+      try {
+        const response = await getActiveAuctions()
+        const source = Array.isArray(response) ? response : response?.data
+        const list = Array.isArray(source) ? source : []
+        if (list.length === 0) return
+        setAuctions((prev) =>
+          prev.map((a) => {
+            const fresh = list.find((item) => String(item?.id) === String(a.id))
+            if (!fresh) return a
+            const freshPrice = readCurrentPrice(fresh)
+            return freshPrice !== a.currentOffer ? { ...a, currentOffer: freshPrice } : a
+          }),
+        )
+      } catch {
+        // Silencioso — no mostrar error por fallo de polling en segundo plano
+      }
+    }, 5000)
+    return () => globalThis.clearInterval(pollId)
+  }, [])
 
   useEffect(() => {
     const storedIds = readStoredParticipations(currentUser?.id)
@@ -862,7 +852,6 @@ export default function CentroSubastas() {
 
   return (
     <AffiliateShell active="auctions">
-      <PageLoadingOverlay visible={showLoader} message="Cargando subastas activas..." />
       <section className="affiliate-auctions-v2" aria-label="Centro de subastas afiliado">
         <header className="auctions-v2-head">
           <h2>Centro de Subastas</h2>

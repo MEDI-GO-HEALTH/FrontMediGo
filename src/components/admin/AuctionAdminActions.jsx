@@ -31,18 +31,7 @@ const toApiLocalDateTime = (dateTimeLocalValue) => {
     return null
   }
 
-  if (dateTimeLocalValue instanceof Date) {
-    const yyyy = dateTimeLocalValue.getFullYear()
-    const mm = String(dateTimeLocalValue.getMonth() + 1).padStart(2, '0')
-    const dd = String(dateTimeLocalValue.getDate()).padStart(2, '0')
-    const hh = String(dateTimeLocalValue.getHours()).padStart(2, '0')
-    const min = String(dateTimeLocalValue.getMinutes()).padStart(2, '0')
-    const ss = String(dateTimeLocalValue.getSeconds()).padStart(2, '0')
-    return `${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}`
-  }
-
-  const localValue = String(dateTimeLocalValue)
-  return localValue.length === 16 ? `${localValue}:00` : localValue
+  return `${dateTimeLocalValue}:00`
 }
 
 const buildEditFormFromDetail = (detail) => ({

@@ -92,7 +92,7 @@ export default function Register() {
     try {
       await registerUser({
         name: form.name.trim(),
-        email: form.email.trim(),
+        email: form.email.trim().toLowerCase(),
         password: form.password,
         phone: form.phone.trim(),
         role,

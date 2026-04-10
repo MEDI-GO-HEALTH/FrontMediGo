@@ -1,346 +1,217 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router';
-import {
-  acceptDriverOrder,
-  getDriverCurrentOrder,
-  getDriverMapSnapshot,
-  startDriverShift,
-} from '../../api/driverDeliveryService';
-import MedigoSidebarBrand from '../../components/common/MedigoSidebarBrand';
-import PageLoadingOverlay from '../../components/common/PageLoadingOverlay';
-import useCappedLoading from '../../hooks/useCappedLoading';
+import { getActiveDeliveries, completeDelivery, pickupDelivery, acceptOrder } from '../../api/logisticsService';
+import { useTracking } from '../../hooks/useTracking';
 import '../../styles/driver/mapa-entregas.css';
 
-const FALLBACK_DATA = {
-  driver: {
-    name: 'Laura Mena',
-    vehicle: 'Moto - MDG 45B',
-  },
-  metrics: {
-    onlineDrivers: 14,
-    pendingOrders: 6,
-  },
-  selectedOrder: {
-    id: 'PED-2031',
-    statusLabel: 'Pedido sugerido',
-    urgencyLabel: 'Urgente',
-    estimatedTimeLabel: '18 min',
-    distanceLabel: '4.8 km',
-    pickupAddress: 'Sede Norte - Av. Calle 116 #15-28',
-    destinationAddress: 'EPS Chapinero - Calle 94 #13-55',
-  },
-};
+const BOGOTA_CENTER = [4.7110, -74.0721];
 
 export default function MapaEntregas() {
   const navigate = useNavigate();
-  const [dashboardData, setDashboardData] = useState(FALLBACK_DATA);
+  const [myOrders, setMyOrders] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [actionError, setActionError] = useState('');
-  const showLoader = useCappedLoading(loading, 3000);
+
+  const userStr = localStorage.getItem('medigo_user');
+  const user = userStr ? JSON.parse(userStr) : null;
+  const driverId = user?.user_id || user?.id || 14;
+
+  const { deliveries, availableOrders, isConnected } = useTracking({
+    deliveryId: driverId,
+    enablePublishing: true
+  });
+
+  const mapRef = useRef(null);
+  const mapInstance = useRef(null);
+  const courierMarkersRef = useRef({});
+  const pickupMarkersRef = useRef({});
+  const deliveryMarkersRef = useRef({});
+  const routePolylineRef = useRef(null);
+
+  const loadMyOrders = async () => {
+    if (!driverId) return;
+    try {
+      const orders = await getActiveDeliveries(driverId);
+      setMyOrders(orders);
+    } catch (e) { console.warn(e); }
+  };
+
+  useEffect(() => { loadMyOrders(); }, [driverId]);
 
   useEffect(() => {
-    let mounted = true;
+    if (!mapInstance.current && window.L && mapRef.current) {
+      mapInstance.current = window.L.map(mapRef.current).setView(BOGOTA_CENTER, 13);
+      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance.current);
+    }
+  }, []);
 
-    const loadDashboard = async () => {
-      setLoading(true);
-      try {
-        const [mapSnapshot, currentOrder] = await Promise.all([
-          getDriverMapSnapshot(),
-          getDriverCurrentOrder(),
-        ]);
+  const calculateRoute = async (start, end) => {
+    try {
+      const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`);
+      const data = await res.json();
+      if (data.routes && data.routes[0]) {
+        return data.routes[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
+      }
+    } catch (e) { console.warn("Error OSRM:", e); }
+    return [];
+  };
 
-        if (!mounted) {
-          return;
-        }
+  // --- 1. Sincronizar Marcadores Fijos (Pickup y Delivery) ---
+  useEffect(() => {
+    if (!mapInstance.current || !window.L) return;
 
-        setDashboardData((prev) => ({
-          ...prev,
-          ...mapSnapshot,
-          selectedOrder: {
-            ...prev.selectedOrder,
-            ...(currentOrder ?? {}),
-          },
-        }));
-      } catch {
-        if (!mounted) {
-          return;
-        }
+    // Limpiar marcadores que ya no están en mis pedidos
+    const currentOrderIds = myOrders.map(o => o.id);
+    Object.keys(pickupMarkersRef.current).forEach(id => {
+      if (!currentOrderIds.includes(Number(id))) {
+        pickupMarkersRef.current[id].remove();
+        delete pickupMarkersRef.current[id];
+      }
+    });
+    Object.keys(deliveryMarkersRef.current).forEach(id => {
+      if (!currentOrderIds.includes(Number(id))) {
+        deliveryMarkersRef.current[id].remove();
+        delete deliveryMarkersRef.current[id];
+      }
+    });
 
-        setDashboardData(FALLBACK_DATA);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+    myOrders.forEach(order => {
+      // Marcador de Recogida (Farmacia) - PERMANENTE
+      if (order.pickupLat && order.pickupLng && !pickupMarkersRef.current[order.id]) {
+        const icon = window.L.divIcon({
+          html: `<div style="background: #e91e63; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 3px 10px rgba(0,0,0,0.3);"><span class="material-symbols-outlined" style="font-size: 20px;">local_pharmacy</span></div>`,
+          className: 'custom-div-icon', iconSize: [32, 32]
+        });
+        pickupMarkersRef.current[order.id] = window.L.marker([order.pickupLat, order.pickupLng], { icon })
+          .addTo(mapInstance.current)
+          .bindPopup(`<b>Recoger:</b> ${order.branchName}`);
+      }
+
+      // Marcador de Entrega (Casa) - PERMANENTE
+      if (order.deliveryLat && order.deliveryLng && !deliveryMarkersRef.current[order.id]) {
+        const icon = window.L.divIcon({
+          html: `<div style="background: #1976d2; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 3px 10px rgba(0,0,0,0.3);"><span class="material-symbols-outlined" style="font-size: 20px;">home</span></div>`,
+          className: 'custom-div-icon', iconSize: [32, 32]
+        });
+        deliveryMarkersRef.current[order.id] = window.L.marker([order.deliveryLat, order.deliveryLng], { icon })
+          .addTo(mapInstance.current)
+          .bindPopup(`<b>Entregar en:</b><br>${order.deliveryAddress}`);
+      }
+    });
+  }, [myOrders]);
+
+  // --- 2. Sincronizar Ruta Dinámica (Seguimiento) ---
+  useEffect(() => {
+    if (!mapInstance.current || !window.L) return;
+
+    const updateRoute = async () => {
+      if (routePolylineRef.current) routePolylineRef.current.remove();
+
+      const myLoc = deliveries.find(d => d.id == driverId);
+      if (!myLoc || myOrders.length === 0) return;
+
+      const active = myOrders[0];
+      const target = active.status === 'ASSIGNED' 
+        ? [active.pickupLat, active.pickupLng] 
+        : [active.deliveryLat, active.deliveryLng];
+      
+      const path = await calculateRoute([myLoc.latitude, myLoc.longitude], target);
+      if (path.length > 0) {
+        routePolylineRef.current = window.L.polyline(path, { color: '#1976d2', weight: 6, opacity: 0.6, dashArray: '10, 15' }).addTo(mapInstance.current);
       }
     };
 
-    loadDashboard();
+    updateRoute();
+  }, [myOrders, deliveries]);
 
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  // --- 3. Sincronizar Otros Repartidores ---
+  useEffect(() => {
+    if (!mapInstance.current || !window.L) return;
+    deliveries.forEach(d => {
+      const isMe = d.id == driverId;
+      if (courierMarkersRef.current[d.id]) {
+        courierMarkersRef.current[d.id].setLatLng([d.latitude, d.longitude]);
+      } else {
+        const icon = window.L.divIcon({
+          html: `<div style="background: ${isMe ? '#1976d2' : '#4caf50'}; width: 22px; height: 22px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"></div>`,
+          className: 'custom-div-icon', iconSize: [22, 22]
+        });
+        courierMarkersRef.current[d.id] = window.L.marker([d.latitude, d.longitude], { icon }).addTo(mapInstance.current);
+      }
+    });
+  }, [deliveries]);
 
-  const selectedOrder = useMemo(() => dashboardData.selectedOrder ?? FALLBACK_DATA.selectedOrder, [dashboardData]);
-
-  const handleStartShift = async () => {
-    setActionError('');
+  const handleAccept = async (orderId) => {
     setLoading(true);
-
     try {
-      await startDriverShift();
-    } catch {
-      setActionError('No fue posible iniciar turno con el backend. Se mantiene modo de prueba local.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAcceptOrder = async () => {
-    setActionError('');
-    setLoading(true);
-
-    try {
-      await acceptDriverOrder(selectedOrder.id);
-    } catch {
-      setActionError('No fue posible confirmar el pedido con el backend. El flujo visual permanece activo.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('medigo_token');
-    localStorage.removeItem('medigo_user');
-    navigate('/');
+      await acceptOrder(orderId, driverId);
+      await loadMyOrders();
+    } catch (e) { alert("Error: " + e.message); }
+    setLoading(false);
   };
 
   return (
     <div className="driver-map-page">
-      <PageLoadingOverlay visible={showLoader} message="Cargando mapa de entregas..." />
       <div className="driver-layout">
-        <aside className="driver-sidenav" aria-label="Navegacion de repartidor">
+        <aside className="driver-sidenav">
           <div className="driver-side-head">
-            <MedigoSidebarBrand
-              containerClassName="driver-side-brand"
-              logoContainerClassName="driver-side-logo"
-              textContainerClassName="driver-side-brand-text"
-              title="Driver Portal"
-              subtitle="Clinical Logistics Unit"
-            />
+            <h1>MediGo Repartidor</h1>
+            <p>ID: {driverId}</p>
+            <div style={{ padding: '8px', background: isConnected ? '#e8f5e9' : '#ffebee', borderRadius: '6px', marginTop: '10px', fontSize: '11px', color: isConnected ? '#2e7d32' : '#c62828' }}>
+              {isConnected ? '● Conexión GPS Activa' : '○ GPS Desconectado'}
+            </div>
           </div>
-
           <nav>
-            <button type="button" className="driver-nav-btn active">
-              <span className="material-symbols-outlined">map</span>
-              Mapa de Entregas
-            </button>
-
-            <button
-              type="button"
-              className="driver-nav-btn"
-              onClick={() => navigate('/repartidor/historial')}
-            >
-              <span className="material-symbols-outlined">history</span>
-              Historial de Viajes
-            </button>
-
-            <button
-              type="button"
-              className="driver-nav-btn"
-              onClick={() => navigate('/repartidor/perfil')}
-            >
-              <span className="material-symbols-outlined">person</span>
-              Mi Perfil
-            </button>
+            <button className="driver-nav-btn active">Ruta Actual</button>
+            <button className="driver-nav-btn" onClick={() => navigate('/')}>Salir</button>
           </nav>
-
-          <div className="driver-sidenav-footer">
-            <button
-              type="button"
-              className="start-shift-btn"
-              onClick={handleStartShift}
-              disabled={loading}
-            >
-              {loading ? 'Procesando...' : 'Iniciar Turno'}
-            </button>
-
-            <button type="button" className="driver-footer-link">
-              <span className="material-symbols-outlined">help</span>
-              Help
-            </button>
-
-            <button type="button" className="driver-footer-link danger" onClick={handleLogout}>
-              <span className="material-symbols-outlined">logout</span>
-              Cerrar sesion
-            </button>
-          </div>
         </aside>
 
-        <main className="driver-main" aria-label="Mapa de entregas provisional">
-          <header className="driver-topbar">
-            <h2 className="driver-top-title">MediGo Clinical Logistics</h2>
-
-            <div className="driver-topbar-right">
-              <div className="driver-top-online">
-                <span />
-                <span>Online</span>
-              </div>
-
-              <button type="button" className="driver-icon-btn" aria-label="Notificaciones">
-                <span className="material-symbols-outlined">notifications</span>
-              </button>
-
-              <div className="driver-top-avatar" aria-label="Avatar por defecto del repartidor">
-                <span className="material-symbols-outlined">local_shipping</span>
-              </div>
-            </div>
-          </header>
-
+        <main className="driver-main">
           <div className="driver-main-stage">
-            <div className="driver-map-canvas" role="img" aria-label="Mapa provisional para futura integracion en tiempo real">
-              <div className="driver-map-grid" />
-              <div className="driver-map-overlay" />
+            <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
 
-              <div className="driver-marker eps-a">
-                <span className="material-symbols-outlined">location_on</span>
-              </div>
-
-              <div className="driver-marker eps-b">
-                <span className="material-symbols-outlined">location_on</span>
-              </div>
-
-              <div className="driver-marker truck-busy">
-                <span className="material-symbols-outlined">local_shipping</span>
-              </div>
-
-              <div className="driver-marker truck-free">
-                <span className="material-symbols-outlined">local_shipping</span>
-              </div>
-
-              <div className="driver-self-marker">
-                <div className="pulse" />
-                <div className="dot-wrap">
-                  <div className="dot" />
+            {/* Mercado Global */}
+            <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 1000, background: 'white', padding: '15px', borderRadius: '12px', width: '260px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
+              <h4 style={{ marginBottom: '12px' }}>📦 Pedidos Disponibles</h4>
+              {availableOrders.length === 0 && <p style={{ fontSize: '12px', color: '#999', textAlign: 'center' }}>Buscando pedidos...</p>}
+              {availableOrders.map(order => (
+                <div key={order.id} style={{ padding: '10px', border: '1px solid #eee', borderRadius: '8px', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 'bold' }}>Pedido #{order.orderNumber}</div>
+                  <button onClick={() => handleAccept(order.id)} disabled={loading} style={{ width: '100%', marginTop: '5px', background: '#ff9800', color: 'white', border: 'none', padding: '6px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Aceptar</button>
                 </div>
-                <span className="tag">Tu ubicacion</span>
-              </div>
-
-              <svg className="driver-route-svg" viewBox="0 0 1200 720" preserveAspectRatio="none" aria-hidden="true">
-                <path d="M 180 520 C 260 470, 340 410, 430 395 C 515 380, 575 420, 650 350 C 760 250, 820 220, 980 200" />
-              </svg>
+              ))}
             </div>
 
-            <div className="driver-search-floating">
-              <div className="driver-search-bar">
-                <div className="driver-search-inner">
-                  <span className="material-symbols-outlined">search</span>
-                  <input type="text" placeholder="Buscar sede, pedido o direccion" disabled />
-                </div>
-                <button type="button" className="filter-btn" aria-label="Filtrar">
-                  <span className="material-symbols-outlined">tune</span>
-                </button>
-              </div>
-            </div>
+            {/* Panel de Tarea */}
+            <div className="driver-orders-container" style={{ position: 'absolute', bottom: '20px', left: '20px', right: '20px', zIndex: 1000, display: 'flex', gap: '15px' }}>
+              {myOrders.map(order => (
+                <article key={order.id} style={{ background: 'white', padding: '20px', borderRadius: '16px', minWidth: '350px', boxShadow: '0 10px 30px rgba(0,0,0,0.25)', borderLeft: '6px solid #1976d2' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '16px', marginBottom: '15px' }}>
+                    {order.status === 'ASSIGNED' ? '🚩 Siguiente parada: Recoger' : '🏠 Siguiente parada: Entregar'}
+                  </div>
 
-            <div className="driver-legend" aria-label="Leyenda del mapa">
-              <div className="driver-legend-row">
-                <span className="driver-legend-dot free" />
-                Repartidor libre
-              </div>
-              <div className="driver-legend-row">
-                <span className="driver-legend-dot busy" />
-                Repartidor ocupado
-              </div>
-              <div className="driver-legend-row">
-                <span className="driver-legend-dot orders" />
-                Punto de pedido
-              </div>
-            </div>
+                  <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: '11px', color: '#e91e63', fontWeight: 'bold', margin: 0 }}>ORIGEN (Rosa)</p>
+                      <p style={{ fontSize: '13px', fontWeight: '500' }}>{order.branchName}</p>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: '11px', color: '#1976d2', fontWeight: 'bold', margin: 0 }}>DESTINO (Azul)</p>
+                      <p style={{ fontSize: '13px', fontWeight: '500' }}>{order.deliveryAddress}</p>
+                    </div>
+                  </div>
 
-            <article className="driver-order-card" aria-label="Detalle de pedido actual">
-              <div className="card-top">
-                <div>
-                  <span className="card-badge">{selectedOrder.statusLabel}</span>
-                  <h2 className="card-title">#{selectedOrder.id}</h2>
-                </div>
-
-                <span className="urgency-pill">
-                  <span className="material-symbols-outlined">priority_high</span>
-                  {selectedOrder.urgencyLabel}
-                </span>
-              </div>
-
-              <div className="card-stats">
-                <div className="stat-box">
-                  <small>ETA estimado</small>
-                  <p>
-                    <span className="material-symbols-outlined">schedule</span>
-                    {selectedOrder.estimatedTimeLabel}
-                  </p>
-                </div>
-
-                <div className="stat-box">
-                  <small>Distancia</small>
-                  <p>
-                    <span className="material-symbols-outlined">route</span>
-                    {selectedOrder.distanceLabel}
-                  </p>
-                </div>
-              </div>
-
-              <div className="route-flow">
-                <div className="route-axis" aria-hidden="true">
-                  <span className="route-point start" />
-                  <span className="route-line" />
-                  <span className="route-point end" />
-                </div>
-
-                <div className="route-text">
-                  <small>Recoger en</small>
-                  <p>{selectedOrder.pickupAddress}</p>
-
-                  <small>Entregar en</small>
-                  <p>{selectedOrder.destinationAddress}</p>
-                </div>
-              </div>
-
-              <button type="button" className="accept-order-btn" onClick={handleAcceptOrder} disabled={loading}>
-                <span className="material-symbols-outlined">check_circle</span>
-                {loading ? 'Procesando...' : 'Aceptar Pedido'}
-              </button>
-
-              {actionError ? <p style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: '#ba1a1a' }}>{actionError}</p> : null}
-            </article>
-
-            <div className="driver-map-controls" aria-label="Controles de mapa">
-              <button type="button" aria-label="Acercar">
-                <span className="material-symbols-outlined">add</span>
-              </button>
-              <button type="button" aria-label="Alejar">
-                <span className="material-symbols-outlined">remove</span>
-              </button>
-              <button type="button" className="locate" aria-label="Ubicarme">
-                <span className="material-symbols-outlined">my_location</span>
-              </button>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    {order.status === 'ASSIGNED' ? (
+                      <button onClick={() => pickupDelivery(order.id).then(loadMyOrders)} style={{ flex: 1, background: '#e91e63', color: 'white', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>He recogido el pedido</button>
+                    ) : (
+                      <button onClick={() => completeDelivery(order.id).then(loadMyOrders)} style={{ flex: 1, background: '#4caf50', color: 'white', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Confirmar Entrega Final</button>
+                    )}
+                  </div>
+                </article>
+              ))}
             </div>
           </div>
-
-          <footer className="driver-mobile-footer" aria-label="Navegacion movil repartidor">
-            <button type="button" onClick={() => navigate('/repartidor/historial')}>
-              <span className="material-symbols-outlined">history</span>
-              Historial
-            </button>
-
-            <span className="driver-mobile-center" aria-hidden="true">
-              <span className="material-symbols-outlined">map</span>
-            </span>
-
-            <button type="button" onClick={() => navigate('/repartidor/perfil')}>
-              <span className="material-symbols-outlined">person</span>
-              Perfil
-            </button>
-          </footer>
         </main>
       </div>
     </div>

@@ -24,6 +24,8 @@ const ROLE_REDIRECTS = {
   ADMIN: '/admin/inventario',
   AFILIADO: '/afiliado/mapa',
   REPARTIDOR: '/repartidor/mapa',
+  AFFILIATE: '/afiliado/mapa',
+  DELIVERY: '/repartidor/mapa',
 }
 
 const normalizeLoginErrorMessage = (err) => {
@@ -89,10 +91,18 @@ export default function Login() {
 
   // Quick login para desarrollo
   const handleQuickLogin = async (role) => {
+    // Roles para el frontend (UI e interna)
     const quickUsers = {
       ADMIN: { id: 1, name: 'Admin Demo', email: 'admin@medigo.co', role: 'ADMIN' },
-      AFILIADO: { id: 2, name: 'Afiliado Demo', email: 'afiliado@medigo.co', role: 'AFILIADO' },
-      REPARTIDOR: { id: 3, name: 'Repartidor Demo', email: 'repartidor@medigo.co', role: 'REPARTIDOR' },
+      AFILIADO: { id: 2, name: 'Afiliado Demo', email: 'afiliado@medigo.co', role: 'AFFILIATE' },
+      REPARTIDOR: { id: 3, name: 'Repartidor Demo', email: 'repartidor@medigo.co', role: 'DELIVERY' },
+    }
+
+    // Role para el JWT (Backend compatible)
+    const jwtRoles = {
+      ADMIN: 'ADMIN',
+      AFILIADO: 'AFFILIATE',
+      REPARTIDOR: 'DELIVERY'
     }
 
     const user = quickUsers[role]
@@ -101,7 +111,11 @@ export default function Login() {
       return
     }
 
-    localStorage.setItem('medigo_token', `dev-token-${role.toLowerCase()}`)
+    // El token debe seguir el formato: fake-jwt.userId.ROLE.timestamp
+    const jwtRole = jwtRoles[role] || role
+    const fakeToken = `fake-jwt.0.${jwtRole}.0`
+
+    localStorage.setItem('medigo_token', fakeToken)
     localStorage.setItem('medigo_user', JSON.stringify(user))
     navigate(ROLE_REDIRECTS[role], { replace: true })
   }

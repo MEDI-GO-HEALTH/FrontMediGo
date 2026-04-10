@@ -68,15 +68,10 @@ const normalizeLoginPayload = (payload, fallbackEmail = '') => {
 
   const token =
     nested?.jwtToken ||
-    nested?.accessToken ||
-    nested?.access_token ||
-    nested?.jwt ||
     nested?.token ||
     root?.jwtToken ||
-    root?.accessToken ||
-    root?.access_token ||
-    root?.jwt ||
     root?.token ||
+    root?.accessToken ||
     '';
 
   const userSource = nested?.user || root?.user || nested || root || {};
@@ -155,58 +150,6 @@ const normalizeRegisterPayload = (payload) => {
   };
 };
 
-const normalizeRegisterErrorMessage = (error) => {
-  const status = Number(error?.response?.status || 0)
-
-  const backendMessage = String(
-    error?.response?.data?.message ||
-      error?.response?.data?.data?.message ||
-      error?.response?.data?.error ||
-      error?.response?.data?.details ||
-      ''
-  ).trim()
-
-  const source = backendMessage.toLowerCase()
-
-  if (!backendMessage && !status) {
-    return 'No se pudo conectar con el servicio de registro. Intenta nuevamente en unos minutos.'
-  }
-
-  if (source.includes('ya se encuentra registrado') || source.includes('ya existe') || status === 409) {
-    return 'No fue posible crear la cuenta con los datos ingresados.'
-  }
-
-  if (source.includes('contraseña') || source.includes('password') || source.includes('weak')) {
-    return 'La contraseña es débil. Debe tener mínimo 8 caracteres, una mayúscula, una minúscula y un número.'
-  }
-
-  if (source.includes('email') && (source.includes('válido') || source.includes('valido') || source.includes('formato'))) {
-    return 'El correo no tiene un formato válido.'
-  }
-
-  if (source.includes('teléfono') || source.includes('telefono') || source.includes('phone')) {
-    return 'El teléfono no es válido. Usa el formato +57-322-5555555.'
-  }
-
-  if (source.includes('rol') || source.includes('role') || source.includes('affiliate') || source.includes('delivery')) {
-    return 'El rol enviado no es válido. Solo se permiten AFFILIATE o DELIVERY.'
-  }
-
-  if (source.includes('campo') || source.includes('required') || source.includes('validation failed') || status === 400) {
-    return 'Hay campos inválidos o incompletos en el formulario de registro.'
-  }
-
-  if (status === 401 || status === 403) {
-    return 'No autorizado para crear la cuenta con los datos enviados.'
-  }
-
-  if (status === 503 || status === 502 || status === 504) {
-    return 'El servicio no está disponible temporalmente. Intenta nuevamente en unos minutos.'
-  }
-
-  return 'No fue posible crear la cuenta por un error inesperado. Intenta nuevamente.'
-}
-
 /**
  * Iniciar sesión
  * @param {{ email: string, password: string }} credentials
@@ -217,13 +160,13 @@ export const login = async (credentials) => {
   // 🧪 MOCK LOGIN para Desarrollo (Si se usa un correo específico)
   if (API_CONFIG.useAuthMock) {
     if (email.includes('admin@medigo.co')) {
-      return { token: 'mock-token-admin', user: { id: 1, name: 'Admin Demo', email, role: 'ADMIN' } };
+      return { token: 'fake-jwt.1.ADMIN.0', user: { id: 1, name: 'Admin Demo', email, role: 'ADMIN' } };
     }
     if (email.includes('afiliado@medigo.co')) {
-      return { token: 'mock-token-afiliado', user: { id: 2, name: 'Afiliado Demo', email, role: 'AFILIADO' } };
+      return { token: 'fake-jwt.2.AFFILIATE.0', user: { id: 2, name: 'Afiliado Demo', email, role: 'AFILIADO' } };
     }
     if (email.includes('repartidor@medigo.co')) {
-      return { token: 'mock-token-repartidor', user: { id: 3, name: 'Repartidor Demo', email, role: 'REPARTIDOR' } };
+      return { token: 'fake-jwt.3.DELIVERY.0', user: { id: 3, name: 'Repartidor Demo', email, role: 'REPARTIDOR' } };
     }
   }
 
@@ -250,7 +193,7 @@ export const login = async (credentials) => {
  */
 export const registerUser = async (payload) => {
   const name = String(payload?.name || '').trim();
-  const email = String(payload?.email || '').trim();
+  const email = String(payload?.email || '').trim().toLowerCase();
   const password = String(payload?.password || '');
   const role = normalizeRegisterRoleForApi(payload?.role);
   const rawPhone = String(payload?.phone || '').trim();
@@ -372,10 +315,11 @@ export const registerUser = async (payload) => {
     lastError?.response?.headers?.['X-Trace-Id'] ||
     '';
 
-  const normalizedErrorMessage = normalizeRegisterErrorMessage(lastError)
-  lastError.message = traceId
-    ? `${normalizedErrorMessage} (traceId: ${traceId})`
-    : normalizedErrorMessage
+  if (backendMessage) {
+    lastError.message = traceId
+      ? `${backendMessage} (traceId: ${traceId})`
+      : backendMessage;
+  }
 
   throw lastError;
 };
@@ -400,11 +344,15 @@ export const logout = async () => {
   return response.data;
 };
 
-/**
- * Obtener usuario actual (validar sesión activa)
- * 📡 BACKEND: GET /auth/me
- */
 export const getMe = async () => {
-  const response = await client.get(AUTH_ENDPOINTS.me);
-  return response.data;
+  // Obtener el ID del usuario desde localStorage como fallback si es necesario
+  const storedUser = JSON.parse(localStorage.getItem('medigo_user') || '{}');
+  const userId = storedUser.id || storedUser.user_id;
+
+  // Ambos Gateway y Backend actuales requieren user_id como query param
+  const response = await client.get(`${AUTH_ENDPOINTS.me}${userId ? `?user_id=${userId}` : ''}`);
+  
+  // Normalizar respuesta del Gateway (success/data envelope)
+  const userData = response.data.data || response.data;
+  return userData;
 };
