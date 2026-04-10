@@ -22,7 +22,7 @@ export default function MapaPedidos() {
     address: 'Selecciona una ubicación en el mapa'
   });
 
-  const { deliveries, activeOrder, isConnected } = useTracking();
+  const { deliveries, activeOrder } = useTracking();
 
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
@@ -30,24 +30,8 @@ export default function MapaPedidos() {
   const branchMarkersRef = useRef({});
   const destinationMarkerRef = useRef(null);
 
-  // 1. Inicialización
-  useEffect(() => {
-    const init = async () => {
-      try {
-        const [profile, branchesData] = await Promise.all([getMe(), getSedes()]);
-        setUserProfile(profile);
-        setRealBranches(branchesData);
-        
-        if (profile.address) {
-          geocodeAddress(profile.address);
-        }
-      } catch (err) { console.error("Error al inicializar mapa:", err); }
-    };
-    init();
-  }, []);
-
   // 2. Lógica de selección de ubicación
-  const updateDeliveryMarker = async (latlng, skipReverseGeocode = false) => {
+  async function updateDeliveryMarker(latlng, skipReverseGeocode = false) {
     if (!mapInstance.current || !window.L) return;
     
     const coords = [latlng.lat, latlng.lng];
@@ -74,22 +58,13 @@ export default function MapaPedidos() {
         const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}`);
         const data = await res.json();
         addressName = data.display_name.split(',').slice(0, 2).join(',');
-      } catch (e) { console.warn("Reverse geocode failed"); }
+      } catch { console.warn("Reverse geocode failed"); }
     }
 
     setDeliveryLocation({ coords, address: addressName });
-  };
+  }
 
-  const handleUseGPS = () => {
-    if (!navigator.geolocation) return alert("Tu navegador no soporta GPS");
-    navigator.geolocation.getCurrentPosition((pos) => {
-      const latlng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      mapInstance.current.setView([latlng.lat, latlng.lng], 16);
-      updateDeliveryMarker(latlng);
-    }, (err) => alert("Error al obtener ubicación GPS: " + err.message));
-  };
-
-  const geocodeAddress = async (address) => {
+  async function geocodeAddress(address) {
     try {
       const query = encodeURIComponent(`${address}, Bogotá, Colombia`);
       const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`);
@@ -103,7 +78,32 @@ export default function MapaPedidos() {
         }
       }
     } catch (e) { console.error("Geocoding failed", e); }
+  }
+
+  const handleUseGPS = () => {
+    if (!navigator.geolocation) return alert("Tu navegador no soporta GPS");
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const latlng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      mapInstance.current.setView([latlng.lat, latlng.lng], 16);
+      updateDeliveryMarker(latlng);
+    }, (err) => alert("Error al obtener ubicación GPS: " + err.message));
   };
+
+  // 1. Inicialización
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const [profile, branchesData] = await Promise.all([getMe(), getSedes()]);
+        setUserProfile(profile);
+        setRealBranches(branchesData);
+
+        if (profile.address) {
+          geocodeAddress(profile.address);
+        }
+      } catch (err) { console.error("Error al inicializar mapa:", err); }
+    };
+    init();
+  }, []);
 
   // 3. Inicializar Leaflet con eventos de clic
   useEffect(() => {

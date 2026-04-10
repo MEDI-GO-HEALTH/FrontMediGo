@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   createAffiliatePaymentMethod,
   deleteAffiliatePaymentMethod,
@@ -132,11 +132,6 @@ export default function PerfilAfiliado() {
       mounted = false
     }
   }, [])
-
-  const affiliateInitials = useMemo(() => {
-    const names = profile.fullName?.split(' ') ?? []
-    return `${names[0]?.[0] ?? 'A'}${names[1]?.[0] ?? 'F'}`.toUpperCase()
-  }, [profile.fullName])
 
   const handleProfileFieldChange = (event) => {
     const { name, value } = event.target

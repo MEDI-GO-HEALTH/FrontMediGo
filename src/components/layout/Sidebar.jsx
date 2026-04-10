@@ -1,3 +1,4 @@
+import { createElement } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router'
 import {
   LayoutGrid, Package, Building2, Users, MapPin,
@@ -68,7 +69,8 @@ export default function Sidebar() {
 
       {/* Nav Items */}
       <nav style={styles.nav}>
-        {navItems.map(({ to, icon: Icon, label }) => {
+        {navItems.map((item) => {
+          const { to, icon, label } = item
           const active = pathname.startsWith(to)
           return (
             <NavLink key={to} to={to} style={{ textDecoration: 'none' }}>
@@ -76,7 +78,13 @@ export default function Sidebar() {
                 ...styles.navItem,
                 ...(active ? styles.navItemActive : {}),
               }}>
-                <Icon size={18} style={{ color: active ? 'var(--primary)' : 'var(--on-surface-variant)', flexShrink: 0 }} />
+                {createElement(icon, {
+                  size: 18,
+                  style: {
+                    color: active ? 'var(--primary)' : 'var(--on-surface-variant)',
+                    flexShrink: 0,
+                  },
+                })}
                 <span style={{ color: active ? 'var(--on-surface)' : 'var(--on-surface-variant)', fontSize: '0.875rem', fontWeight: active ? 600 : 400 }}>
                   {label}
                 </span>

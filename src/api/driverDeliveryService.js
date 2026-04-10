@@ -1,5 +1,3 @@
-import client from './client'
-
 // NOTE: Replace these endpoint paths when backend contracts are finalized.
 const ENDPOINTS = {
   mapSnapshot: '/driver/deliveries/map-snapshot',
@@ -17,12 +15,12 @@ export async function getDriverCurrentOrder() {
   return Promise.reject(new Error('Backend contract not finalized'));
 }
 
-export async function acceptDriverOrder(payload) {
+export async function acceptDriverOrder() {
   // Mock success
   return { success: true }
 }
 
-export async function startDriverShift(payload = {}) {
+export async function startDriverShift() {
   // Mock success
   return { success: true }
 }

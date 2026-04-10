@@ -29,7 +29,10 @@ function getWsUrl() {
 export default function useAuctionLivePrices(onPriceUpdate) {
   // Ref para mantener el callback siempre fresco sin recrear la conexión
   const cbRef = useRef(onPriceUpdate)
-  cbRef.current = onPriceUpdate
+
+  useEffect(() => {
+    cbRef.current = onPriceUpdate
+  }, [onPriceUpdate])
 
   useEffect(() => {
     let active = true // guard contra el doble-montaje de React StrictMode
@@ -82,5 +85,5 @@ export default function useAuctionLivePrices(onPriceUpdate) {
       console.log('[STOMP] Limpiando conexión')
       client.deactivate()
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 }

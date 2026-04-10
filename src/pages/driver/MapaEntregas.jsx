@@ -35,7 +35,12 @@ export default function MapaEntregas() {
     } catch (e) { console.warn(e); }
   };
 
-  useEffect(() => { loadMyOrders(); }, [driverId]);
+  useEffect(() => {
+    if (!driverId) return;
+    getActiveDeliveries(driverId)
+      .then((orders) => setMyOrders(orders))
+      .catch((e) => console.warn(e));
+  }, [driverId]);
 
   useEffect(() => {
     if (!mapInstance.current && window.L && mapRef.current) {

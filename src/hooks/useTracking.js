@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { Client } from '@stomp/stompjs';
 import { API_CONFIG } from '../config/api';
 
-export function useTracking({ deliveryId, assignedOrderId, enablePublishing = false } = {}) {
+export function useTracking({ deliveryId, enablePublishing = false } = {}) {
   const [deliveries, setDeliveries] = useState([]); // Ubicaciones de repartidores
   const [branches, setBranches] = useState([]);     // Sedes/Farmacias
   const [availableOrders, setAvailableOrders] = useState([]); // Mercado global de pedidos

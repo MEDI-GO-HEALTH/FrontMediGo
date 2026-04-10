@@ -1,4 +1,3 @@
-/* eslint-disable sonarjs/cognitive-complexity */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import AffiliateShell from '../../components/layout/AffiliateShell'
 import {

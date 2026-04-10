@@ -8,7 +8,7 @@
  * - Responsive: Stack vertical en mobile
  */
 
-import { useState } from 'react'
+import { createElement, useState } from 'react'
 import { useNavigate, Link } from 'react-router'
 import { Eye, EyeOff, Loader2, User, Truck } from 'lucide-react'
 import { registerUser } from '../../api/authService'
@@ -171,17 +171,17 @@ export default function Register() {
             {[
               { value: 'AFFILIATE', label: 'Affiliate', icon: User, desc: 'Access auctions & medications' },
               { value: 'DELIVERY', label: 'Driver', icon: Truck, desc: 'Manage deliveries' },
-            ].map(({ value, label, icon: Icon, desc }) => (
+            ].map((roleOption) => (
               <button
-                key={value}
+                key={roleOption.value}
                 type="button"
-                onClick={() => setRole(value)}
-                className={`role-btn ${role === value ? 'active' : ''}`}
+                onClick={() => setRole(roleOption.value)}
+                className={`role-btn ${role === roleOption.value ? 'active' : ''}`}
               >
-                <Icon size={18} />
+                {createElement(roleOption.icon, { size: 18 })}
                 <div className="role-btn-text">
-                  <div className="role-btn-label">{label}</div>
-                  <div className="role-btn-desc">{desc}</div>
+                  <div className="role-btn-label">{roleOption.label}</div>
+                  <div className="role-btn-desc">{roleOption.desc}</div>
                 </div>
               </button>
             ))}

@@ -32,7 +32,7 @@ function getWsUrl() {
 function safeParse(body) {
   try {
     return JSON.parse(body)
-  } catch (_) {
+  } catch {
     return null
   }
 }
@@ -48,8 +48,10 @@ export default function useAuctionWebSocket({ auctionId, onGlobalUpdate, onAucti
   })
 
   // Mantiene callbacks y auctionId frescos en cada render (sin recrear la conexión)
-  ref.current.auctionId = auctionId
-  ref.current.cb = { onGlobalUpdate, onAuctionUpdate, onBidPlaced }
+  useEffect(() => {
+    ref.current.auctionId = auctionId
+    ref.current.cb = { onGlobalUpdate, onAuctionUpdate, onBidPlaced }
+  }, [auctionId, onGlobalUpdate, onAuctionUpdate, onBidPlaced])
 
   // ── Conexión STOMP (solo al montar el componente) ─────────────────────
   useEffect(() => {
@@ -100,7 +102,7 @@ export default function useAuctionWebSocket({ auctionId, onGlobalUpdate, onAucti
       client.deactivate()
       r.client = null
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
   // ── Re-suscripción cuando cambia la subasta seleccionada ─────────────
   useEffect(() => {
@@ -110,5 +112,5 @@ export default function useAuctionWebSocket({ auctionId, onGlobalUpdate, onAucti
     if (r.client?.connected) {
       r.resubscribeAuction?.(auctionId)
     }
-  }, [auctionId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [auctionId])
 }
