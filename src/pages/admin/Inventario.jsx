@@ -53,6 +53,14 @@ const FALLBACK_ADMIN = {
   allVerified: true,
 }
 
+const INITIAL_CREATE_FORM = {
+  name: '',
+  description: '',
+  unit: '',
+  price: '',
+  initialStock: '',
+}
+
 const formatMoney = (value, currency = 'USD') =>
   new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -99,6 +107,9 @@ export default function Inventario() {
   const [backendNotice, setBackendNotice] = useState('')
   const [branches, setBranches] = useState([])
   const [selectedBranchId, setSelectedBranchId] = useState('')
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [isCreatingMedication, setIsCreatingMedication] = useState(false)
+  const [createForm, setCreateForm] = useState(INITIAL_CREATE_FORM)
   const showLoader = useCappedLoading(loading, 3000)
 
   const applyInventoryStats = (stats) => {
@@ -312,30 +323,67 @@ export default function Inventario() {
     }
   }
 
-  const handleCreateMedication = async () => {
+  const handleCreateMedication = () => {
     const branchId = Number(selectedBranchId || 0)
     if (!branchId) {
       setBackendNotice('Seleccione una sede antes de crear un medicamento.')
       return
     }
 
-    const name = globalThis.prompt('Nombre del medicamento:')?.trim() || ''
-    if (!name) {
+    setCreateForm(INITIAL_CREATE_FORM)
+    setIsCreateModalOpen(true)
+  }
+
+  const handleCreateFormField = (field, value) => {
+    setCreateForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }))
+  }
+
+  const closeCreateModal = () => {
+    if (isCreatingMedication) {
+      return
+    }
+    setIsCreateModalOpen(false)
+  }
+
+  const handleSubmitCreateMedication = async (event) => {
+    event.preventDefault()
+
+    const branchId = Number(selectedBranchId || 0)
+    if (!branchId) {
+      setBackendNotice('Seleccione una sede antes de crear un medicamento.')
       return
     }
 
-    const unit = globalThis.prompt('Unidad/presentacion (ej. tableta):')?.trim() || ''
-    if (!unit) {
+    const name = createForm.name.trim()
+    const unit = createForm.unit.trim()
+    const description = createForm.description.trim() || 'Creado desde panel de inventario'
+    const priceValue = Number(createForm.price)
+    const initialStockValue = Number(createForm.initialStock)
+
+    if (!name || !unit) {
+      setBackendNotice('Nombre y unidad son obligatorios para crear el medicamento.')
       return
     }
 
-    const priceValue = Number(globalThis.prompt('Precio unitario (ej. 5000):') || 0)
-    const initialStockValue = Number(globalThis.prompt('Stock inicial (ej. 100):') || 0)
+    if (!Number.isFinite(priceValue) || priceValue <= 0) {
+      setBackendNotice('El precio unitario debe ser un numero mayor a 0.')
+      return
+    }
+
+    if (!Number.isInteger(initialStockValue) || initialStockValue < 0) {
+      setBackendNotice('El stock inicial debe ser un numero entero mayor o igual a 0.')
+      return
+    }
+
+    setIsCreatingMedication(true)
 
     try {
       await createMedicamento({
         name,
-        description: 'Creado desde panel MVP',
+        description,
         unit,
         price: priceValue,
         branchId,
@@ -343,9 +391,13 @@ export default function Inventario() {
       })
 
       setBackendNotice('Medicamento creado correctamente.')
+      setIsCreateModalOpen(false)
+      setCreateForm(INITIAL_CREATE_FORM)
       await refreshCurrentBranch()
     } catch {
       setBackendNotice('No fue posible crear el medicamento. Verifique los datos requeridos por backend.')
+    } finally {
+      setIsCreatingMedication(false)
     }
   }
 
@@ -634,6 +686,109 @@ export default function Inventario() {
           <footer className="inventory-legal">Arquitectura del Sistema MediGo - v4.2.0 - Asegurado con encriptacion de 256 bits</footer>
         </div>
       </main>
+
+      {isCreateModalOpen ? (
+        <div className="inventory-create-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="create-medication-title">
+          <div className="inventory-create-modal">
+            <div className="inventory-create-modal-head">
+              <h3 id="create-medication-title">Nueva Entrada de Medicamento</h3>
+              <button
+                type="button"
+                className="inventory-modal-close"
+                onClick={closeCreateModal}
+                aria-label="Cerrar formulario de nueva entrada"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <p className="inventory-create-modal-subtitle">
+              Registre un medicamento en la sede seleccionada con datos completos de catalogo y stock inicial.
+            </p>
+
+            <form className="inventory-create-form" onSubmit={handleSubmitCreateMedication}>
+              <label>
+                Nombre del medicamento
+                <input
+                  value={createForm.name}
+                  onChange={(event) => handleCreateFormField('name', event.target.value)}
+                  placeholder="Ej. Acetaminofen 500mg"
+                  maxLength={120}
+                  required
+                />
+              </label>
+
+              <label>
+                Descripcion
+                <textarea
+                  value={createForm.description}
+                  onChange={(event) => handleCreateFormField('description', event.target.value)}
+                  placeholder="Uso sugerido, presentacion, observaciones"
+                  maxLength={300}
+                />
+              </label>
+
+              <div className="inventory-create-grid-two">
+                <label>
+                  Unidad
+                  <input
+                    value={createForm.unit}
+                    onChange={(event) => handleCreateFormField('unit', event.target.value)}
+                    placeholder="Ej. tableta"
+                    maxLength={40}
+                    required
+                  />
+                </label>
+
+                <label>
+                  Precio unitario
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={createForm.price}
+                    onChange={(event) => handleCreateFormField('price', event.target.value)}
+                    placeholder="Ej. 5500"
+                    required
+                  />
+                </label>
+              </div>
+
+              <div className="inventory-create-grid-two">
+                <label>
+                  Stock inicial
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={createForm.initialStock}
+                    onChange={(event) => handleCreateFormField('initialStock', event.target.value)}
+                    placeholder="Ej. 100"
+                    required
+                  />
+                </label>
+
+                <label>
+                  Sede seleccionada
+                  <input
+                    value={branches.find((branch) => String(branch.id) === String(selectedBranchId))?.name || 'Sede no seleccionada'}
+                    disabled
+                  />
+                </label>
+              </div>
+
+              <div className="inventory-create-actions">
+                <button type="button" className="secondary" onClick={closeCreateModal} disabled={isCreatingMedication}>
+                  Cancelar
+                </button>
+                <button type="submit" className="primary" disabled={isCreatingMedication}>
+                  {isCreatingMedication ? 'Guardando...' : 'Guardar Medicamento'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
 
       {loading ? <div className="inventory-loading">Sincronizando inventario...</div> : null}
     </div>
