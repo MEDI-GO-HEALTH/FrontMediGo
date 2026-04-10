@@ -77,14 +77,21 @@ const mapAuctionFromApi = (item, index) => ({
   active: Boolean(item?.activa ?? String(item?.status || item?.estado || '').toUpperCase().includes('ACTIVE')),
 })
 
+const formatApiLocalDateTime = (dateValue) => {
+  const date = dateValue instanceof Date ? dateValue : new Date(dateValue)
+  if (Number.isNaN(date.getTime())) {
+    return null
+  }
+
+  const offset = date.getTimezoneOffset() * 60 * 1000
+  const localDate = new Date(date.getTime() - offset)
+  return `${localDate.toISOString().slice(0, 19)}`
+}
+
 export default function GestionSubastas() {
   const navigate = useNavigate()
   const START_PAST_TOLERANCE_SECONDS = 15
   const SAFE_START_BUFFER_SECONDS = 60
-  const ENV_AUCTION_HOURS_OFFSET = Number(import.meta.env.VITE_AUCTION_HOURS_OFFSET)
-  const FRONTEND_TO_BACKEND_HOURS_OFFSET = Number.isFinite(ENV_AUCTION_HOURS_OFFSET)
-    ? ENV_AUCTION_HOURS_OFFSET
-    : -5
 
   const toDateTimeLocal = (dateValue) => {
     const value = new Date(dateValue)
@@ -98,24 +105,13 @@ export default function GestionSubastas() {
       return null
     }
 
-    const parsedDate = dateTimeLocalValue instanceof Date
-      ? new Date(dateTimeLocalValue.getTime())
-      : new Date(String(dateTimeLocalValue))
-
-    if (Number.isNaN(parsedDate.getTime())) {
-      return null
+    const formatted = formatApiLocalDateTime(dateTimeLocalValue)
+    if (formatted) {
+      return formatted
     }
 
-    // Ajuste solicitado: restar 5 horas antes de enviar al backend.
-    parsedDate.setHours(parsedDate.getHours() + FRONTEND_TO_BACKEND_HOURS_OFFSET)
-
-    const yyyy = parsedDate.getFullYear()
-    const mm = String(parsedDate.getMonth() + 1).padStart(2, '0')
-    const dd = String(parsedDate.getDate()).padStart(2, '0')
-    const hh = String(parsedDate.getHours()).padStart(2, '0')
-    const min = String(parsedDate.getMinutes()).padStart(2, '0')
-    const ss = String(parsedDate.getSeconds()).padStart(2, '0')
-    return `${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}`
+    const localValue = String(dateTimeLocalValue).trim()
+    return localValue.length === 16 ? `${localValue}:00` : localValue
   }
 
   const getDefaultStartDate = () => new Date(Date.now() + SAFE_START_BUFFER_SECONDS * 1000)
