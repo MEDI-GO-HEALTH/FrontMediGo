@@ -13,7 +13,7 @@ import {
   joinAuction,
   placeAuctionBid,
 } from '../../api/subastaService'
-import useAuctionLivePrices from '../../hooks/useAuctionLivePrices'
+import useAuctionWebSocket from '../../hooks/useAuctionWebSocket'
 import '../../styles/affiliate/perfil-afiliado.css'
 import '../../styles/affiliate/centro-subastas.css'
 
@@ -288,21 +288,56 @@ export default function CentroSubastas() {
   const winnerCheckScheduleRef = useRef({})
 
   const currentUser = getCurrentAffiliateUser()
+  const liveAuctionId = String(selectedBidAuctionId || selectedAuctionId || '')
 
-  // ── Tiempo real: actualización de "Monto actual" vía WebSocket STOMP ──
-  // Cuando cualquier usuario registra una puja, el backend publica en
-  // /topic/auctions y este hook actualiza el estado local de forma inmediata.
-  useAuctionLivePrices((auctionId, newPrice) => {
-    // 1. Actualiza el precio en la tarjeta de la lista de subastas
-    setAuctions((prev) =>
-      prev.map((a) =>
-        String(a.id) === auctionId ? { ...a, currentOffer: newPrice } : a,
-      ),
-    )
-    // 2. Actualiza el detalle abierto en el panel lateral (afecta "Oferta actual")
-    setSelectedAuctionDetail((prev) =>
-      prev && String(prev.id) === auctionId ? { ...prev, currentPrice: newPrice } : prev,
-    )
+  useAuctionWebSocket({
+    auctionId: liveAuctionId || null,
+    onGlobalUpdate: (msg) => {
+      const auctionId = String(msg?.auctionId || '')
+      const newPrice = Number(msg?.currentPrice)
+      if (!auctionId || !Number.isFinite(newPrice)) {
+        return
+      }
+
+      setAuctions((prev) =>
+        prev.map((a) =>
+          String(a.id) === auctionId ? { ...a, currentOffer: newPrice } : a,
+        ),
+      )
+
+      setSelectedAuctionDetail((prev) =>
+        prev && String(prev.id) === auctionId ? { ...prev, currentPrice: newPrice } : prev,
+      )
+    },
+    onBidPlaced: (auctionId, bidMsg) => {
+      const targetAuctionId = String(auctionId || '')
+      if (!targetAuctionId || targetAuctionId !== liveAuctionId) {
+        return
+      }
+
+      const normalizedBid = {
+        id: `${bidMsg?.bidderId || 'U'}-${bidMsg?.amount || '0'}-${bidMsg?.placedAt || Date.now()}`,
+        auctionId: Number(bidMsg?.auctionId || targetAuctionId),
+        userId: Number(bidMsg?.bidderId || 0),
+        userName: bidMsg?.bidderName || `Usuario #${bidMsg?.bidderId || '?'}`,
+        amount: Number(bidMsg?.amount || 0),
+        placedAt: bidMsg?.placedAt || new Date().toISOString(),
+      }
+
+      setSelectedAuctionBids((previous) => {
+        const alreadyExists = previous.some((bid) =>
+          String(bid?.userId) === String(normalizedBid.userId)
+          && Number(bid?.amount) === Number(normalizedBid.amount)
+          && String(bid?.placedAt) === String(normalizedBid.placedAt)
+        )
+
+        if (alreadyExists) {
+          return previous
+        }
+
+        return [normalizedBid, ...previous]
+      })
+    },
   })
 
   useEffect(() => {
