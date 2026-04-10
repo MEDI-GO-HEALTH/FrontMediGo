@@ -77,6 +77,17 @@ const mapAuctionFromApi = (item, index) => ({
   active: Boolean(item?.activa ?? String(item?.status || item?.estado || '').toUpperCase().includes('ACTIVE')),
 })
 
+const formatApiLocalDateTime = (dateValue) => {
+  const date = dateValue instanceof Date ? dateValue : new Date(dateValue)
+  if (Number.isNaN(date.getTime())) {
+    return null
+  }
+
+  const offset = date.getTimezoneOffset() * 60 * 1000
+  const localDate = new Date(date.getTime() - offset)
+  return `${localDate.toISOString().slice(0, 19)}`
+}
+
 export default function GestionSubastas() {
   const navigate = useNavigate()
   const START_PAST_TOLERANCE_SECONDS = 15
@@ -94,18 +105,12 @@ export default function GestionSubastas() {
       return null
     }
 
-    // Enviar exactamente la fecha/hora local seleccionada por el admin, sin ajustes.
-    if (dateTimeLocalValue instanceof Date) {
-      const yyyy = dateTimeLocalValue.getFullYear()
-      const mm = String(dateTimeLocalValue.getMonth() + 1).padStart(2, '0')
-      const dd = String(dateTimeLocalValue.getDate()).padStart(2, '0')
-      const hh = String(dateTimeLocalValue.getHours()).padStart(2, '0')
-      const min = String(dateTimeLocalValue.getMinutes()).padStart(2, '0')
-      const ss = String(dateTimeLocalValue.getSeconds()).padStart(2, '0')
-      return `${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}`
+    const formatted = formatApiLocalDateTime(dateTimeLocalValue)
+    if (formatted) {
+      return formatted
     }
 
-    const localValue = String(dateTimeLocalValue)
+    const localValue = String(dateTimeLocalValue).trim()
     return localValue.length === 16 ? `${localValue}:00` : localValue
   }
 
