@@ -79,6 +79,8 @@ const mapAuctionFromApi = (item, index) => ({
 
 export default function GestionSubastas() {
   const navigate = useNavigate()
+  const START_PAST_TOLERANCE_SECONDS = 15
+  const SAFE_START_BUFFER_SECONDS = 60
 
   const toDateTimeLocal = (dateValue) => {
     const value = new Date(dateValue)
@@ -107,13 +109,13 @@ export default function GestionSubastas() {
     return `${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}`
   }
 
-  const getMinStartDate = () => new Date(Date.now() + 60 * 1000)
+  const getDefaultStartDate = () => new Date(Date.now() + SAFE_START_BUFFER_SECONDS * 1000)
 
   const initialCreateForm = {
     medicationId: 0,
     branchId: 0,
     basePrice: 0,
-    startTime: toDateTimeLocal(getMinStartDate()),
+    startTime: toDateTimeLocal(getDefaultStartDate()),
     endTime: toDateTimeLocal(new Date(Date.now() + (61 * 60 * 1000))),
     closureType: 'FIXED_TIME',
     maxPrice: 0,
@@ -195,7 +197,7 @@ export default function GestionSubastas() {
   }
 
   const handleOpenCreateModal = () => {
-    const freshMinStart = getMinStartDate()
+    const freshMinStart = getDefaultStartDate()
     const freshPlusOneHour = new Date(freshMinStart.getTime() + 60 * 60 * 1000)
     setCreateError('')
     setCreateForm((previous) => ({
@@ -226,16 +228,20 @@ export default function GestionSubastas() {
     setNotice('')
     setCreateError('')
 
+    const now = new Date()
+    const minAcceptedStart = new Date(now.getTime() - START_PAST_TOLERANCE_SECONDS * 1000)
+    const safeStartDate = new Date(now.getTime() + SAFE_START_BUFFER_SECONDS * 1000)
     const startDate = new Date(createForm.startTime)
     const endDate = new Date(createForm.endTime)
+    const normalizedStartDate = startDate < safeStartDate ? safeStartDate : startDate
 
-    if (startDate < getMinStartDate()) {
-      setCreateError('La fecha/hora de inicio debe ser al menos 1 minuto en el futuro.')
+    if (startDate < minAcceptedStart) {
+      setCreateError('La fecha/hora de inicio no puede estar en el pasado.')
       setCreating(false)
       return
     }
 
-    if (endDate <= startDate) {
+    if (endDate <= normalizedStartDate) {
       setCreateError('La fecha/hora de fin debe ser posterior a la fecha/hora de inicio.')
       setCreating(false)
       return
@@ -257,7 +263,7 @@ export default function GestionSubastas() {
       medicationId: Number(createForm.medicationId),
       branchId: Number(createForm.branchId),
       basePrice: Number(createForm.basePrice),
-      startTime: toApiLocalDateTime(createForm.startTime),
+      startTime: toApiLocalDateTime(normalizedStartDate),
       endTime: toApiLocalDateTime(createForm.endTime),
       closureType: String(createForm.closureType),
       ...(createForm.maxPrice > 0 ? { maxPrice: Number(createForm.maxPrice) } : {}),
@@ -559,7 +565,7 @@ export default function GestionSubastas() {
                   type="datetime-local"
                   name="startTime"
                   value={createForm.startTime}
-                  min={toDateTimeLocal(getMinStartDate())}
+                  min={toDateTimeLocal(new Date())}
                   onChange={handleCreateInputChange}
                   required
                 />
