@@ -27,7 +27,7 @@ export default function CarritoCompras() {
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [notification, setNotification] = useState('')
 
-  const handleQuantityChange = (medicationId, newQuantity, maxStock) => {
+  const handleQuantityChange = (medicationId, newQuantity, maxStock, branchId = 0) => {
     const result = cart.updateQuantity(medicationId, newQuantity, maxStock)
 
     if (!result.success) {
@@ -39,8 +39,8 @@ export default function CarritoCompras() {
     }
   }
 
-  const handleRemoveItem = (medicationId) => {
-    const result = cart.removeFromCart(medicationId)
+  const handleRemoveItem = (medicationId, branchId) => {
+    const result = cart.removeFromCart(medicationId, branchId)
     if (result.success) {
       setDeleteConfirm(null)
       setNotification({
@@ -84,15 +84,7 @@ export default function CarritoCompras() {
     <div className="carrito-modal-backdrop">
       <div className="carrito-modal">
         <header className="carrito-modal-header">
-          <div className="carrito-header-content">
-            <h2>Mi Carrito</h2>
-            {cart.branchId && (
-              <div className="carrito-branch-badge">
-                <span className="material-symbols-outlined">location_on</span>
-                {getBranchName(cart.branchId)}
-              </div>
-            )}
-          </div>
+          <h2>Mi Carrito</h2>
           <button
             type="button"
             className="close-btn"
@@ -133,9 +125,13 @@ export default function CarritoCompras() {
                   {cart.cart.map((item) => {
                     const itemSubtotal = item.price * item.quantity
                     return (
-                      <tr key={item.medicationId}>
+                      <tr key={`${item.medicationId}-${item.branchId}`}>
                         <td className="med-name">
                           <strong>{item.name}</strong>
+                          <div className="medication-branch-tag">
+                            <span className="material-symbols-outlined">location_on</span>
+                            {getBranchName(item.branchId)}
+                          </div>
                         </td>
                         <td>{item.unit}</td>
                         <td className="center">
@@ -146,7 +142,8 @@ export default function CarritoCompras() {
                                 handleQuantityChange(
                                   item.medicationId,
                                   Math.max(1, item.quantity - 1),
-                                  item.maxStock
+                                  item.maxStock,
+                                  item.branchId
                                 )
                               }
                               aria-label="Disminuir cantidad"
@@ -160,7 +157,8 @@ export default function CarritoCompras() {
                                 handleQuantityChange(
                                   item.medicationId,
                                   Number(e.target.value),
-                                  item.maxStock
+                                  item.maxStock,
+                                  item.branchId
                                 )
                               }
                               min="1"
@@ -172,7 +170,8 @@ export default function CarritoCompras() {
                                 handleQuantityChange(
                                   item.medicationId,
                                   item.quantity + 1,
-                                  item.maxStock
+                                  item.maxStock,
+                                  item.branchId
                                 )
                               }
                               disabled={item.quantity >= item.maxStock}
@@ -187,12 +186,12 @@ export default function CarritoCompras() {
                           <strong>{formatCurrency(itemSubtotal)}</strong>
                         </td>
                         <td className="center">
-                          {deleteConfirm === item.medicationId ? (
+                          {deleteConfirm === `${item.medicationId}-${item.branchId}` ? (
                             <div className="delete-confirm">
                               <button
                                 type="button"
                                 className="confirm-btn"
-                                onClick={() => handleRemoveItem(item.medicationId)}
+                                onClick={() => handleRemoveItem(item.medicationId, item.branchId)}
                               >
                                 Sí
                               </button>
@@ -204,7 +203,7 @@ export default function CarritoCompras() {
                             <button
                               type="button"
                               className="delete-btn"
-                              onClick={() => setDeleteConfirm(item.medicationId)}
+                              onClick={() => setDeleteConfirm(`${item.medicationId}-${item.branchId}`)}
                               aria-label={`Eliminar ${item.name}`}
                             >
                               <span className="material-symbols-outlined">delete</span>

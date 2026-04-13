@@ -14,7 +14,6 @@ import {
   clearCart as clearCartService,
   getCartItemCount,
   getCartUnitsCount,
-  getCartBranch,
 } from '../api/carritoService'
 
 export default function useCart() {
@@ -22,7 +21,6 @@ export default function useCart() {
   const [total, setTotal] = useState(0)
   const [itemCount, setItemCount] = useState(0)
   const [unitsCount, setUnitsCount] = useState(0)
-  const [branchId, setBranchId] = useState(null)
 
   // Sincronizar carrito desde localStorage
   const refreshCart = () => {
@@ -31,7 +29,6 @@ export default function useCart() {
     setTotal(calculateCartTotal(currentCart))
     setItemCount(getCartItemCount())
     setUnitsCount(getCartUnitsCount())
-    setBranchId(getCartBranch(currentCart))
   }
 
   useEffect(() => {
@@ -48,24 +45,24 @@ export default function useCart() {
     return () => window.removeEventListener('storage', handleStorageChange)
   }, [])
 
-  const addToCart = (medication, quantity = 1, maxStock = 0, cartBranchId = 0) => {
-    const result = addToCartService(medication, quantity, maxStock, cartBranchId)
+  const addToCart = (medication, quantity = 1, maxStock = 0, branchId = 0) => {
+    const result = addToCartService(medication, quantity, maxStock, branchId)
     if (result.success) {
       refreshCart()
     }
     return result
   }
 
-  const updateQuantity = (medicationId, newQuantity, maxStock = 0) => {
-    const result = updateQuantityService(medicationId, newQuantity, maxStock)
+  const updateQuantity = (medicationId, newQuantity, maxStock = 0, branchId = 0) => {
+    const result = updateQuantityService(medicationId, newQuantity, maxStock, branchId)
     if (result.success) {
       refreshCart()
     }
     return result
   }
 
-  const removeFromCart = (medicationId) => {
-    const result = removeFromCartService(medicationId)
+  const removeFromCart = (medicationId, branchId = 0) => {
+    const result = removeFromCartService(medicationId, branchId)
     if (result.success) {
       refreshCart()
     }
@@ -85,7 +82,6 @@ export default function useCart() {
     total,
     itemCount,
     unitsCount,
-    branchId,
     addToCart,
     updateQuantity,
     removeFromCart,
