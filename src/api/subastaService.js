@@ -4,6 +4,7 @@
  */
 
 import client from './client';
+import axios from 'axios';
 
 const AUCTIONS_BASE = '/api/auctions';
 
@@ -41,65 +42,53 @@ export const getAuctionErrorMessage = (error, fallbackMessage = 'No se pudo comp
 
 /** GET /api/auctions — Listar subastas */
 export const getAuctions = async (params = {}) => {
-  const response = await client.get(AUCTIONS_BASE, { params });
-  return response.data;
+  return retryRequest(() => client.get(AUCTIONS_BASE, { params }));
 };
 
 /** GET /api/auctions/active — Subastas activas */
 export const getActiveAuctions = async () => {
-  const response = await client.get(`${AUCTIONS_BASE}/active`);
-  return response.data;
+  return retryRequest(() => client.get(`${AUCTIONS_BASE}/active`));
 };
 
 /** GET /api/auctions/{id} — Detalle de subasta */
 export const getAuctionById = async (id) => {
-  const response = await client.get(`${AUCTIONS_BASE}/${id}`);
-  return response.data;
+  return retryRequest(() => client.get(`${AUCTIONS_BASE}/${id}`));
 };
 
 /** POST /api/auctions — Crear subasta */
 export const createAuction = async (data) => {
-  const response = await client.post(AUCTIONS_BASE, data);
-  return response.data;
+  return retryRequest(() => client.post(AUCTIONS_BASE, data));
 };
 
 /** PUT /api/auctions/{id} — Editar subasta */
 export const updateAuction = async (id, data) => {
-  const response = await client.put(`${AUCTIONS_BASE}/${id}`, data);
-  return response.data;
+  return retryRequest(() => client.put(`${AUCTIONS_BASE}/${id}`, data));
 };
 
 /** POST /api/auctions/{id}/join — Unirse a subasta */
 export const joinAuction = async (id, userId) => {
-  const response = await client.post(`${AUCTIONS_BASE}/${id}/join`, null, {
-    params: { userId },
-  });
-  return response.data;
+  return retryRequest(() => client.post(`${AUCTIONS_BASE}/${id}/join`, null, { params: { userId } }));
 };
 
 /** GET /api/auctions/{id}/bids — Historial de pujas */
 export const getAuctionBids = async (id) => {
-  const response = await client.get(`${AUCTIONS_BASE}/${id}/bids`);
-  return response.data;
+  return retryRequest(() => client.get(`${AUCTIONS_BASE}/${id}/bids`));
 };
 
 /** POST /api/auctions/{id}/bids — Colocar puja */
 export const placeAuctionBid = async (id, payload) => {
-  const response = await client.post(`${AUCTIONS_BASE}/${id}/bids`, payload);
-  return response.data;
+  return retryRequest(() => client.post(`${AUCTIONS_BASE}/${id}/bids`, payload));
 };
 
 /** GET /api/auctions/{id}/winner — Ganador de la subasta */
 export const getAuctionWinner = async (id) => {
-  const response = await client.get(`${AUCTIONS_BASE}/${id}/winner`);
-  return response.data;
+  return retryRequest(() => client.get(`${AUCTIONS_BASE}/${id}/winner`));
 };
 
 /** GET /api/auctions/won — Subastas ganadas por el afiliado autenticado */
 export const getWonAuctions = async (params) => {
   const requestParams = params || { page: 0, size: 20 };
-  const response = await client.get(`${AUCTIONS_BASE}/won`, { params: requestParams });
-  return response.data;
+  return retryRequest(() => client.get(`${AUCTIONS_BASE}/won`, { params: requestParams }));
 };
 
 // Alias de compatibilidad para el resto de pantallas existentes
@@ -121,3 +110,18 @@ export const cancelarSubasta = async (id) => {
   const response = await client.delete(`/subastas/${id}`);
   return response.data;
 };
+
+async function retryRequest(requestFn, retries = 3, delay = 1000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await requestFn();
+      return response.data;
+    } catch (error) {
+      if (i < retries - 1) {
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      } else {
+        throw error;
+      }
+    }
+  }
+}

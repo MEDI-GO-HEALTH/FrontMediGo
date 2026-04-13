@@ -21,6 +21,7 @@
 import { useEffect, useRef } from 'react'
 import { Client } from '@stomp/stompjs'
 import { API_CONFIG } from '../config/api'
+import { log } from '../utils/log'
 
 function getWsUrl() {
   return API_CONFIG.auctionWsURL
@@ -78,15 +79,22 @@ export default function useAuctionWebSocket({ auctionId, onGlobalUpdate, onAucti
       brokerURL: getWsUrl(),
       reconnectDelay: 5000,
       onConnect: () => {
-        // Topic global: siempre activo mientras el componente esté montado
+        log.info("WebSocket connected to auctions.");
         r.subs.global?.unsubscribe()
         r.subs.global = client.subscribe('/topic/auctions', ({ body }) => {
           const msg = safeParse(body)
           if (msg) r.cb.onGlobalUpdate?.(msg)
         })
-
-        // Topics por subasta con el ID actual en el momento de la conexión
         resubscribeAuction(r.auctionId)
+      },
+      onStompError: (frame) => {
+        log.error("WebSocket STOMP error: {}", frame.headers["message"])
+      },
+      onWebSocketClose: (event) => {
+        log.warn("WebSocket closed: {}", event.reason)
+      },
+      onWebSocketError: (event) => {
+        log.error("WebSocket error: {}", event.message)
       },
     })
 
