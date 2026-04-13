@@ -8,50 +8,16 @@ import { ROUTES } from '../../constants/routes'
 import useCappedLoading from '../../hooks/useCappedLoading'
 import '../../styles/admin/gestion-subastas.css'
 
-const FALLBACK_AUCTIONS = [
-  {
-    id: 'SUB-001',
-    name: 'Amoxicillin 500mg',
-    batch: 'AMX-2024-001',
-    status: 'EN VIVO',
-    startPrice: 12400,
-    reserveNote: 'Reserva Alcanzada',
-    remaining: '04h 12m 31s',
-    icon: 'pill',
-    active: true,
-  },
-  {
-    id: 'SUB-002',
-    name: 'Insulin Glargine',
-    batch: 'INS-992-B',
-    status: 'EN VIVO',
-    startPrice: 85200,
-    reserveNote: 'Reserva Alcanzada',
-    remaining: '01h 45m 08s',
-    icon: 'vaccines',
-    active: true,
-  },
-  {
-    id: 'SUB-003',
-    name: 'Atorvastatin Calcium',
-    batch: 'ATR-V34-X',
-    status: 'PENDIENTE',
-    startPrice: 4150,
-    reserveNote: 'Puja Min. Requerida',
-    remaining: 'Empieza en 2d',
-    icon: 'vital_signs',
-    active: false,
-  },
-]
+const FALLBACK_AUCTIONS = []
 
 const FALLBACK_OVERVIEW = {
-  growthPct: 12,
-  activeAuctions: 142,
-  totalValue: 2481200,
-  topBid: 450000,
-  multiplier: 1.4,
-  pendingApprovals: 4,
-  scheduledStarts: 12,
+  growthPct: 0,
+  activeAuctions: 0,
+  totalValue: 0,
+  topBid: 0,
+  multiplier: 0,
+  pendingApprovals: 0,
+  scheduledStarts: 0,
 }
 
 const formatMoney = (value, compact = false) =>
