@@ -62,6 +62,32 @@ const formatMoney = (value, compact = false) =>
     maximumFractionDigits: compact ? 1 : 0,
   }).format(Number(value) || 0)
 
+const formatRemainingTime = (rawSeconds) => {
+  const total = Math.max(0, Number(rawSeconds || 0))
+  const hours = Math.floor(total / 3600)
+  const minutes = Math.floor((total % 3600) / 60)
+  const seconds = total % 60
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
+
+const getAuctionRemainingSeconds = (auction, currentTime) => {
+  const endTimeValue = auction?.endTime
+  const parsedEndTime = endTimeValue ? new Date(endTimeValue) : null
+
+  if (parsedEndTime && !Number.isNaN(parsedEndTime.getTime())) {
+    return Math.max(0, Math.floor((parsedEndTime.getTime() - currentTime.getTime()) / 1000))
+  }
+
+  const fallbackRemaining = auction?.remainingSeconds
+  if (fallbackRemaining === null || fallbackRemaining === undefined) {
+    return 0
+  }
+
+  const loadedAtMs = Number(auction?.loadedAtMs || Date.now())
+  const elapsedSeconds = Math.max(0, Math.floor((currentTime.getTime() - loadedAtMs) / 1000))
+  return Math.max(0, Number(fallbackRemaining) - elapsedSeconds)
+}
+
 const mapAuctionFromApi = (item, index) => ({
   id: item?.id || item?.codigo || `SUB-${String(index + 1).padStart(3, '0')}`,
   name: item?.medicationName || item?.nombre || item?.medicamento || `Medicamento #${item?.medicationId ?? index + 1}`,
@@ -69,10 +95,9 @@ const mapAuctionFromApi = (item, index) => ({
   status: String(item?.status || item?.estado || (item?.activa ? 'EN VIVO' : 'PENDIENTE')).toUpperCase(),
   startPrice: Number(item?.precioInicial ?? item?.montoActual ?? item?.precioBase ?? item?.basePrice ?? 0),
   reserveNote: item?.reservaNota || `Tipo cierre: ${item?.closureType || 'N/A'}`,
-  remaining:
-    item?.remainingSeconds === null || item?.remainingSeconds === undefined
-      ? 'Sin dato'
-      : `${Math.max(0, Math.floor(Number(item.remainingSeconds) / 60))} min`,
+  remainingSeconds: item?.remainingSeconds,
+  endTime: item?.endTime || null,
+  loadedAtMs: Date.now(),
   icon: index % 2 === 0 ? 'pill' : 'vaccines',
   active: Boolean(item?.activa ?? String(item?.status || item?.estado || '').toUpperCase().includes('ACTIVE')),
 })
@@ -137,7 +162,18 @@ export default function GestionSubastas() {
   const [createError, setCreateError] = useState('')
   const [createForm, setCreateForm] = useState(initialCreateForm)
   const [selectedAuctionId, setSelectedAuctionId] = useState('')
+  const [clock, setClock] = useState(new Date())
   const showLoader = useCappedLoading(loading, 3000)
+
+  useEffect(() => {
+    const timerId = globalThis.setInterval(() => {
+      setClock(new Date())
+    }, 1000)
+
+    return () => {
+      globalThis.clearInterval(timerId)
+    }
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -471,7 +507,7 @@ export default function GestionSubastas() {
                       <td>
                         <div className={`time-cell ${auction.active ? 'live' : 'pending'}`}>
                           <span className="material-symbols-outlined">schedule</span>
-                          {' '}{auction.remaining}
+                          {' '}{formatRemainingTime(getAuctionRemainingSeconds(auction, clock))}
                         </div>
                       </td>
                       <td className="right">
