@@ -99,13 +99,39 @@
   border-bottom: 1px solid #e9ecef;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.carrito-header-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .carrito-modal-header h2 {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
+  color: #212529;
+}
+
+.carrito-branch-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  width: fit-content;
+}
+
+.carrito-branch-badge .material-symbols-outlined {
+  font-size: 1rem;
 }
 
 .carrito-modal-header .close-btn {

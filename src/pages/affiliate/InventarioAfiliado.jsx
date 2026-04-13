@@ -125,10 +125,10 @@ export default function InventarioAfiliado() {
         medicationId: medication.medicationId,
         name: medication.name,
         unit: medication.unit,
-        branchId: Number(selectedBranchId),
       },
       1,
-      maxStock
+      maxStock,
+      Number(selectedBranchId)
     )
 
     if (result.success) {

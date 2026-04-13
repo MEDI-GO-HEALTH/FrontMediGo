@@ -9,6 +9,18 @@ const formatCurrency = (value) =>
     maximumFractionDigits: 0,
   }).format(Number(value) || 0)
 
+const getBranchName = (branchId) => {
+  // Mapeo de sucursales - esto idealmente vendría del backend
+  const branchMap = {
+    1: 'Sede Principal - Bogotá',
+    2: 'Sede Medellín',
+    3: 'Sede Cali',
+    4: 'Sede Barranquilla',
+    5: 'Sede Santa Marta',
+  }
+  return branchMap[branchId] || `Sede #${branchId}`
+}
+
 export default function CarritoCompras() {
   const cart = useCart()
   const [showModal, setShowModal] = useState(false)
@@ -72,7 +84,15 @@ export default function CarritoCompras() {
     <div className="carrito-modal-backdrop">
       <div className="carrito-modal">
         <header className="carrito-modal-header">
-          <h2>Mi Carrito</h2>
+          <div className="carrito-header-content">
+            <h2>Mi Carrito</h2>
+            {cart.branchId && (
+              <div className="carrito-branch-badge">
+                <span className="material-symbols-outlined">location_on</span>
+                {getBranchName(cart.branchId)}
+              </div>
+            )}
+          </div>
           <button
             type="button"
             className="close-btn"

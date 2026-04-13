@@ -14,6 +14,7 @@ import {
   clearCart as clearCartService,
   getCartItemCount,
   getCartUnitsCount,
+  getCartBranch,
 } from '../api/carritoService'
 
 export default function useCart() {
@@ -21,6 +22,7 @@ export default function useCart() {
   const [total, setTotal] = useState(0)
   const [itemCount, setItemCount] = useState(0)
   const [unitsCount, setUnitsCount] = useState(0)
+  const [branchId, setBranchId] = useState(null)
 
   // Sincronizar carrito desde localStorage
   const refreshCart = () => {
@@ -29,6 +31,7 @@ export default function useCart() {
     setTotal(calculateCartTotal(currentCart))
     setItemCount(getCartItemCount())
     setUnitsCount(getCartUnitsCount())
+    setBranchId(getCartBranch(currentCart))
   }
 
   useEffect(() => {
@@ -45,8 +48,8 @@ export default function useCart() {
     return () => window.removeEventListener('storage', handleStorageChange)
   }, [])
 
-  const addToCart = (medication, quantity = 1, maxStock = 0) => {
-    const result = addToCartService(medication, quantity, maxStock)
+  const addToCart = (medication, quantity = 1, maxStock = 0, cartBranchId = 0) => {
+    const result = addToCartService(medication, quantity, maxStock, cartBranchId)
     if (result.success) {
       refreshCart()
     }
@@ -82,6 +85,7 @@ export default function useCart() {
     total,
     itemCount,
     unitsCount,
+    branchId,
     addToCart,
     updateQuantity,
     removeFromCart,

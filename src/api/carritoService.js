@@ -33,13 +33,14 @@ const saveCart = (cart) => {
 }
 
 /**
- * Agrega un medicamento al carrito
+ * Agrega un medicamento al carrito con validación de sucursal
  * @param {Object} medication - Datos del medicamento
  * @param {Number} quantity - Cantidad a agregar (default: 1)
  * @param {Number} maxStock - Stock disponible máximo
- * @returns {Object} { success, message, cartItem, cartTotal }
+ * @param {Number} branchId - ID de la sucursal (requerido)
+ * @returns {Object} { success, message, cartItem, cartTotal, cartBranch }
  */
-export const addToCart = (medication, quantity = 1, maxStock = 0) => {
+export const addToCart = (medication, quantity = 1, maxStock = 0, branchId = 0) => {
   if (!medication) {
     return { success: false, message: 'Medicamento no válido' }
   }
@@ -53,9 +54,25 @@ export const addToCart = (medication, quantity = 1, maxStock = 0) => {
     return { success: false, message: 'ID de medicamento no válido' }
   }
 
-  const addQuantity = Math.max(1, Number(quantity || 1))
+  const currentBranchId = Number(branchId ?? medication.branchId ?? 0)
+  if (currentBranchId <= 0) {
+    return { success: false, message: 'La sucursal no es válida' }
+  }
 
+  const addQuantity = Math.max(1, Number(quantity || 1))
   const cart = getCart()
+
+  // Validar que el carrito no tenga medicamentos de otra sucursal
+  const existingBranchId = cart.length > 0 ? Number(cart[0].branchId ?? 0) : null
+  if (existingBranchId && existingBranchId !== currentBranchId) {
+    return {
+      success: false,
+      message: 'Solo puedes comprar de una sucursal a la vez. Vacía el carrito para cambiar de sucursal.',
+      currentBranch: existingBranchId,
+      attemptedBranch: currentBranchId,
+    }
+  }
+
   const existingItem = cart.find((item) => item.medicationId === medicationId)
 
   if (existingItem) {
@@ -85,7 +102,7 @@ export const addToCart = (medication, quantity = 1, maxStock = 0) => {
       price: Number(medication.price ?? medication.unitPrice ?? 0),
       quantity: addQuantity,
       maxStock,
-      branchId: Number(medication.branchId ?? 0),
+      branchId: currentBranchId,
       addedAt: new Date().toISOString(),
       lastUpdated: new Date().toISOString(),
     })
@@ -95,6 +112,7 @@ export const addToCart = (medication, quantity = 1, maxStock = 0) => {
 
   const cartItem = cart.find((item) => item.medicationId === medicationId)
   const cartTotal = calculateCartTotal(cart)
+  const cartBranch = getCartBranch(cart)
 
   return {
     success: true,
@@ -103,6 +121,7 @@ export const addToCart = (medication, quantity = 1, maxStock = 0) => {
       : `"${cartItem.name}" agregado al carrito`,
     cartItem,
     cartTotal,
+    cartBranch,
   }
 }
 
@@ -207,4 +226,25 @@ export const getCartItemCount = () => {
  */
 export const getCartUnitsCount = () => {
   return getCart().reduce((total, item) => total + Number(item.quantity ?? 0), 0)
+}
+
+/**
+ * Obtiene la sucursal asociada al carrito actual
+ * @param {Array} cart - Items del carrito (opcional, si no se proporciona obtiene del localStorage)
+ * @returns {Number|null} ID de la sucursal o null si el carrito está vacío
+ */
+export const getCartBranch = (cart = null) => {
+  const items = cart || getCart()
+  if (items.length === 0) {
+    return null
+  }
+  return Number(items[0]?.branchId ?? 0) || null
+}
+
+/**
+ * Verifica si el carrito está vacío
+ * @returns {Boolean} true si el carrito está vacío
+ */
+export const isCartEmpty = () => {
+  return getCart().length === 0
 }
