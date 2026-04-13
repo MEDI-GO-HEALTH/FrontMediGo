@@ -37,10 +37,11 @@ const saveCart = (cart) => {
  * @param {Object} medication - Datos del medicamento
  * @param {Number} quantity - Cantidad a agregar (default: 1)
  * @param {Number} maxStock - Stock disponible máximo
- * @param {Number} branchId - ID de la sucursal (requerido para mostrar en carrito)
+ * @param {Number} branchId - ID de la sucursal
+ * @param {String} branchName - Nombre descriptivo de la sucursal
  * @returns {Object} { success, message, cartItem, cartTotal }
  */
-export const addToCart = (medication, quantity = 1, maxStock = 0, branchId = 0) => {
+export const addToCart = (medication, quantity = 1, maxStock = 0, branchId = 0, branchName = '') => {
   if (!medication) {
     return { success: false, message: 'Medicamento no válido' }
   }
@@ -90,6 +91,7 @@ export const addToCart = (medication, quantity = 1, maxStock = 0, branchId = 0) 
       quantity: addQuantity,
       maxStock,
       branchId: currentBranchId,
+      branchName: branchName || `Sede #${currentBranchId}`,
       addedAt: new Date().toISOString(),
       lastUpdated: new Date().toISOString(),
     })

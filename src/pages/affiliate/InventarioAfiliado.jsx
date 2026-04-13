@@ -120,6 +120,10 @@ export default function InventarioAfiliado() {
     setAddingToCartId(medication.medicationId)
     setNotification('')
 
+    // Obtener el nombre de la sucursal seleccionada
+    const selectedBranch = branches.find((b) => b.id === Number(selectedBranchId))
+    const branchName = selectedBranch?.name || `Sede #${selectedBranchId}`
+
     const result = cart.addToCart(
       {
         medicationId: medication.medicationId,
@@ -128,7 +132,8 @@ export default function InventarioAfiliado() {
       },
       1,
       maxStock,
-      Number(selectedBranchId)
+      Number(selectedBranchId),
+      branchName
     )
 
     if (result.success) {

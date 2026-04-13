@@ -45,8 +45,8 @@ export default function useCart() {
     return () => window.removeEventListener('storage', handleStorageChange)
   }, [])
 
-  const addToCart = (medication, quantity = 1, maxStock = 0, branchId = 0) => {
-    const result = addToCartService(medication, quantity, maxStock, branchId)
+  const addToCart = (medication, quantity = 1, maxStock = 0, branchId = 0, branchName = '') => {
+    const result = addToCartService(medication, quantity, maxStock, branchId, branchName)
     if (result.success) {
       refreshCart()
     }
