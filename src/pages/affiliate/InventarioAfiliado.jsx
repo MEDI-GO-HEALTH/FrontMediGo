@@ -3,6 +3,7 @@ import { getBranchStock, getBranchesWithMedications } from '../../api/inventario
 import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
 import AffiliateShell from '../../components/layout/AffiliateShell'
 import useCappedLoading from '../../hooks/useCappedLoading'
+import useCart from '../../hooks/useCart'
 import '../../styles/affiliate/inventario-afiliado.css'
 
 const CRITICAL_STOCK_THRESHOLD = 20
@@ -27,7 +28,10 @@ export default function InventarioAfiliado() {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [notification, setNotification] = useState('')
+  const [addingToCartId, setAddingToCartId] = useState(null)
   const showLoader = useCappedLoading(loading, 3000)
+  const cart = useCart()
 
   useEffect(() => {
     let mounted = true
@@ -112,6 +116,38 @@ export default function InventarioAfiliado() {
     return rows.filter((row) => row.name.toLowerCase().includes(term))
   }, [rows, search])
 
+  const handleAddToCart = (medication, maxStock) => {
+    setAddingToCartId(medication.medicationId)
+    setNotification('')
+
+    const result = cart.addToCart(
+      {
+        medicationId: medication.medicationId,
+        name: medication.name,
+        unit: medication.unit,
+        branchId: Number(selectedBranchId),
+      },
+      1,
+      maxStock
+    )
+
+    if (result.success) {
+      setNotification({
+        type: 'success',
+        message: result.message,
+      })
+      setTimeout(() => setNotification(''), 3000)
+    } else {
+      setNotification({
+        type: 'error',
+        message: result.message,
+      })
+      setTimeout(() => setNotification(''), 4000)
+    }
+
+    setAddingToCartId(null)
+  }
+
   return (
     <AffiliateShell active="inventory">
       <PageLoadingOverlay visible={showLoader} message="Cargando inventario por sede..." />
@@ -153,6 +189,20 @@ export default function InventarioAfiliado() {
 
       {error ? <p className="affiliate-inventory-error">{error}</p> : null}
 
+      {notification && (
+        <div className={`affiliate-inventory-notification notification-${notification.type}`}>
+          <span>{notification.message}</span>
+          <button
+            type="button"
+            className="notification-close"
+            onClick={() => setNotification('')}
+            aria-label="Cerrar notificación"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       <section className="affiliate-inventory-table-wrap" aria-label="Resultados de inventario">
         {loading ? (
           <div className="affiliate-inventory-state">Cargando inventario...</div>
@@ -166,16 +216,44 @@ export default function InventarioAfiliado() {
                 <th>Unidad</th>
                 <th>Stock</th>
                 <th>Estado</th>
+                <th className="center">Acción</th>
               </tr>
             </thead>
             <tbody>
               {filteredRows.map((row) => (
                 <tr key={`${row.medicationId}-${row.name}`}>
-                  <td>{row.name}</td>
-                  <td>{row.unit}</td>
-                  <td>{row.quantity}</td>
                   <td>
-                    <span className="affiliate-inventory-ok">Disponible</span>
+                    <strong>{row.name}</strong>
+                  </td>
+                  <td>{row.unit}</td>
+                  <td className="center">
+                    <span className={`stock-badge ${row.quantity < 50 ? 'medium' : 'high'}`}>
+                      {row.quantity}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="affiliate-inventory-ok">✓ Disponible</span>
+                  </td>
+                  <td className="center">
+                    <button
+                      type="button"
+                      className={`add-cart-btn ${addingToCartId === row.medicationId ? 'loading' : ''}`}
+                      onClick={() => handleAddToCart(row, row.quantity)}
+                      disabled={addingToCartId === row.medicationId || row.quantity === 0}
+                      aria-label={`Agregar ${row.name} al carrito`}
+                    >
+                      {addingToCartId === row.medicationId ? (
+                        <>
+                          <span className="spinner" />
+                          Agregando...
+                        </>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined">shopping_cart</span>
+                          Agregar
+                        </>
+                      )}
+                    </button>
                   </td>
                 </tr>
               ))}

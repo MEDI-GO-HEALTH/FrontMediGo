@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router'
 import { ROUTES } from '../../constants/routes'
 import MedigoSidebarBrand from '../common/MedigoSidebarBrand'
+import CarritoCompras from '../affiliate/CarritoCompras'
 
 const SIDE_LINKS = [
   { key: 'map', label: 'Logistics Map', icon: 'map', path: ROUTES.AFFILIATE.MAP },
@@ -107,6 +108,8 @@ export default function AffiliateShell({ active = 'map', contentMode = 'containe
           <div className={`affiliate-content${contentMode === 'fluid' ? ' fluid' : ''}`}>{children}</div>
         </main>
       </div>
+
+      <CarritoCompras />
 
       <nav className="affiliate-mobile-bottom" aria-label="Navegacion movil afiliado">
         {MOBILE_LINKS.map((item) => (
