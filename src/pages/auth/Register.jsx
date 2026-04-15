@@ -216,7 +216,7 @@ export default function Register() {
                 value={form.email}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                placeholder="name@medigo.co"
+                placeholder="name@medigo.com"
                 autoComplete="email"
                 className={`form-input ${touched.email && !form.email ? 'error' : ''}`}
                 disabled={loading}

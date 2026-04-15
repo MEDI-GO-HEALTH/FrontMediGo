@@ -90,9 +90,9 @@ export default function Login() {
   // Quick login para desarrollo
   const handleQuickLogin = async (role) => {
     const quickUsers = {
-      ADMIN: { id: 1, name: 'Admin Demo', email: 'admin@medigo.co', role: 'ADMIN' },
-      AFILIADO: { id: 2, name: 'Afiliado Demo', email: 'afiliado@medigo.co', role: 'AFILIADO' },
-      REPARTIDOR: { id: 3, name: 'Repartidor Demo', email: 'repartidor@medigo.co', role: 'REPARTIDOR' },
+      ADMIN: { id: 1, name: 'Admin Demo', email: 'admin@medigo.com', role: 'ADMIN' },
+      AFILIADO: { id: 2, name: 'Afiliado Demo', email: 'user@medigo.com', role: 'AFILIADO' },
+      REPARTIDOR: { id: 3, name: 'Repartidor Demo', email: 'delivery@medigo.com', role: 'REPARTIDOR' },
     }
 
     const user = quickUsers[role]

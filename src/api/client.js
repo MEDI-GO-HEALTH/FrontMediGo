@@ -80,8 +80,10 @@ client.interceptors.request.use(
 client.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // 🚪 Token expirado o inválido → limpiar sesión y redirigir
+    const isLoginRequest = error.config?.url?.includes('/api/auth/login');
+
+    if (error.response?.status === 401 && !isLoginRequest) {
+      // 🚪 Token expirado o inválido (y no es login) → limpiar sesión y redirigir
       localStorage.removeItem('medigo_token');
       localStorage.removeItem('medigo_user');
       globalThis.location.href = '/';

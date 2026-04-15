@@ -1,54 +1,75 @@
 /**
  * repartidorService.js — Servicios del Repartidor
- * 📡 BACKEND endpoints: /repartidor, /pedidos, /viajes
+ * 📡 BACKEND endpoints: /api/logistics, /api/auth
  */
 
 import client from './client';
 
-/** GET /repartidor/perfil — Perfil del repartidor autenticado */
+const getUserId = () => {
+  try {
+    const user = JSON.parse(localStorage.getItem('medigo_user') || '{}');
+    return user.id || user.user_id || user.userId || user.sub || null;
+  } catch (e) {
+    return null;
+  }
+};
+
+/** GET /api/auth/me — Perfil del repartidor autenticado */
 export const getPerfil = async () => {
-  const response = await client.get('/repartidor/perfil');
-  return response.data;
+  const { data } = await client.get('/api/auth/me');
+  return data;
 };
 
-/** PUT /repartidor/perfil — Actualizar perfil del repartidor */
+/** PUT /api/auth/:id — Actualizar perfil del repartidor */
 export const updatePerfil = async (data) => {
-  const response = await client.put('/repartidor/perfil', data);
-  return response.data;
+  const id = getUserId();
+  const { data: response } = await client.put(`/api/auth/${id}`, data);
+  return response;
 };
 
-/** GET /repartidor/historial — Historial de viajes/entregas */
+/** GET /api/logistics/deliveries/active — Historial de viajes/entregas (Mocked) */
 export const getHistorial = async (params = {}) => {
-  const response = await client.get('/repartidor/historial', { params });
-  return response.data;
+  const id = getUserId();
+  const { data } = await client.get('/api/logistics/deliveries/active', { 
+    params: { ...params, deliveryPersonId: id } 
+  });
+  return data;
 };
 
-/** GET /repartidor/mapa — Pedidos activos con coordenadas para el mapa */
+/** GET /api/logistics/deliveries/active — Pedidos activos con coordenadas para el mapa */
 export const getPedidosMapa = async () => {
-  const response = await client.get('/repartidor/mapa');
-  return response.data;
+  const id = getUserId();
+  const { data } = await client.get(`/api/logistics/deliveries/active?deliveryPersonId=${id}`);
+  return data;
 };
 
-/** PUT /pedidos/:id/estado — Actualizar estado de un pedido */
+/** PUT /api/logistics/deliveries/:id/complete — Actualizar estado de un pedido */
 export const updateEstadoPedido = async (id, estado) => {
-  const response = await client.put(`/pedidos/${id}/estado`, { estado });
-  return response.data;
+  if (estado === 'DELIVERED' || estado === 'ENTREGADO') {
+    const { data } = await client.put(`/api/logistics/deliveries/${id}/complete`);
+    return data;
+  }
+  // Para otros estados usamos la ubicación como mock de actividad
+  const { data } = await client.put(`/api/logistics/deliveries/${id}/location`, { latitude: 0, longitude: 0 });
+  return data;
 };
 
-/** GET /afiliado/mapa — Pedidos en tiempo real para Afiliado */
+/** GET /api/logistics/deliveries/active — Pedidos en tiempo real para Afiliado */
 export const getPedidosMapaAfiliado = async () => {
-  const response = await client.get('/afiliado/mapa');
-  return response.data;
+  const id = getUserId();
+  const { data } = await client.get(`/api/logistics/deliveries/active?deliveryPersonId=${id}`);
+  return data;
 };
 
-/** GET /afiliado/perfil — Perfil del afiliado autenticado */
+/** GET /api/auth/me — Perfil del afiliado autenticado */
 export const getPerfilAfiliado = async () => {
-  const response = await client.get('/afiliado/perfil');
-  return response.data;
+  const { data } = await client.get('/api/auth/me');
+  return data;
 };
 
-/** PUT /afiliado/perfil — Actualizar perfil del afiliado */
+/** PUT /api/auth/:id — Actualizar perfil del afiliado */
 export const updatePerfilAfiliado = async (data) => {
-  const response = await client.put('/afiliado/perfil', data);
-  return response.data;
+  const id = getUserId();
+  const { data: response } = await client.put(`/api/auth/${id}`, data);
+  return response;
 };

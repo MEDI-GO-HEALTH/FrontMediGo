@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
+import { getInventario } from '../../api/inventarioService'
 import { createSubasta, getActiveAuctions, getAuctionErrorMessage } from '../../api/subastaService'
+import { getSedes } from '../../api/sedesService'
 import AuctionAdminActions from '../../components/admin/AuctionAdminActions'
 import MedigoSidebarBrand from '../../components/common/MedigoSidebarBrand'
 import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
@@ -137,6 +139,9 @@ export default function GestionSubastas() {
   const [createError, setCreateError] = useState('')
   const [createForm, setCreateForm] = useState(initialCreateForm)
   const [selectedAuctionId, setSelectedAuctionId] = useState('')
+  const [medications, setMedications] = useState([])
+  const [sedes, setSedes] = useState([])
+  const [loadingOptions, setLoadingOptions] = useState(false)
   const showLoader = useCappedLoading(loading, 3000)
 
   useEffect(() => {
@@ -201,16 +206,28 @@ export default function GestionSubastas() {
     navigate(ROUTES.AUTH.LOGIN, { replace: true })
   }
 
-  const handleOpenCreateModal = () => {
+  const handleOpenCreateModal = async () => {
     const freshMinStart = getDefaultStartDate()
     const freshPlusOneHour = new Date(freshMinStart.getTime() + 60 * 60 * 1000)
     setCreateError('')
-    setCreateForm((previous) => ({
-      ...previous,
+    setCreateForm({
+      ...initialCreateForm,
       startTime: toDateTimeLocal(freshMinStart),
       endTime: toDateTimeLocal(freshPlusOneHour),
-    }))
+    })
     setShowCreateModal(true)
+
+    setLoadingOptions(true)
+    try {
+      const [medsResult, sedesResult] = await Promise.all([getInventario(), getSedes()])
+      setMedications(Array.isArray(medsResult) ? medsResult : [])
+      const sedesItems = sedesResult?.data?.data?.items ?? sedesResult?.data?.items
+      setSedes(Array.isArray(sedesItems) ? sedesItems : [])
+    } catch {
+      // Si falla la carga de opciones, el usuario puede escribir el ID manualmente
+    } finally {
+      setLoadingOptions(false)
+    }
   }
 
   const handleCloseCreateModal = () => {
@@ -220,10 +237,11 @@ export default function GestionSubastas() {
 
   const handleCreateInputChange = (event) => {
     const { name, value, type } = event.target
+    const isNumeric = type === 'number' || event.target.dataset.numeric === 'true'
 
     setCreateForm((previous) => ({
       ...previous,
-      [name]: type === 'number' ? Number(value) : value,
+      [name]: isNumeric ? Number(value) : value,
     }))
   }
 
@@ -528,27 +546,45 @@ export default function GestionSubastas() {
 
             <form className="auction-modal-form" onSubmit={handleCreateAuction}>
               <label>
-                <span>Medication ID</span>
-                <input
-                  type="number"
-                  min="1"
+                <span>Medicamento</span>
+                <select
                   name="medicationId"
                   value={createForm.medicationId}
                   onChange={handleCreateInputChange}
+                  data-numeric="true"
                   required
-                />
+                  disabled={loadingOptions}
+                >
+                  <option value="0">
+                    {loadingOptions ? 'Cargando medicamentos...' : '— Selecciona un medicamento —'}
+                  </option>
+                  {medications.map((med) => (
+                    <option key={med.medicationId} value={med.medicationId}>
+                      {med.medicationName || `Medicamento ${med.medicationId}`} (ID: {med.medicationId})
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <label>
-                <span>Branch ID</span>
-                <input
-                  type="number"
-                  min="1"
+                <span>Sede</span>
+                <select
                   name="branchId"
                   value={createForm.branchId}
                   onChange={handleCreateInputChange}
+                  data-numeric="true"
                   required
-                />
+                  disabled={loadingOptions}
+                >
+                  <option value="0">
+                    {loadingOptions ? 'Cargando sedes...' : '— Selecciona una sede —'}
+                  </option>
+                  {sedes.map((sede) => (
+                    <option key={sede.id} value={sede.id}>
+                      {sede.name || sede.nombre || `Sede ${sede.id}`} (ID: {sede.id})
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <label>

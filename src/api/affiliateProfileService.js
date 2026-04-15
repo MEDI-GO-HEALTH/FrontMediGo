@@ -2,14 +2,14 @@ import client from './client'
 
 // NOTE: Replace these endpoint paths when backend contracts are finalized.
 const ENDPOINTS = {
-  profile: '/affiliate/profile',
-  paymentMethods: '/affiliate/payment-methods',
-  preferences: '/affiliate/preferences',
-  accountStatus: '/affiliate/account-status',
-  updateProfile: '/affiliate/profile',
-  updatePreferences: '/affiliate/preferences',
-  createPaymentMethod: '/affiliate/payment-methods',
-  deletePaymentMethod: '/affiliate/payment-methods',
+  profile: '/api/affiliate/profile',
+  paymentMethods: '/api/affiliate/payment-methods',
+  preferences: '/api/affiliate/preferences',
+  accountStatus: '/api/affiliate/account-status',
+  updateProfile: '/api/affiliate/profile',
+  updatePreferences: '/api/affiliate/preferences',
+  createPaymentMethod: '/api/affiliate/payment-methods',
+  deletePaymentMethod: '/api/affiliate/payment-methods',
 }
 
 export async function getAffiliateProfile() {

@@ -79,7 +79,8 @@ const normalizeLoginPayload = (payload, fallbackEmail = '') => {
     root?.token ||
     '';
 
-  const userSource = nested?.user || root?.user || nested || root || {};
+  const nonEmptyNested = nested && Object.keys(nested).length > 0 ? nested : null;
+  const userSource = nested?.user || root?.user || nonEmptyNested || root || {};
   const rawRole =
     userSource?.role ??
     userSource?.rol ??
@@ -92,7 +93,7 @@ const normalizeLoginPayload = (payload, fallbackEmail = '') => {
     root?.authorities;
 
   const user = {
-    id: userSource?.id ?? userSource?.user_id ?? null,
+    id: userSource?.id ?? userSource?.user_id ?? root?.id ?? root?.user_id ?? null,
     name: userSource?.name || userSource?.username || 'Usuario',
     email: userSource?.email || fallbackEmail,
     role: normalizeRole(rawRole) || 'AFILIADO',
@@ -216,13 +217,13 @@ export const login = async (credentials) => {
 
   // 🧪 MOCK LOGIN para Desarrollo (Si se usa un correo específico)
   if (API_CONFIG.useAuthMock) {
-    if (email.includes('admin@medigo.co')) {
+    if (email.includes('admin@medigo.com')) {
       return { token: 'mock-token-admin', user: { id: 1, name: 'Admin Demo', email, role: 'ADMIN' } };
     }
-    if (email.includes('afiliado@medigo.co')) {
+    if (email.includes('user@medigo.com')) {
       return { token: 'mock-token-afiliado', user: { id: 2, name: 'Afiliado Demo', email, role: 'AFILIADO' } };
     }
-    if (email.includes('repartidor@medigo.co')) {
+    if (email.includes('delivery@medigo.com')) {
       return { token: 'mock-token-repartidor', user: { id: 3, name: 'Repartidor Demo', email, role: 'REPARTIDOR' } };
     }
   }
