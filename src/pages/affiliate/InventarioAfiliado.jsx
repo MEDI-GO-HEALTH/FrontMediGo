@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getBranchStock, getBranchesWithMedications } from '../../api/inventarioService'
+import CarritoPanel from '../../components/affiliate/CarritoPanel'
 import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
 import AffiliateShell from '../../components/layout/AffiliateShell'
+import { useCart } from '../../context/CartContext'
 import useCappedLoading from '../../hooks/useCappedLoading'
 import '../../styles/affiliate/inventario-afiliado.css'
 
@@ -17,6 +19,7 @@ const mapStock = (item, index) => ({
   name: item?.medicationName || item?.name || `Medicamento ${index + 1}`,
   unit: item?.unit || 'unidad',
   quantity: Number(item?.quantity ?? 0),
+  unitPrice: Number(item?.unitPrice ?? 0),
   isAvailable: Boolean(item?.isAvailable ?? Number(item?.quantity ?? 0) > 0),
 })
 
@@ -28,6 +31,15 @@ export default function InventarioAfiliado() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const showLoader = useCappedLoading(loading, 3000)
+
+  const { cartCount, addItem, notification, isOpen, setIsOpen, syncBranch } = useCart()
+
+  // Sincronizar el carrito cuando cambia la sucursal
+  useEffect(() => {
+    if (selectedBranchId) {
+      syncBranch(Number(selectedBranchId))
+    }
+  }, [selectedBranchId, syncBranch])
 
   useEffect(() => {
     let mounted = true
@@ -112,16 +124,62 @@ export default function InventarioAfiliado() {
     return rows.filter((row) => row.name.toLowerCase().includes(term))
   }, [rows, search])
 
+  const handleAddToCart = (medication) => {
+    addItem(medication, selectedBranchId)
+  }
+
+  const formatPrice = (value) => {
+    const num = Number(value)
+    if (!num) {
+      return '—'
+    }
+    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(num)
+  }
+
   return (
     <AffiliateShell active="inventory">
       <PageLoadingOverlay visible={showLoader} message="Cargando inventario por sede..." />
+
+      {/* Notificación toast */}
+      {notification ? (
+        <div
+          className={`cart-notification cart-notification--${notification.type}`}
+          role="status"
+          aria-live="polite"
+        >
+          <span className="material-symbols-outlined">
+            {notification.type === 'success' ? 'check_circle' : 'error'}
+          </span>
+          {notification.message}
+        </div>
+      ) : null}
+
       <header className="affiliate-inventory-header">
-        <h2>Inventario por Sucursal</h2>
-        <p>
-          Vista de consulta para afiliados. Solo se muestran medicamentos disponibles y no criticos (stock mayor a
-          {` ${CRITICAL_STOCK_THRESHOLD} `}
-          unidades).
-        </p>
+        <div className="affiliate-inventory-header-row">
+          <div>
+            <h2>Inventario por Sucursal</h2>
+            <p>
+              Vista de consulta para afiliados. Solo se muestran medicamentos disponibles y no críticos (stock mayor a
+              {` ${CRITICAL_STOCK_THRESHOLD} `}
+              unidades).
+            </p>
+          </div>
+
+          {/* Botón del carrito con badge de cantidad */}
+          <button
+            type="button"
+            className="cart-toggle-btn"
+            aria-label={`Abrir carrito. ${cartCount} producto(s) en el carrito`}
+            onClick={() => setIsOpen(!isOpen)}
+          >
+            <span className="material-symbols-outlined">shopping_cart</span>
+            {cartCount > 0 ? (
+              <span className="cart-badge" aria-hidden="true">
+                {cartCount > 99 ? '99+' : cartCount}
+              </span>
+            ) : null}
+          </button>
+        </div>
       </header>
 
       <section className="affiliate-inventory-toolbar" aria-label="Filtros de inventario">
@@ -157,7 +215,7 @@ export default function InventarioAfiliado() {
         {loading ? (
           <div className="affiliate-inventory-state">Cargando inventario...</div>
         ) : filteredRows.length === 0 ? (
-          <div className="affiliate-inventory-state">No hay medicamentos no criticos para la sede seleccionada.</div>
+          <div className="affiliate-inventory-state">No hay medicamentos no críticos para la sede seleccionada.</div>
         ) : (
           <table className="affiliate-inventory-table">
             <thead>
@@ -165,24 +223,50 @@ export default function InventarioAfiliado() {
                 <th>Medicamento</th>
                 <th>Unidad</th>
                 <th>Stock</th>
+                <th>Precio</th>
                 <th>Estado</th>
+                <th>Acción</th>
               </tr>
             </thead>
             <tbody>
-              {filteredRows.map((row) => (
-                <tr key={`${row.medicationId}-${row.name}`}>
-                  <td>{row.name}</td>
-                  <td>{row.unit}</td>
-                  <td>{row.quantity}</td>
-                  <td>
-                    <span className="affiliate-inventory-ok">Disponible</span>
-                  </td>
-                </tr>
-              ))}
+              {filteredRows.map((row) => {
+                const hasStock = row.quantity > 0
+                return (
+                  <tr key={`${row.medicationId}-${row.name}`}>
+                    <td>{row.name}</td>
+                    <td>{row.unit}</td>
+                    <td>{row.quantity}</td>
+                    <td>{formatPrice(row.unitPrice)}</td>
+                    <td>
+                      {hasStock ? (
+                        <span className="affiliate-inventory-ok">Disponible</span>
+                      ) : (
+                        <span className="affiliate-inventory-no-stock">Sin stock</span>
+                      )}
+                    </td>
+                    <td>
+                      {/* Escenario 3: botón deshabilitado si stock = 0 */}
+                      <button
+                        type="button"
+                        className="cart-add-btn"
+                        disabled={!hasStock}
+                        aria-label={`Agregar ${row.name} al carrito`}
+                        onClick={() => handleAddToCart(row)}
+                      >
+                        <span className="material-symbols-outlined">add_shopping_cart</span>
+                        Agregar
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         )}
       </section>
+
+      {/* Panel del carrito */}
+      <CarritoPanel />
     </AffiliateShell>
   )
 }
