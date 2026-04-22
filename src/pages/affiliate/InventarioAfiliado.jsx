@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getBranchStock, getBranchesWithMedications } from '../../api/inventarioService'
 import CarritoPanel from '../../components/affiliate/CarritoPanel'
+import DisponibilidadModal from '../../components/affiliate/DisponibilidadModal'
 import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
 import AffiliateShell from '../../components/layout/AffiliateShell'
 import { useCart } from '../../context/CartContext'
@@ -30,6 +31,7 @@ export default function InventarioAfiliado() {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [selectedMedication, setSelectedMedication] = useState(null)
   const showLoader = useCappedLoading(loading, 3000)
 
   const { cartCount, addItem, notification, isOpen, setIsOpen, syncBranch } = useCart()
@@ -126,6 +128,10 @@ export default function InventarioAfiliado() {
 
   const handleAddToCart = (medication) => {
     addItem(medication, selectedBranchId)
+  }
+
+  const handleVerDisponibilidad = (row) => {
+    setSelectedMedication(row)
   }
 
   const formatPrice = (value) => {
@@ -225,7 +231,7 @@ export default function InventarioAfiliado() {
                 <th>Stock</th>
                 <th>Precio</th>
                 <th>Estado</th>
-                <th>Acción</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -238,14 +244,31 @@ export default function InventarioAfiliado() {
                     <td>{row.quantity}</td>
                     <td>{formatPrice(row.unitPrice)}</td>
                     <td>
+                      {/* Indicador visual: verde disponible / rojo sin stock (HU-03 + HU-04) */}
                       {hasStock ? (
-                        <span className="affiliate-inventory-ok">Disponible</span>
+                        <span className="affiliate-inventory-ok">
+                          <span className="material-symbols-outlined" style={{ fontSize: '0.85rem' }}>check_circle</span>
+                          Disponible
+                        </span>
                       ) : (
-                        <span className="affiliate-inventory-no-stock">Sin stock</span>
+                        <span className="affiliate-inventory-no-stock">
+                          <span className="material-symbols-outlined" style={{ fontSize: '0.85rem' }}>cancel</span>
+                          Sin stock
+                        </span>
                       )}
                     </td>
-                    <td>
-                      {/* Escenario 3: botón deshabilitado si stock = 0 */}
+                    <td className="affiliate-inventory-actions">
+                      {/* Botón: Ver disponibilidad por sucursal (HU-04) */}
+                      <button
+                        type="button"
+                        className="disp-open-btn"
+                        aria-label={`Ver disponibilidad de ${row.name} en sucursales`}
+                        onClick={() => handleVerDisponibilidad(row)}
+                      >
+                        <span className="material-symbols-outlined">store</span>
+                        Sucursales
+                      </button>
+                      {/* Botón: Agregar al carrito (HU-03) */}
                       <button
                         type="button"
                         className="cart-add-btn"
@@ -265,8 +288,18 @@ export default function InventarioAfiliado() {
         )}
       </section>
 
-      {/* Panel del carrito */}
+      {/* Panel del carrito (HU-03) */}
       <CarritoPanel />
+
+      {/* Modal de disponibilidad por sucursal (HU-04) */}
+      {selectedMedication ? (
+        <DisponibilidadModal
+          medication={selectedMedication}
+          branches={branches}
+          selectedBranchId={selectedBranchId}
+          onClose={() => setSelectedMedication(null)}
+        />
+      ) : null}
     </AffiliateShell>
   )
 }

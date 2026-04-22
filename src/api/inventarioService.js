@@ -52,6 +52,24 @@ export const getMedicationAvailabilityByBranch = async (medicationId, branchId) 
   return response.data
 }
 
+/**
+ * Obtiene la disponibilidad de un medicamento en TODAS las sucursales (HU-04).
+ *
+ * Respuesta del backend:
+ * {
+ *   medicationId, medicationName, description, unit,
+ *   availabilityByBranch: [{ branchId, quantity, isAvailable, availabilityStatus }],
+ *   totalAvailable, branchesWithStock
+ * }
+ *
+ * @param {number} medicationId
+ * @returns {Promise<MedicationAvailabilityResponse>}
+ */
+export const getMedicationAvailabilityAllBranches = async (medicationId) => {
+  const response = await client.get(`${MEDICATIONS_BASE}/${medicationId}/availability/branches`)
+  return response.data
+}
+
 export const createMedicamento = async (payload) => {
   const response = await client.post(`${MEDICATIONS_BASE}`, payload)
   return response.data

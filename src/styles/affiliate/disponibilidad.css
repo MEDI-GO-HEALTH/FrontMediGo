@@ -1,0 +1,344 @@
+/* ─── Overlay ─────────────────────────────────────────────────────────── */
+.disp-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: dispFadeIn 0.2s ease;
+}
+
+@keyframes dispFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ─── Modal ───────────────────────────────────────────────────────────── */
+.disp-modal {
+  background: #fff;
+  border-radius: 16px;
+  width: min(560px, 96vw);
+  max-height: min(680px, 90dvh);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
+  animation: dispSlideUp 0.22s ease;
+  overflow: hidden;
+}
+
+@keyframes dispSlideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Header ──────────────────────────────────────────────────────────── */
+.disp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.4rem;
+  border-bottom: 1px solid #e4ecf0;
+  flex-shrink: 0;
+}
+
+.disp-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.disp-header-icon {
+  font-size: 1.6rem;
+  color: #0f6fa3;
+  flex-shrink: 0;
+}
+
+.disp-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f2d3f;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.disp-unit {
+  font-size: 0.8rem;
+  color: #496275;
+}
+
+.disp-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.3rem;
+  border-radius: 6px;
+  color: #496275;
+  display: flex;
+  align-items: center;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.disp-close:hover {
+  background: #f0f4f7;
+  color: #0f2d3f;
+}
+
+/* ─── Barra de estado polling ─────────────────────────────────────────── */
+.disp-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.4rem;
+  background: #f0f7fb;
+  border-bottom: 1px solid #d5e8f0;
+  flex-shrink: 0;
+}
+
+/* Indicador pulsante */
+.disp-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #9cbccc;
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+
+.disp-pulse.active {
+  background: #0f6fa3;
+  animation: pulsate 1s ease-in-out infinite;
+}
+
+@keyframes pulsate {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(1.3); }
+}
+
+.disp-status-text {
+  flex: 1;
+  font-size: 0.78rem;
+  color: #496275;
+}
+
+.disp-refresh-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.2rem;
+  border-radius: 4px;
+  color: #496275;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+
+.disp-refresh-btn:hover:not(:disabled) {
+  color: #0f6fa3;
+}
+
+.disp-refresh-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.disp-refresh-btn .material-symbols-outlined {
+  font-size: 1rem;
+}
+
+/* ─── Resumen ─────────────────────────────────────────────────────────── */
+.disp-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  padding: 0.8rem 1.4rem 0;
+  flex-shrink: 0;
+}
+
+.disp-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 10px;
+  font-size: 0.82rem;
+}
+
+.disp-summary-card .material-symbols-outlined {
+  font-size: 1.1rem;
+}
+
+.disp-summary-card--ok {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.disp-summary-card--total {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.disp-summary-num {
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.disp-summary-label {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+/* ─── Body / Lista ────────────────────────────────────────────────────── */
+.disp-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.8rem 1.4rem;
+}
+
+.disp-loading,
+.disp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 2.5rem 1rem;
+  color: #7a9aad;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.disp-loading {
+  flex-direction: row;
+  justify-content: center;
+}
+
+.disp-spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid #cde4f0;
+  border-top-color: #0f6fa3;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.disp-empty .material-symbols-outlined {
+  font-size: 2.5rem;
+  opacity: 0.4;
+}
+
+/* ─── Lista de sucursales ──────────────────────────────────────────────── */
+.disp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.disp-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e4ecf0;
+  border-radius: 10px;
+  background: #f8fbfd;
+  gap: 0.5rem;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+/* Sucursal actualmente seleccionada */
+.disp-item--selected {
+  background: #eef6fb;
+  border-color: #0f6fa3;
+}
+
+.disp-item-branch {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.disp-branch-icon {
+  font-size: 1.2rem;
+  color: #496275;
+  flex-shrink: 0;
+}
+
+.disp-item--selected .disp-branch-icon {
+  color: #0f6fa3;
+}
+
+.disp-branch-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #163041;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.disp-branch-tag {
+  font-size: 0.72rem;
+  color: #0f6fa3;
+  font-weight: 500;
+}
+
+/* ─── Badges de disponibilidad ─────────────────────────────────────────── */
+.disp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Verde = Disponible (Escenario 1) */
+.disp-badge--ok {
+  color: #166534;
+  background: #dcfce7;
+}
+
+/* Rojo = No disponible (Escenario 2) */
+.disp-badge--no {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.disp-badge-icon {
+  font-size: 0.9rem;
+}
+
+/* ─── Footer ──────────────────────────────────────────────────────────── */
+.disp-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.7rem 1.4rem;
+  border-top: 1px solid #e4ecf0;
+  background: #f8fbfd;
+  font-size: 0.78rem;
+  color: #7a9aad;
+  flex-shrink: 0;
+}
+
+.disp-footer-icon {
+  font-size: 0.95rem;
+}

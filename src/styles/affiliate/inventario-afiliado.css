@@ -77,6 +77,7 @@
 .affiliate-inventory-ok {
   display: inline-flex;
   align-items: center;
+  gap: 0.2rem;
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
   font-size: 0.8rem;
@@ -88,6 +89,7 @@
 .affiliate-inventory-no-stock {
   display: inline-flex;
   align-items: center;
+  gap: 0.2rem;
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
   font-size: 0.8rem;
@@ -145,6 +147,39 @@
   align-items: center;
   justify-content: center;
   line-height: 1;
+}
+
+/* ─── Celda de acciones ───────────────────────────────────────────────── */
+.affiliate-inventory-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+/* ─── Botón "Ver disponibilidad" en tabla (HU-04) ─────────────────────── */
+.disp-open-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #b6d4e3;
+  background: #fff;
+  color: #0f6fa3;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.disp-open-btn .material-symbols-outlined {
+  font-size: 1rem;
+}
+
+.disp-open-btn:hover {
+  background: #e8f4fb;
+  border-color: #0f6fa3;
 }
 
 /* ─── Botón "Agregar al carrito" en tabla ─────────────────────────────── */
