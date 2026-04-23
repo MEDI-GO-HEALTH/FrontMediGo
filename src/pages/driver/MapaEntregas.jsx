@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   acceptDriverOrder,
+  finalizeDelivery,
   getDriverCurrentOrder,
   getDriverMapSnapshot,
   startDriverShift,
@@ -22,7 +23,9 @@ const FALLBACK_DATA = {
   },
   selectedOrder: {
     id: 'PED-2031',
+    deliveryId: null,       // ID real del delivery para HU-10
     statusLabel: 'Pedido sugerido',
+    status: 'IN_ROUTE',     // 'IN_ROUTE' | 'DELIVERED'
     urgencyLabel: 'Urgente',
     estimatedTimeLabel: '18 min',
     distanceLabel: '4.8 km',
@@ -36,6 +39,12 @@ export default function MapaEntregas() {
   const [dashboardData, setDashboardData] = useState(FALLBACK_DATA);
   const [loading, setLoading] = useState(false);
   const [actionError, setActionError] = useState('');
+
+  // HU-10: estado de modal de confirmación y entrega completada
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [deliveryCompleted, setDeliveryCompleted] = useState(false);
+  const [deliveredAt, setDeliveredAt] = useState(null);
+
   const showLoader = useCappedLoading(loading, 3000);
 
   useEffect(() => {
@@ -109,15 +118,100 @@ export default function MapaEntregas() {
     }
   };
 
+  /** HU-10: repartidor presiona "Finalizar Entrega" → muestra modal de confirmación */
+  const handleFinalizeClick = () => {
+    setActionError('');
+    setShowConfirmModal(true);
+  };
+
+  /** HU-10: repartidor confirma en el modal → llama al backend */
+  const handleConfirmFinalize = async () => {
+    setShowConfirmModal(false);
+    setLoading(true);
+    setActionError('');
+
+    try {
+      const deliveryId = selectedOrder.deliveryId ?? selectedOrder.id;
+      const result = await finalizeDelivery(deliveryId);
+      const now = result?.deliveredAt ? new Date(result.deliveredAt) : new Date();
+      setDeliveredAt(now);
+      setDeliveryCompleted(true);
+      setDashboardData((prev) => ({
+        ...prev,
+        selectedOrder: {
+          ...prev.selectedOrder,
+          status: 'DELIVERED',
+          statusLabel: 'Entregado',
+        },
+      }));
+    } catch {
+      setActionError('No se pudo confirmar la entrega con el servidor. Por favor intenta nuevamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /** HU-10: repartidor cancela el modal → no hace nada */
+  const handleCancelFinalize = () => {
+    setShowConfirmModal(false);
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('medigo_token');
     localStorage.removeItem('medigo_user');
     navigate('/');
   };
 
+  /** Formatea fecha de entrega */
+  const fmtDeliveredAt = (date) =>
+    date
+      ? date.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+      : '';
+
   return (
     <div className="driver-map-page">
       <PageLoadingOverlay visible={showLoader} message="Cargando mapa de entregas..." />
+
+      {/* HU-10: Modal de confirmación de entrega */}
+      {showConfirmModal && (
+        <div className="delivery-confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+          <div className="delivery-confirm-modal">
+            <div className="delivery-confirm-icon">
+              <span className="material-symbols-outlined">local_shipping</span>
+            </div>
+            <h2 id="confirm-title">¿Confirmar entrega?</h2>
+            <p>
+              Estás por marcar el pedido <strong>#{selectedOrder.id}</strong> como entregado.
+              Esta acción no se puede deshacer.
+            </p>
+            <div className="delivery-confirm-address">
+              <span className="material-symbols-outlined">location_on</span>
+              {selectedOrder.destinationAddress}
+            </div>
+            <div className="delivery-confirm-actions">
+              <button
+                type="button"
+                id="btn-cancel-finalize"
+                className="delivery-confirm-btn--cancel"
+                onClick={handleCancelFinalize}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                id="btn-confirm-finalize"
+                className="delivery-confirm-btn--confirm"
+                onClick={handleConfirmFinalize}
+                disabled={loading}
+              >
+                <span className="material-symbols-outlined">check_circle</span>
+                Confirmar entrega
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="driver-layout">
         <aside className="driver-sidenav" aria-label="Navegacion de repartidor">
           <div className="driver-side-head">
@@ -210,13 +304,16 @@ export default function MapaEntregas() {
                 <span className="material-symbols-outlined">location_on</span>
               </div>
 
-              <div className="driver-marker truck-busy">
-                <span className="material-symbols-outlined">local_shipping</span>
-              </div>
-
-              <div className="driver-marker truck-free">
-                <span className="material-symbols-outlined">local_shipping</span>
-              </div>
+              {/* HU-10: marcador del repartidor cambia a "libre" tras la entrega */}
+              {deliveryCompleted ? (
+                <div className="driver-marker truck-free">
+                  <span className="material-symbols-outlined">local_shipping</span>
+                </div>
+              ) : (
+                <div className="driver-marker truck-busy">
+                  <span className="material-symbols-outlined">local_shipping</span>
+                </div>
+              )}
 
               <div className="driver-self-marker">
                 <div className="pulse" />
@@ -226,9 +323,11 @@ export default function MapaEntregas() {
                 <span className="tag">Tu ubicacion</span>
               </div>
 
-              <svg className="driver-route-svg" viewBox="0 0 1200 720" preserveAspectRatio="none" aria-hidden="true">
-                <path d="M 180 520 C 260 470, 340 410, 430 395 C 515 380, 575 420, 650 350 C 760 250, 820 220, 980 200" />
-              </svg>
+              {!deliveryCompleted && (
+                <svg className="driver-route-svg" viewBox="0 0 1200 720" preserveAspectRatio="none" aria-hidden="true">
+                  <path d="M 180 520 C 260 470, 340 410, 430 395 C 515 380, 575 420, 650 350 C 760 250, 820 220, 980 200" />
+                </svg>
+              )}
             </div>
 
             <div className="driver-search-floating">
@@ -258,59 +357,114 @@ export default function MapaEntregas() {
               </div>
             </div>
 
+            {/* ── Tarjeta de pedido ─── */}
             <article className="driver-order-card" aria-label="Detalle de pedido actual">
-              <div className="card-top">
-                <div>
-                  <span className="card-badge">{selectedOrder.statusLabel}</span>
-                  <h2 className="card-title">#{selectedOrder.id}</h2>
-                </div>
-
-                <span className="urgency-pill">
-                  <span className="material-symbols-outlined">priority_high</span>
-                  {selectedOrder.urgencyLabel}
-                </span>
-              </div>
-
-              <div className="card-stats">
-                <div className="stat-box">
-                  <small>ETA estimado</small>
-                  <p>
-                    <span className="material-symbols-outlined">schedule</span>
-                    {selectedOrder.estimatedTimeLabel}
+              {/* HU-10: Vista post-entrega */}
+              {deliveryCompleted ? (
+                <div className="delivery-success-panel" aria-live="polite">
+                  <div className="delivery-success-icon">
+                    <span className="material-symbols-outlined">task_alt</span>
+                  </div>
+                  <h2 className="delivery-success-title">¡Entrega completada!</h2>
+                  <p className="delivery-success-sub">
+                    Pedido <strong>#{selectedOrder.id}</strong> entregado exitosamente
                   </p>
+                  {deliveredAt && (
+                    <div className="delivery-success-time">
+                      <span className="material-symbols-outlined">schedule</span>
+                      Entregado a las {fmtDeliveredAt(deliveredAt)}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    id="btn-next-order"
+                    className="accept-order-btn"
+                    onClick={() => {
+                      setDeliveryCompleted(false);
+                      setDeliveredAt(null);
+                      setDashboardData(FALLBACK_DATA);
+                    }}
+                  >
+                    <span className="material-symbols-outlined">arrow_forward</span>
+                    Ver siguiente pedido
+                  </button>
                 </div>
+              ) : (
+                /* Vista normal del pedido */
+                <>
+                  <div className="card-top">
+                    <div>
+                      <span className="card-badge">{selectedOrder.statusLabel}</span>
+                      <h2 className="card-title">#{selectedOrder.id}</h2>
+                    </div>
 
-                <div className="stat-box">
-                  <small>Distancia</small>
-                  <p>
-                    <span className="material-symbols-outlined">route</span>
-                    {selectedOrder.distanceLabel}
-                  </p>
-                </div>
-              </div>
+                    <span className="urgency-pill">
+                      <span className="material-symbols-outlined">priority_high</span>
+                      {selectedOrder.urgencyLabel}
+                    </span>
+                  </div>
 
-              <div className="route-flow">
-                <div className="route-axis" aria-hidden="true">
-                  <span className="route-point start" />
-                  <span className="route-line" />
-                  <span className="route-point end" />
-                </div>
+                  <div className="card-stats">
+                    <div className="stat-box">
+                      <small>ETA estimado</small>
+                      <p>
+                        <span className="material-symbols-outlined">schedule</span>
+                        {selectedOrder.estimatedTimeLabel}
+                      </p>
+                    </div>
 
-                <div className="route-text">
-                  <small>Recoger en</small>
-                  <p>{selectedOrder.pickupAddress}</p>
+                    <div className="stat-box">
+                      <small>Distancia</small>
+                      <p>
+                        <span className="material-symbols-outlined">route</span>
+                        {selectedOrder.distanceLabel}
+                      </p>
+                    </div>
+                  </div>
 
-                  <small>Entregar en</small>
-                  <p>{selectedOrder.destinationAddress}</p>
-                </div>
-              </div>
+                  <div className="route-flow">
+                    <div className="route-axis" aria-hidden="true">
+                      <span className="route-point start" />
+                      <span className="route-line" />
+                      <span className="route-point end" />
+                    </div>
 
-              <button type="button" className="accept-order-btn" onClick={handleAcceptOrder} disabled={loading}>
-                <span className="material-symbols-outlined">check_circle</span>
-                {loading ? 'Procesando...' : 'Aceptar Pedido'}
-              </button>
+                    <div className="route-text">
+                      <small>Recoger en</small>
+                      <p>{selectedOrder.pickupAddress}</p>
 
-              {actionError ? <p style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: '#ba1a1a' }}>{actionError}</p> : null}
+                      <small>Entregar en</small>
+                      <p>{selectedOrder.destinationAddress}</p>
+                    </div>
+                  </div>
+
+                  {/* Botón principal HU-10: Finalizar Entrega (aparece cuando está EN_ROUTE) */}
+                  {selectedOrder.status === 'IN_ROUTE' ? (
+                    <button
+                      type="button"
+                      id="btn-finalize-delivery"
+                      className="finalize-delivery-btn"
+                      onClick={handleFinalizeClick}
+                      disabled={loading}
+                    >
+                      <span className="material-symbols-outlined">task_alt</span>
+                      {loading ? 'Procesando...' : 'Finalizar Entrega'}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="accept-order-btn"
+                      onClick={handleAcceptOrder}
+                      disabled={loading}
+                    >
+                      <span className="material-symbols-outlined">check_circle</span>
+                      {loading ? 'Procesando...' : 'Aceptar Pedido'}
+                    </button>
+                  )}
+
+                  {actionError ? <p style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: '#ba1a1a' }}>{actionError}</p> : null}
+                </>
+              )}
             </article>
 
             <div className="driver-map-controls" aria-label="Controles de mapa">

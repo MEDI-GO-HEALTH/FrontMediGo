@@ -718,3 +718,221 @@
     font-size: 1.35rem;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────
+   HU-10: Botón "Finalizar Entrega"
+──────────────────────────────────────────────────────────────────────── */
+.finalize-delivery-btn {
+  width: 100%;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.85rem;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #006a4e 0%, #00845f 100%);
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.4rem;
+  box-shadow: 0 10px 20px -8px rgba(0, 106, 78, 0.6);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.finalize-delivery-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 24px -8px rgba(0, 106, 78, 0.7);
+}
+
+.finalize-delivery-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   HU-10: Modal de confirmación de entrega
+──────────────────────────────────────────────────────────────────────── */
+.delivery-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.52);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+.delivery-confirm-modal {
+  background: #fff;
+  border-radius: 1.25rem;
+  padding: 2.2rem 2rem;
+  width: min(92%, 420px);
+  box-shadow: 0 28px 60px rgba(0, 0, 0, 0.22);
+  text-align: center;
+  animation: slideUp 0.25s ease;
+}
+
+.delivery-confirm-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #006a4e 0%, #00845f 100%);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.1rem;
+}
+
+.delivery-confirm-icon .material-symbols-outlined {
+  font-size: 32px;
+  font-variation-settings: 'FILL' 1;
+}
+
+.delivery-confirm-modal h2 {
+  margin: 0 0 0.6rem;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0c4a6e;
+}
+
+.delivery-confirm-modal p {
+  margin: 0 0 1rem;
+  color: #475569;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.delivery-confirm-address {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  background: #f1f5f9;
+  border-radius: 0.75rem;
+  padding: 0.7rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #0c4a6e;
+  margin-bottom: 1.5rem;
+}
+
+.delivery-confirm-actions {
+  display: flex;
+  gap: 0.8rem;
+}
+
+.delivery-confirm-btn--cancel {
+  flex: 1;
+  border: 2px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 0.8rem;
+  font-weight: 700;
+  color: #475569;
+  background: transparent;
+  transition: background 0.15s;
+}
+
+.delivery-confirm-btn--cancel:hover {
+  background: #f8fafc;
+}
+
+.delivery-confirm-btn--confirm {
+  flex: 2;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.8rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #006a4e 0%, #00845f 100%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  box-shadow: 0 8px 16px -6px rgba(0, 106, 78, 0.55);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.delivery-confirm-btn--confirm:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.delivery-confirm-btn--confirm:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   HU-10: Panel de éxito post-entrega (dentro de la tarjeta del pedido)
+──────────────────────────────────────────────────────────────────────── */
+.delivery-success-panel {
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+.delivery-success-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #006a4e 0%, #00845f 100%);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  box-shadow: 0 12px 24px -8px rgba(0, 106, 78, 0.5);
+  animation: bounceIn 0.4s ease;
+}
+
+.delivery-success-icon .material-symbols-outlined {
+  font-size: 36px;
+  font-variation-settings: 'FILL' 1;
+}
+
+.delivery-success-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #006a4e;
+}
+
+.delivery-success-sub {
+  margin: 0 0 0.9rem;
+  color: #475569;
+  font-size: 0.82rem;
+}
+
+.delivery-success-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #f0fdf4;
+  color: #16a34a;
+  font-weight: 700;
+  font-size: 0.88rem;
+  border-radius: 9999px;
+  padding: 0.4rem 0.9rem;
+  margin-bottom: 1.2rem;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Keyframes
+──────────────────────────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(24px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes bounceIn {
+  0%   { transform: scale(0.6); opacity: 0; }
+  70%  { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
+

@@ -19,6 +19,7 @@ export const driverDeliveryEndpoints = {
   currentOrder: '/api/logistics/deliveries/active',
   acceptOrder: '/api/logistics/deliveries/assign',
   startShift: '/api/logistics/deliveries/active', // Mocked to active
+  completeDelivery: (id) => `/api/logistics/deliveries/${id}/complete`,
 }
 
 export async function getDriverMapSnapshot() {
@@ -53,5 +54,18 @@ export async function startDriverShift(payload = {}) {
     return [];
   }
   const { data } = await client.get(`${driverDeliveryEndpoints.startShift}?deliveryPersonId=${id}`)
+  return data
+}
+
+/**
+ * HU-10: El repartidor confirma la entrega de un pedido.
+ * Llama a PUT /api/logistics/deliveries/{id}/complete
+ * Cambia estado a DELIVERED y registra fecha/hora de entrega.
+ *
+ * @param {number} deliveryId  ID de la entrega a confirmar
+ * @returns {Promise<{id, orderId, deliveryPersonId, status, assignedAt, deliveredAt}>}
+ */
+export async function finalizeDelivery(deliveryId) {
+  const { data } = await client.put(driverDeliveryEndpoints.completeDelivery(deliveryId))
   return data
 }
