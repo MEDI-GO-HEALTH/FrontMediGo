@@ -126,7 +126,7 @@ export default function MapaPedidos() {
   const toastTimerRef = useRef(null)
 
   // ── Estado del pedido en tiempo real vía WebSocket ───────────────────
-  const { status: wsStatus, deliveryId: wsDeliveryId, deliveredAt: wsDeliveredAt, connected: wsOrderConnected } =
+  const { status: wsStatus, deliveryId: wsDeliveryId, deliveredAt: wsDeliveredAt } =
     useOrderStatusWebSocket({ orderId })
 
   // ── Carga inicial del estado via HTTP (snapshot) ─────────────────────
@@ -168,7 +168,7 @@ export default function MapaPedidos() {
   // Posición GPS del repartidor asignado vía WebSocket
   // Usa deliveryId del HTTP si está disponible; si no, lo saca del driver asignado en el polling
   const effectiveDeliveryId = deliveryId ?? assignedDriver?.deliveryId ?? null
-  const { position: wsDriverPos, connected: wsLocationConnected } = useDriverLocationWebSocket({
+  const { position: wsDriverPos } = useDriverLocationWebSocket({
     deliveryId: effectiveDeliveryId,
   })
 
@@ -359,36 +359,6 @@ export default function MapaPedidos() {
         </aside>
       </div>
 
-      {/* ── Panel de diagnóstico WebSocket (visible en móvil) ─────────── */}
-      {(
-        <details
-          style={{
-            position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999,
-            background: '#111', color: '#0f0', fontFamily: 'monospace', fontSize: 12,
-            padding: '6px 10px', maxHeight: '40vh', overflowY: 'auto',
-          }}
-        >
-          <summary style={{ cursor: 'pointer', color: '#0f0', fontWeight: 'bold' }}>
-            🔌 WS Debug (toca para expandir)
-          </summary>
-          <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-            {JSON.stringify({
-              wsUrl: (typeof window !== 'undefined' ? window.__WS_URL__ : null) || 'ver api.js',
-              orderId,
-              deliveryId,
-              effectiveDeliveryId,
-              orderWS: wsOrderConnected ? 'CONECTADO' : 'DESCONECTADO',
-              locationWS: wsLocationConnected ? 'CONECTADO' : 'DESCONECTADO',
-              wsOrderStatus: wsStatus,
-              orderStatus,
-              driversCount: drivers.length,
-              drivers: drivers.map(d => ({ id: d.id, name: d.name, status: d.status, orderId: d.orderId })),
-              assignedDriver: assignedDriver ? { id: assignedDriver.id, name: assignedDriver.name, status: assignedDriver.status } : null,
-              wsDriverPos,
-            }, null, 2)}
-          </pre>
-        </details>
-      )}
     </AffiliateShell>
   )
 }

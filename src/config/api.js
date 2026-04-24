@@ -44,12 +44,9 @@ const resolveAuctionWsUrl = () => {
   return gatewayWs.replace('ezequiel-gateway', 'medi-go-app')
 }
 
-const _auctionWsURL = resolveAuctionWsUrl()
-if (typeof window !== 'undefined') window.__WS_URL__ = _auctionWsURL
-
 export const API_CONFIG = {
   baseURL: resolveApiBaseUrl(),
-  auctionWsURL: _auctionWsURL,
+  auctionWsURL: resolveAuctionWsUrl(),
   timeoutMs: Number(import.meta.env.VITE_API_TIMEOUT_MS || 15000),
   enableTraceIdHeader: String(import.meta.env.VITE_ENABLE_TRACE_ID_HEADER || 'false').toLowerCase() === 'true',
   useAuthMock: String(import.meta.env.VITE_USE_AUTH_MOCK || 'false').toLowerCase() === 'true',
