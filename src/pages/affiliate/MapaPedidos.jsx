@@ -14,6 +14,7 @@ import 'leaflet/dist/leaflet.css'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet'
 import { getOrderStatus } from '../../api/affiliateOrderService'
+import client from '../../api/client'
 import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
 import AffiliateShell from '../../components/layout/AffiliateShell'
 import useDriverLocations from '../../hooks/useDriverLocations'
@@ -171,6 +172,14 @@ export default function MapaPedidos() {
   })
 
   const orderDelivered = orderStatus === 'DELIVERED'
+
+  // ── Debug: consulta directa al endpoint de entregas activas ──────────
+  const [debugDeliveries, setDebugDeliveries] = useState(null)
+  useEffect(() => {
+    client.get('/api/logistics/debug/deliveries/active')
+      .then(r => setDebugDeliveries(r.data))
+      .catch(e => setDebugDeliveries({ error: e?.response?.status ?? e?.message }))
+  }, [])
 
   const handleNuevoPedido = () => {
     setActiveOrder(null)
@@ -391,6 +400,7 @@ export default function MapaPedidos() {
               drivers: drivers.map(d => ({ id: d.id, name: d.name, status: d.status, orderId: d.orderId })),
               assignedDriver: assignedDriver ? { id: assignedDriver.id, name: assignedDriver.name, status: assignedDriver.status } : null,
               wsDriverPos,
+              debugActiveDeliveries: debugDeliveries,
             }, null, 2)}
           </pre>
         </details>
