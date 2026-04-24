@@ -1,7 +1,7 @@
 const trimTrailingSlash = (value = '') => value.replace(/\/$/, '')
 
 const DEFAULT_PROD_API_BASE_URL = 'https://ezequiel-gateway-etcrh9dxg9dwhng4.canadacentral-01.azurewebsites.net'
-const DEFAULT_DEV_API_BASE_URL = 'http://localhost:8081'
+const DEFAULT_DEV_API_BASE_URL = ''  // Proxy de Vite reenvía /api/* → localhost:8081
 const DEFAULT_API_BASE_URL = import.meta.env.DEV ? DEFAULT_DEV_API_BASE_URL : DEFAULT_PROD_API_BASE_URL
 const DEFAULT_DEV_AUCTION_WS_URL = 'ws://localhost:8080/ws'
 
@@ -24,19 +24,24 @@ const resolveApiBaseUrl = () => {
 }
 
 const resolveAuctionWsUrl = () => {
-  const explicitWsUrl = normalizeWsUrl(import.meta.env.VITE_AUCTION_WS_URL || '')
-  if (explicitWsUrl) {
-    return explicitWsUrl
-  }
+  // VITE_WS_URL toma precedencia — cubre tanto subastas como ubicación de repartidores
+  const wsUrl = normalizeWsUrl(import.meta.env.VITE_WS_URL || '')
+  if (wsUrl) return wsUrl
 
-  // Camino recomendado: en desarrollo conectar subastas por WS directo al backend.
+  const explicitWsUrl = normalizeWsUrl(import.meta.env.VITE_AUCTION_WS_URL || '')
+  if (explicitWsUrl) return explicitWsUrl
+
+  // En desarrollo: conectar directo al backend (puerto 8080)
   if (import.meta.env.DEV) {
     return DEFAULT_DEV_AUCTION_WS_URL
   }
 
-  // Fallback para producción cuando no se define VITE_AUCTION_WS_URL.
+  // En producción sin VITE_WS_URL: derivar del backend Azure
+  // El gateway de Azure no hace proxy WebSocket — apuntamos al backend directamente
   const httpBase = resolveApiBaseUrl().replace(/\/api\/?$/, '')
-  return normalizeWsUrl(httpBase) + '/ws'
+  const gatewayWs = normalizeWsUrl(httpBase) + '/ws'
+  // Sustituir el dominio del gateway por el del backend si coincide el patrón conocido
+  return gatewayWs.replace('ezequiel-gateway', 'medi-go-app')
 }
 
 export const API_CONFIG = {
