@@ -167,8 +167,10 @@ export default function MapaPedidos() {
   const showLoader = useCappedLoading(isLoading, 1500)
 
   // Posición GPS del repartidor asignado vía WebSocket
+  // Usa deliveryId del HTTP si está disponible; si no, lo saca del driver asignado en el polling
+  const effectiveDeliveryId = deliveryId ?? assignedDriver?.deliveryId ?? null
   const { position: wsDriverPos, connected: wsLocationConnected } = useDriverLocationWebSocket({
-    deliveryId: deliveryId ?? null,
+    deliveryId: effectiveDeliveryId,
   })
 
   const orderDelivered = orderStatus === 'DELIVERED'
@@ -392,6 +394,7 @@ export default function MapaPedidos() {
               wsUrl: (typeof window !== 'undefined' ? window.__WS_URL__ : null) || 'ver api.js',
               orderId,
               deliveryId,
+              effectiveDeliveryId,
               orderWS: wsOrderConnected ? 'CONECTADO' : 'DESCONECTADO',
               locationWS: wsLocationConnected ? 'CONECTADO' : 'DESCONECTADO',
               wsOrderStatus: wsStatus,

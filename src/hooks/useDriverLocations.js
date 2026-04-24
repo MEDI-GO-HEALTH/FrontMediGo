@@ -27,24 +27,29 @@ export default function useDriverLocations(pollIntervalMs = POLL_INTERVAL_MS, or
 
       if (dashboard?.drivers && Array.isArray(dashboard.drivers) && dashboard.drivers.length > 0) {
         setDrivers(
-          dashboard.drivers.map((d) => ({
-            id: d.id,
-            name: d.name || `Repartidor ${d.id}`,
-            lat: Number(d.lat),
-            lng: Number(d.lng),
-            status: d.status || 'BUSY',
-            estimatedTime: d.estimatedTime ?? null,
-            orderId: d.orderId ?? null,
-            lastUpdate: new Date(),
-          }))
+          dashboard.drivers.map((d) => {
+            // Si el backend ya marcó ASSIGNED_TO_ME úsalo; si no, detectar por orderId coincidente
+            const status = d.status === 'ASSIGNED_TO_ME' || (orderId != null && d.orderId === orderId)
+              ? 'ASSIGNED_TO_ME'
+              : (d.status || 'BUSY')
+            return {
+              id: d.id,
+              name: d.name || `Repartidor ${d.id}`,
+              lat: Number(d.lat),
+              lng: Number(d.lng),
+              status,
+              deliveryId: d.deliveryId ?? null,
+              estimatedTime: d.estimatedTime ?? null,
+              orderId: d.orderId ?? null,
+              lastUpdate: new Date(),
+            }
+          })
         )
       } else {
-        // Sin datos reales → lista vacía
         setDrivers([])
       }
     } catch {
-      // API no disponible → lista vacía
-      setDrivers([])
+      // API no disponible → mantener lista actual sin borrarla
     } finally {
       setLastUpdated(new Date())
       if (isFirstLoad) setIsLoading(false)
