@@ -126,7 +126,7 @@ export default function MapaPedidos() {
   const toastTimerRef = useRef(null)
 
   // ── Estado del pedido en tiempo real vía WebSocket ───────────────────
-  const { status: wsStatus, deliveryId: wsDeliveryId, deliveredAt: wsDeliveredAt } =
+  const { status: wsStatus, deliveryId: wsDeliveryId, deliveredAt: wsDeliveredAt, connected: wsOrderConnected } =
     useOrderStatusWebSocket({ orderId })
 
   // ── Carga inicial del estado via HTTP (snapshot) ─────────────────────
@@ -166,7 +166,7 @@ export default function MapaPedidos() {
   const showLoader = useCappedLoading(isLoading, 1500)
 
   // Posición GPS del repartidor asignado vía WebSocket
-  const { position: wsDriverPos } = useDriverLocationWebSocket({
+  const { position: wsDriverPos, connected: wsLocationConnected } = useDriverLocationWebSocket({
     deliveryId: deliveryId ?? null,
   })
 
@@ -365,6 +365,35 @@ export default function MapaPedidos() {
           </div>
         </aside>
       </div>
+
+      {/* ── Panel de diagnóstico WebSocket (visible en móvil) ─────────── */}
+      {orderId && (
+        <details
+          style={{
+            position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999,
+            background: '#111', color: '#0f0', fontFamily: 'monospace', fontSize: 12,
+            padding: '6px 10px', maxHeight: '40vh', overflowY: 'auto',
+          }}
+        >
+          <summary style={{ cursor: 'pointer', color: '#0f0', fontWeight: 'bold' }}>
+            🔌 WS Debug (toca para expandir)
+          </summary>
+          <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+            {JSON.stringify({
+              wsUrl: (typeof window !== 'undefined' ? window.__WS_URL__ : null) || 'ver api.js',
+              orderId,
+              deliveryId,
+              orderWS: wsOrderConnected ? 'CONECTADO' : 'DESCONECTADO',
+              locationWS: wsLocationConnected ? 'CONECTADO' : 'DESCONECTADO',
+              wsOrderStatus: wsStatus,
+              orderStatus,
+              driversCount: drivers.length,
+              assignedDriver: assignedDriver ? { id: assignedDriver.id, name: assignedDriver.name, status: assignedDriver.status } : null,
+              wsDriverPos,
+            }, null, 2)}
+          </pre>
+        </details>
+      )}
     </AffiliateShell>
   )
 }
