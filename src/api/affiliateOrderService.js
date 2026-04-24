@@ -1,40 +1,65 @@
 /**
- * affiliateOrderService.js — Consulta de estado de pedidos del afiliado (HU-10)
+ * affiliateOrderService.js — Pedidos del afiliado
  *
- * Permite al panel del cliente saber cuando su pedido fue marcado como ENTREGADO
- * por el repartidor, para ocultar el mapa en vivo y mostrar la hora de entrega.
+ * Cubre el flujo completo:
+ *  1. confirmOrder()  → POST /api/orders/{branchId}/confirm
+ *                       Convierte el carrito PENDING en orden CONFIRMED
+ *  2. getOrderStatus()→ GET /api/logistics/orders/{orderId}/status
+ *                       Polling del estado para saber cuándo llega el pedido
+ *  3. getMyOrders()   → GET /api/orders/affiliate/{affiliateId}
+ *                       Historial de órdenes del afiliado
  */
 import client from './client'
 
-const ENDPOINTS = {
-  ordersByAffiliate: '/api/orders',                 // GET ?affiliateId=X → lista de órdenes
-  orderStatus: (orderId) => `/api/logistics/orders/${orderId}/status`,  // GET → estado del pedido
+const getAffiliateId = () => {
+  try {
+    return Number(JSON.parse(localStorage.getItem('medigo_user') || '{}')?.id) || null
+  } catch {
+    return null
+  }
 }
 
 /**
- * Obtiene todas las órdenes del afiliado (cualquier estado).
- * Útil para detectar si la orden más reciente cambió a DELIVERED.
+ * Confirma el carrito activo convirtiéndolo en una orden CONFIRMED.
  *
- * @param {number} affiliateId
- * @returns {Promise<Array>} lista de órdenes
+ * Llama a POST /api/orders/{branchId}/confirm?affiliateId={affiliateId}
+ * con la dirección de entrega.
+ *
+ * @param {{ branchId: number, street: string, streetNumber: string, city: string, commune: string, latitude?: number, longitude?: number }} payload
+ * @returns {Promise<{ id: number, orderNumber: string, status: string, totalPrice: number, items: Array }>}
  */
-export async function getAffiliateOrders(affiliateId) {
-  const { data } = await client.get(ENDPOINTS.ordersByAffiliate, {
-    params: { affiliateId },
-  })
-  return Array.isArray(data) ? data : []
-}
+export async function confirmOrder({ branchId, street, streetNumber, city, commune, latitude, longitude }) {
+  const affiliateId = getAffiliateId()
+  if (!affiliateId) throw new Error('No se encontró el ID del afiliado')
 
-/**
- * Consulta el estado actual de un pedido específico.
- * HU-10 Escenario 2: cliente consulta si su pedido fue entregado.
- *
- * @param {number} orderId
- * @returns {Promise<{orderId: number, status: string, deliveredAt: string}>}
- */
-export async function getOrderStatus(orderId) {
-  const { data } = await client.get(ENDPOINTS.orderStatus(orderId))
+  const { data } = await client.post(
+    `/api/orders/${branchId}/confirm`,
+    { street, streetNumber, city, commune, latitude, longitude },
+    { params: { affiliateId } },
+  )
   return data
 }
 
-export const affiliateOrderEndpoints = ENDPOINTS
+/**
+ * Consulta el estado actual de una orden específica.
+ * HU-10: el afiliado sabe cuándo su pedido fue marcado DELIVERED.
+ *
+ * @param {number} orderId
+ * @returns {Promise<{ orderId: number, status: string, deliveredAt: string|null }>}
+ */
+export async function getOrderStatus(orderId) {
+  const { data } = await client.get(`/api/logistics/orders/${orderId}/status`)
+  return data
+}
+
+/**
+ * Obtiene todas las órdenes del afiliado autenticado.
+ *
+ * @returns {Promise<Array>}
+ */
+export async function getMyOrders() {
+  const affiliateId = getAffiliateId()
+  if (!affiliateId) return []
+  const { data } = await client.get(`/api/orders/affiliate/${affiliateId}`)
+  return Array.isArray(data) ? data : []
+}

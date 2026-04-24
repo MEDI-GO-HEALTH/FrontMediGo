@@ -203,24 +203,27 @@
 /* ─── Mensaje sin repartidores (Escenario 8) ─────────────────────────── */
 .map-no-drivers {
   position: absolute;
-  inset: 0;
-  z-index: 900;
-  display: flex;
-  flex-direction: column;
+  bottom: 0.9rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 800;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.6rem;
-  background: rgba(248, 251, 253, 0.9);
+  gap: 0.45rem;
+  background: rgba(255, 255, 255, 0.95);
   color: #496275;
-  font-size: 0.92rem;
-  font-weight: 500;
-  text-align: center;
-  padding: 2rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 .map-no-drivers .material-symbols-outlined {
-  font-size: 3rem;
-  opacity: 0.35;
+  font-size: 1rem;
+  opacity: 0.55;
 }
 
 /* ─── Tarjeta del repartidor asignado en el panel ────────────────────── */
@@ -283,6 +286,7 @@
 .map-viewport {
   flex: 1;
   min-width: 0;
+  position: relative;
 }
 
 .map-surface {
@@ -831,5 +835,130 @@
 
 .route-status--delivered {
   color: #22c55e !important;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Sin pedido activo
+──────────────────────────────────────────────────────────────────────── */
+.map-no-order {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem 2rem;
+  background: #f8f9fb;
+  text-align: center;
+}
+
+.map-no-order__icon {
+  font-size: 4rem;
+  color: #c1cbd5;
+  font-variation-settings: 'FILL' 0;
+}
+
+.map-no-order h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #475569;
+}
+
+.map-no-order p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #94a3b8;
+  max-width: 380px;
+  line-height: 1.55;
+}
+
+.panel-no-order {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem 0;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.panel-no-order .material-symbols-outlined {
+  font-size: 2rem;
+  opacity: 0.4;
+}
+
+.panel-no-order p {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Tarjeta de seguimiento del pedido activo
+──────────────────────────────────────────────────────────────────────── */
+.order-tracking-card {
+  background: #f0f7ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.85rem;
+  padding: 0.9rem 1rem;
+}
+
+.order-tracking-number {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #003358;
+}
+
+.order-tracking-status {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1d4b7f;
+}
+
+.order-status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+.order-status-dot--confirmed        { background: #0284c7; }
+.order-status-dot--pending_shipping { background: #7c3aed; }
+.order-status-dot--assigned         { background: #eab308; }
+.order-status-dot--in_route         { background: #f97316; animation: statusPulse 1.5s ease-in-out infinite; }
+.order-status-dot--delivered        { background: #22c55e; }
+.order-status-dot--cancelled        { background: #ef4444; }
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.55; transform: scale(1.3); }
+}
+
+/* Botón "Hacer otro pedido" en panel de entrega completada */
+.order-delivered-new-btn {
+  margin-top: 1rem;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1.75rem;
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: #fff;
+  background: linear-gradient(135deg, #003358 0%, #0284c7 100%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  box-shadow: 0 8px 20px -6px rgba(0, 51, 88, 0.4);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.order-delivered-new-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -6px rgba(0, 51, 88, 0.5);
 }
 

@@ -1,11 +1,12 @@
 /**
- * MapaPedidos.jsx — Mapa en vivo con ubicación de repartidores (HU-09/HU-10)
+ * MapaPedidos.jsx — Mapa en vivo con seguimiento del pedido (HU-09/HU-10)
  *
- * HU-09: Muestra un mapa Leaflet con todos los repartidores activos en la zona.
- * HU-10: Cuando el pedido está en estado DELIVERED:
- *   - Oculta el mapa en vivo
- *   - Muestra el panel de confirmación de entrega con hora
- *   - Emite notificación mock al cliente
+ * HU-09: Mapa Leaflet con repartidores activos en la zona.
+ * HU-10: Polling del estado del pedido activo cada 8 s.
+ *        Cuando el backend devuelve status=DELIVERED → muestra panel de confirmación.
+ *
+ * Lee el pedido activo desde localStorage['medigo_active_order'] que guarda
+ * CheckoutModal al confirmar el pedido.
  */
 
 import L from 'leaflet'
@@ -16,6 +17,7 @@ import { getOrderStatus } from '../../api/affiliateOrderService'
 import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
 import AffiliateShell from '../../components/layout/AffiliateShell'
 import useDriverLocations from '../../hooks/useDriverLocations'
+import useDriverLocationWebSocket from '../../hooks/useDriverLocationWebSocket'
 import useCappedLoading from '../../hooks/useCappedLoading'
 import '../../styles/affiliate/perfil-afiliado.css'
 import '../../styles/affiliate/mapa-pedidos.css'
@@ -23,7 +25,7 @@ import '../../styles/affiliate/mapa-pedidos.css'
 // ── Configuración del mapa ────────────────────────────────────────────
 const BOGOTA_CENTER = [4.711, -74.0721]
 const INITIAL_ZOOM = 14
-const ORDER_POLL_INTERVAL_MS = 8_000   // HU-10: revisión de estado cada 8 s
+const ORDER_POLL_INTERVAL_MS = 8_000
 
 // ── Colores y etiquetas por estado ───────────────────────────────────
 const STATUS_CONFIG = {
@@ -38,11 +40,21 @@ const STATUS_POPUP = {
   BUSY:           (name) => `Repartidor ocupado: ${name} — Entregando otro pedido`,
 }
 
-/** Crea un icono Leaflet personalizado (divIcon) para cada estado. */
+// ── Etiqueta legible para el estado del pedido ───────────────────────
+const ORDER_STATUS_LABEL = {
+  PENDING:          'Pendiente',
+  CONFIRMED:        'Confirmado — esperando repartidor',
+  PENDING_SHIPPING: 'Preparando envío',
+  ASSIGNED:         'Repartidor asignado',
+  IN_ROUTE:         'En camino',
+  DELIVERED:        'Entregado',
+  CANCELLED:        'Cancelado',
+}
+
+/** Crea icono Leaflet para cada estado del repartidor. */
 const createDriverIcon = (status) => {
   const { bgClass } = STATUS_CONFIG[status] ?? STATUS_CONFIG.BUSY
   const pulseHtml = status === 'ASSIGNED_TO_ME' ? '<div class="driver-pin__pulse"></div>' : ''
-
   return L.divIcon({
     className: '',
     html: `<div class="driver-pin ${bgClass}" role="img" aria-label="${STATUS_CONFIG[status]?.label ?? 'Repartidor'}">
@@ -55,48 +67,44 @@ const createDriverIcon = (status) => {
   })
 }
 
-/** Formatea fecha de última actualización. */
 const fmtTime = (date) =>
   date ? date.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'
 
-/** Formatea hora de entrega (HH:MM). */
 const fmtDeliveredAt = (isoStr) => {
   if (!isoStr) return '—'
+  try { return new Date(isoStr).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) }
+  catch { return isoStr }
+}
+
+// ── Lee el pedido activo de localStorage ─────────────────────────────
+const readActiveOrder = () => {
   try {
-    return new Date(isoStr).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+    return JSON.parse(localStorage.getItem('medigo_active_order') || 'null')
   } catch {
-    return isoStr
+    return null
   }
 }
 
-// ── Componente de marcador individual ────────────────────────────────
+// ── Marcador individual de repartidor ────────────────────────────────
 function DriverMarker({ driver }) {
   const icon = useMemo(() => createDriverIcon(driver.status), [driver.status])
   const popupText = STATUS_POPUP[driver.status]?.(driver.name) ?? driver.name
   const statusCfg = STATUS_CONFIG[driver.status] ?? STATUS_CONFIG.BUSY
-
   return (
-    <Marker
-      key={driver.id}
-      position={[driver.lat, driver.lng]}
-      icon={icon}
-      aria-label={popupText}
-    >
+    <Marker position={[driver.lat, driver.lng]} icon={icon} aria-label={popupText}>
       <Popup>
         <div className="driver-popup">
           <div className="driver-popup__dot" style={{ background: statusCfg.color }} />
           <div className="driver-popup__body">
             <p className="driver-popup__name">{driver.name}</p>
             <p className="driver-popup__status">{popupText}</p>
-            {driver.estimatedTime && driver.status === 'ASSIGNED_TO_ME' ? (
+            {driver.estimatedTime && driver.status === 'ASSIGNED_TO_ME' && (
               <p className="driver-popup__eta">
                 <span className="material-symbols-outlined">schedule</span>
                 Tiempo estimado: {driver.estimatedTime}
               </p>
-            ) : null}
-            <p className="driver-popup__update">
-              Actualizado: {fmtTime(driver.lastUpdate)}
-            </p>
+            )}
+            <p className="driver-popup__update">Actualizado: {fmtTime(driver.lastUpdate)}</p>
           </div>
         </div>
       </Popup>
@@ -104,86 +112,91 @@ function DriverMarker({ driver }) {
   )
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────
-const getAffiliateId = () => {
-  try {
-    const user = JSON.parse(localStorage.getItem('medigo_user') || '{}')
-    return user?.currentOrderId ?? user?.activeOrderId ?? null
-  } catch {
-    return null
-  }
-}
-
 // ── Componente principal ──────────────────────────────────────────────
 export default function MapaPedidos() {
   const { drivers, assignedDriver, isLoading, lastUpdated, noDrivers } = useDriverLocations()
   const showLoader = useCappedLoading(isLoading, 1500)
-  const [routeData] = useState({ origin: 'Almacen Central Norte', destination: 'EPS Sanitas Teusaquillo', status: 'En Camino' })
 
-  // HU-10: estado de entrega
-  const [orderDelivered, setOrderDelivered] = useState(false)
-  const [deliveredAt, setDeliveredAt] = useState(null)
-  const [showToast, setShowToast] = useState(false)
+  // Pedido activo leído de localStorage
+  const [activeOrder, setActiveOrder] = useState(readActiveOrder)
+  const orderId = activeOrder?.orderId ?? null
+
+  // Estado del pedido (del backend)
+  const [orderStatus, setOrderStatus]   = useState(null)   // string: CONFIRMED, ASSIGNED, IN_ROUTE, DELIVERED…
+  const [deliveredAt, setDeliveredAt]   = useState(null)
+  const [deliveryId, setDeliveryId]     = useState(null)   // ID de la entrega (para WebSocket)
+  const [showToast, setShowToast]       = useState(false)
   const toastTimerRef = useRef(null)
-  const pollRef = useRef(null)
+  const pollRef       = useRef(null)
 
-  /** HU-10: muestra el toast de notificación por 5 segundos */
+  // Posición en tiempo real del repartidor asignado vía WebSocket
+  const { position: wsDriverPos } = useDriverLocationWebSocket({
+    deliveryId: deliveryId ?? null,
+  })
+
+  const orderDelivered = orderStatus === 'DELIVERED'
+
+  /** Muestra el toast por 5 s */
   const triggerToast = useCallback(() => {
     setShowToast(true)
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
     toastTimerRef.current = setTimeout(() => setShowToast(false), 5000)
   }, [])
 
-  /** HU-10: polling para detectar si el pedido fue entregado */
+  /** Polling del estado del pedido */
   useEffect(() => {
-    const orderId = getAffiliateId()
     if (!orderId) return
 
-    const checkOrderStatus = async () => {
+    const check = async () => {
       try {
         const result = await getOrderStatus(orderId)
-        if (result?.status === 'DELIVERED' && !orderDelivered) {
-          setOrderDelivered(true)
-          setDeliveredAt(result.deliveredAt || null)
-          triggerToast()
-        }
+        const newStatus = result?.status
+        if (!newStatus) return
+
+        // Guardar deliveryId para el WebSocket de ubicación
+        if (result.deliveryId) setDeliveryId(result.deliveryId)
+
+        setOrderStatus((prev) => {
+          if (newStatus === 'DELIVERED' && prev !== 'DELIVERED') {
+            setDeliveredAt(result.deliveredAt || new Date().toISOString())
+            triggerToast()
+            localStorage.removeItem('medigo_active_order')
+          }
+          return newStatus
+        })
       } catch {
-        // API no disponible - mantener estado actual
+        // API no disponible — mantener estado actual
       }
     }
 
-    checkOrderStatus()
-    pollRef.current = setInterval(checkOrderStatus, ORDER_POLL_INTERVAL_MS)
-
+    check()
+    pollRef.current = setInterval(check, ORDER_POLL_INTERVAL_MS)
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
     }
-  }, [orderDelivered, triggerToast])
+  }, [orderId, triggerToast])
+
+  const handleNuevoPedido = () => {
+    setActiveOrder(null)
+    setOrderStatus(null)
+    setDeliveredAt(null)
+    localStorage.removeItem('medigo_active_order')
+  }
 
   return (
     <AffiliateShell active="map" contentMode="fluid">
       <PageLoadingOverlay visible={showLoader} message="Sincronizando mapa de repartidores..." />
 
-      {/* HU-10: Toast de notificación "Tu pedido ha sido entregado" */}
+      {/* Toast de entrega */}
       {showToast && (
-        <div
-          className="delivery-toast"
-          role="status"
-          aria-live="polite"
-          aria-label="Notificación de entrega"
-        >
+        <div className="delivery-toast" role="status" aria-live="polite" aria-label="Notificación de entrega">
           <span className="material-symbols-outlined delivery-toast__icon">task_alt</span>
           <div>
             <p className="delivery-toast__title">¡Tu pedido ha sido entregado!</p>
             <p className="delivery-toast__sub">Revisa los detalles en tu panel de seguimiento.</p>
           </div>
-          <button
-            type="button"
-            className="delivery-toast__close"
-            aria-label="Cerrar notificación"
-            onClick={() => setShowToast(false)}
-          >
+          <button type="button" className="delivery-toast__close" aria-label="Cerrar notificación" onClick={() => setShowToast(false)}>
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
@@ -191,17 +204,19 @@ export default function MapaPedidos() {
 
       <div className="affiliate-map-workspace">
 
-        {/* ── HU-10: Panel de entrega completada (reemplaza el mapa) ─── */}
-        {orderDelivered ? (
-          <section
-            className="order-delivered-panel"
-            aria-label="Pedido entregado"
-            role="status"
-          >
+        {/* ── Sin pedido activo ─────────────────────────────────────────── */}
+        {!activeOrder && !orderDelivered ? (
+          <section className="map-no-order" aria-label="Sin pedido activo">
+            <span className="material-symbols-outlined map-no-order__icon">receipt_long</span>
+            <h3>No tienes un pedido activo</h3>
+            <p>Ve al catálogo de medicamentos, agrega productos al carrito y confirma tu pedido para ver el seguimiento aquí.</p>
+          </section>
+
+        ) : orderDelivered ? (
+          /* ── Panel de entrega completada ─────────────────────────────── */
+          <section className="order-delivered-panel" aria-label="Pedido entregado" role="status">
             <div className="order-delivered-animation">
-              <span className="material-symbols-outlined order-delivered-icon">
-                task_alt
-              </span>
+              <span className="material-symbols-outlined order-delivered-icon">task_alt</span>
               <div className="order-delivered-pulse" />
             </div>
             <h2 className="order-delivered-title">¡Pedido Entregado!</h2>
@@ -210,50 +225,42 @@ export default function MapaPedidos() {
             {deliveredAt && (
               <div className="order-delivered-time">
                 <span className="material-symbols-outlined">schedule</span>
-                <span>
-                  Entregado a las <strong>{fmtDeliveredAt(deliveredAt)}</strong>
-                </span>
+                <span>Entregado a las <strong>{fmtDeliveredAt(deliveredAt)}</strong></span>
               </div>
             )}
 
-            <div className="order-delivered-details">
-              <div className="order-delivered-detail-row">
-                <span className="material-symbols-outlined">location_on</span>
-                <span>{routeData.destination}</span>
+            {activeOrder && (
+              <div className="order-delivered-details">
+                <div className="order-delivered-detail-row">
+                  <span className="material-symbols-outlined">tag</span>
+                  <span>Pedido {activeOrder.orderNumber ?? `#${activeOrder.orderId}`}</span>
+                </div>
+                <div className="order-delivered-detail-row">
+                  <span className="material-symbols-outlined">electric_moped</span>
+                  <span>{assignedDriver?.name ?? 'Repartidor'}</span>
+                </div>
               </div>
-              <div className="order-delivered-detail-row">
-                <span className="material-symbols-outlined">electric_moped</span>
-                <span>{assignedDriver?.name ?? 'Repartidor'}</span>
-              </div>
-            </div>
+            )}
 
-            <p className="order-delivered-history-hint">
-              Este pedido aparecerá en tu historial de pedidos.
-            </p>
+            <p className="order-delivered-history-hint">Este pedido aparecerá en tu historial de pedidos.</p>
+            <button type="button" className="order-delivered-new-btn" onClick={handleNuevoPedido}>
+              <span className="material-symbols-outlined">add_shopping_cart</span>
+              Hacer otro pedido
+            </button>
           </section>
+
         ) : (
-          /* ── HU-09: Mapa Leaflet en vivo ─────────────────────────────── */
+          /* ── Mapa Leaflet en vivo ─────────────────────────────────────── */
           <section className="map-viewport" aria-label="Mapa de repartidores en tiempo real">
-            {/* Indicador de actualización en vivo */}
             <div className="map-live-bar" aria-live="polite" aria-label="Estado de actualización del mapa">
               <span className="map-live-dot" aria-hidden="true" />
               <span>En vivo · {fmtTime(lastUpdated)}</span>
             </div>
 
-            {/* Leyenda de colores */}
             <div className="map-legend" role="complementary" aria-label="Leyenda de repartidores">
-              <div className="map-legend__item">
-                <span className="map-legend__dot map-legend__dot--assigned" />
-                Mi repartidor
-              </div>
-              <div className="map-legend__item">
-                <span className="map-legend__dot map-legend__dot--available" />
-                Disponible
-              </div>
-              <div className="map-legend__item">
-                <span className="map-legend__dot map-legend__dot--busy" />
-                Ocupado
-              </div>
+              <div className="map-legend__item"><span className="map-legend__dot map-legend__dot--assigned" />Mi repartidor</div>
+              <div className="map-legend__item"><span className="map-legend__dot map-legend__dot--available" />Disponible</div>
+              <div className="map-legend__item"><span className="map-legend__dot map-legend__dot--busy" />Ocupado</div>
             </div>
 
             <MapContainer
@@ -266,32 +273,54 @@ export default function MapaPedidos() {
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
               />
-
-              {drivers.map((driver) => (
-                <DriverMarker key={driver.id} driver={driver} />
-              ))}
+              {drivers.map((driver) => {
+                // Si hay posición en tiempo real por WebSocket para el repartidor asignado, usarla
+                const realPos = wsDriverPos && driver.status === 'ASSIGNED_TO_ME' ? wsDriverPos : null
+                const d = realPos ? { ...driver, lat: realPos.lat, lng: realPos.lng, lastUpdate: new Date(realPos.ts ?? Date.now()) } : driver
+                return <DriverMarker key={driver.id} driver={d} />
+              })}
             </MapContainer>
 
-            {/* Mensaje cuando no hay repartidores (Escenario 8) */}
-            {noDrivers && !showLoader ? (
+            {noDrivers && !showLoader && (
               <div className="map-no-drivers" role="status">
                 <span className="material-symbols-outlined">electric_moped</span>
-                <p>No hay repartidores disponibles en tu zona en este momento</p>
+                <span>No hay repartidores disponibles en tu zona en este momento</span>
               </div>
-            ) : null}
+            )}
           </section>
         )}
 
-        {/* ── Panel de logística ────────────────────────────────────── */}
+        {/* ── Panel lateral de seguimiento ─────────────────────────────── */}
         <aside className="logistics-panel">
           <div className="panel-header">
-            <h3>Logística de Pedido</h3>
-            <p>Gestión de despacho clínico</p>
+            <h3>Seguimiento de Pedido</h3>
+            <p>Estado en tiempo real</p>
           </div>
 
           <div className="panel-body">
-            {/* Tarjeta del repartidor asignado */}
-            {assignedDriver && !orderDelivered ? (
+
+            {/* Sin pedido — invitar a comprar */}
+            {!activeOrder && !orderDelivered && (
+              <div className="panel-no-order">
+                <span className="material-symbols-outlined">shopping_cart</span>
+                <p>Confirma un pedido desde el catálogo para ver el seguimiento aquí.</p>
+              </div>
+            )}
+
+            {/* Pedido activo — número y estado */}
+            {activeOrder && (
+              <section className="order-tracking-card" aria-label="Pedido activo">
+                <label className="panel-label">Número de pedido</label>
+                <p className="order-tracking-number">{activeOrder.orderNumber ?? `#${activeOrder.orderId}`}</p>
+                <div className="order-tracking-status">
+                  <span className={`order-status-dot order-status-dot--${(orderStatus ?? 'CONFIRMED').toLowerCase()}`} />
+                  <span>{ORDER_STATUS_LABEL[orderStatus] ?? orderStatus ?? 'Confirmado'}</span>
+                </div>
+              </section>
+            )}
+
+            {/* Repartidor asignado */}
+            {assignedDriver && activeOrder && !orderDelivered && (
               <section className="assigned-driver-card" aria-label="Repartidor asignado">
                 <div className="assigned-driver-card__dot" />
                 <div>
@@ -304,9 +333,9 @@ export default function MapaPedidos() {
                   </div>
                 </div>
               </section>
-            ) : null}
+            )}
 
-            {/* HU-10: cuando está entregado, mostrar resumen */}
+            {/* Resumen post-entrega */}
             {orderDelivered && (
               <section className="delivery-summary-card" aria-label="Resumen de entrega">
                 <div className="delivery-summary-card__icon">
@@ -325,71 +354,8 @@ export default function MapaPedidos() {
               </section>
             )}
 
-            <section>
-              <label className="panel-label">Medicamento &amp; Cantidad</label>
-              <div className="panel-field-group">
-                <div className="panel-field">
-                  <span>Nombre del Fármaco</span>
-                  <input type="text" placeholder="Ej: Acetaminofén 500mg" />
-                </div>
-                <div className="double-fields">
-                  <div className="panel-field">
-                    <span>Unidades</span>
-                    <input type="number" defaultValue="100" />
-                  </div>
-                  <div className="panel-field">
-                    <span>Prioridad</span>
-                    <select defaultValue="Normal">
-                      <option>Normal</option>
-                      <option>Urgente</option>
-                      <option>Crítico</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {!orderDelivered && (
-              <section>
-                <label className="panel-label">Canal de Entrega</label>
-                <div className="delivery-option active">
-                  <div className="option-icon"><span className="material-symbols-outlined">campaign</span></div>
-                  <div>
-                    <p>Publicar Pedido Abierto</p>
-                    <small>Subasta rápida al mejor postor</small>
-                  </div>
-                </div>
-                <div className="delivery-option">
-                  <div className="option-icon"><span className="material-symbols-outlined">person_search</span></div>
-                  <div>
-                    <p>Asignar Mensajero Específico</p>
-                    <small>Seleccionar desde el mapa</small>
-                  </div>
-                </div>
-              </section>
-            )}
-
-            <section className="route-card">
-              <div className="route-card-head">
-                <h4>Ruta en curso</h4>
-                <span className={orderDelivered ? 'route-status--delivered' : ''}>
-                  {orderDelivered ? 'Entregado' : routeData.status}
-                </span>
-              </div>
-              <div className="route-points">
-                <div>
-                  <small>ORIGEN</small>
-                  <p>{routeData.origin}</p>
-                </div>
-                <div>
-                  <small>DESTINO</small>
-                  <p>{routeData.destination}</p>
-                </div>
-              </div>
-            </section>
-
-            {/* Contador de repartidores activos (solo si aún no entregado) */}
-            {!isLoading && !orderDelivered ? (
+            {/* Contador de repartidores activos */}
+            {!isLoading && !orderDelivered && (
               <section className="drivers-summary" aria-label="Resumen de repartidores">
                 <div className="drivers-summary__item">
                   <span className="map-legend__dot map-legend__dot--available" style={{ display: 'inline-block' }} />
@@ -400,11 +366,7 @@ export default function MapaPedidos() {
                   <span>{drivers.filter((d) => d.status === 'BUSY').length} ocupados</span>
                 </div>
               </section>
-            ) : null}
-          </div>
-
-          <div className="panel-footer">
-            <button type="button">Confirmar Logística</button>
+            )}
           </div>
         </aside>
       </div>

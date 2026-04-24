@@ -289,7 +289,7 @@ export default function InventarioAfiliado() {
       </section>
 
       {/* Panel del carrito (HU-03) */}
-      <CarritoPanel />
+      <CarritoPanel branchId={Number(selectedBranchId) || null} />
 
       {/* Modal de disponibilidad por sucursal (HU-04) */}
       {selectedMedication ? (
