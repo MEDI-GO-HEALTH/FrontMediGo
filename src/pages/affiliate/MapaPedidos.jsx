@@ -18,6 +18,7 @@ import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
 import AffiliateShell from '../../components/layout/AffiliateShell'
 import useDriverLocations from '../../hooks/useDriverLocations'
 import useDriverLocationWebSocket from '../../hooks/useDriverLocationWebSocket'
+import useOrderStatusWebSocket from '../../hooks/useOrderStatusWebSocket'
 import useCappedLoading from '../../hooks/useCappedLoading'
 import '../../styles/affiliate/perfil-afiliado.css'
 import '../../styles/affiliate/mapa-pedidos.css'
@@ -25,7 +26,6 @@ import '../../styles/affiliate/mapa-pedidos.css'
 // ── Configuración del mapa ────────────────────────────────────────────
 const BOGOTA_CENTER = [4.711, -74.0721]
 const INITIAL_ZOOM = 14
-const ORDER_POLL_INTERVAL_MS = 8_000
 
 // ── Colores y etiquetas por estado ───────────────────────────────────
 const STATUS_CONFIG = {
@@ -114,68 +114,63 @@ function DriverMarker({ driver }) {
 
 // ── Componente principal ──────────────────────────────────────────────
 export default function MapaPedidos() {
-  const { drivers, assignedDriver, isLoading, lastUpdated, noDrivers } = useDriverLocations()
-  const showLoader = useCappedLoading(isLoading, 1500)
-
   // Pedido activo leído de localStorage
   const [activeOrder, setActiveOrder] = useState(readActiveOrder)
   const orderId = activeOrder?.orderId ?? null
 
-  // Estado del pedido (del backend)
-  const [orderStatus, setOrderStatus]   = useState(null)   // string: CONFIRMED, ASSIGNED, IN_ROUTE, DELIVERED…
-  const [deliveredAt, setDeliveredAt]   = useState(null)
-  const [deliveryId, setDeliveryId]     = useState(null)   // ID de la entrega (para WebSocket)
-  const [showToast, setShowToast]       = useState(false)
+  // Estado del pedido
+  const [orderStatus, setOrderStatus] = useState(null)
+  const [deliveredAt, setDeliveredAt] = useState(null)
+  const [deliveryId, setDeliveryId]   = useState(null)
+  const [showToast, setShowToast]     = useState(false)
   const toastTimerRef = useRef(null)
-  const pollRef       = useRef(null)
 
-  // Posición en tiempo real del repartidor asignado vía WebSocket
-  const { position: wsDriverPos } = useDriverLocationWebSocket({
-    deliveryId: deliveryId ?? null,
-  })
+  // ── Estado del pedido en tiempo real vía WebSocket ───────────────────
+  const { status: wsStatus, deliveryId: wsDeliveryId, deliveredAt: wsDeliveredAt } =
+    useOrderStatusWebSocket({ orderId })
 
-  const orderDelivered = orderStatus === 'DELIVERED'
+  // ── Carga inicial del estado via HTTP (snapshot) ─────────────────────
+  useEffect(() => {
+    if (!orderId) return
+    getOrderStatus(orderId)
+      .then((result) => {
+        if (result?.status) setOrderStatus(result.status)
+        if (result?.deliveryId) setDeliveryId(result.deliveryId)
+        if (result?.deliveredAt) setDeliveredAt(result.deliveredAt)
+      })
+      .catch(() => {})
+  }, [orderId])
 
-  /** Muestra el toast por 5 s */
+  // ── Actualizar estado cuando llega mensaje WebSocket ─────────────────
   const triggerToast = useCallback(() => {
     setShowToast(true)
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
     toastTimerRef.current = setTimeout(() => setShowToast(false), 5000)
   }, [])
 
-  /** Polling del estado del pedido */
   useEffect(() => {
-    if (!orderId) return
-
-    const check = async () => {
-      try {
-        const result = await getOrderStatus(orderId)
-        const newStatus = result?.status
-        if (!newStatus) return
-
-        // Guardar deliveryId para el WebSocket de ubicación
-        if (result.deliveryId) setDeliveryId(result.deliveryId)
-
-        setOrderStatus((prev) => {
-          if (newStatus === 'DELIVERED' && prev !== 'DELIVERED') {
-            setDeliveredAt(result.deliveredAt || new Date().toISOString())
-            triggerToast()
-            localStorage.removeItem('medigo_active_order')
-          }
-          return newStatus
-        })
-      } catch {
-        // API no disponible — mantener estado actual
+    if (!wsStatus) return
+    if (wsDeliveryId) setDeliveryId(wsDeliveryId)
+    setOrderStatus((prev) => {
+      if (wsStatus === 'DELIVERED' && prev !== 'DELIVERED') {
+        setDeliveredAt(wsDeliveredAt || new Date().toISOString())
+        triggerToast()
+        localStorage.removeItem('medigo_active_order')
       }
-    }
+      return wsStatus
+    })
+  }, [wsStatus, wsDeliveryId, wsDeliveredAt, triggerToast])
 
-    check()
-    pollRef.current = setInterval(check, ORDER_POLL_INTERVAL_MS)
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current)
-      if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
-    }
-  }, [orderId, triggerToast])
+  // Repartidores en tiempo real (polling liviano con orderId para marcar ASSIGNED_TO_ME)
+  const { drivers, assignedDriver, isLoading, lastUpdated, noDrivers } = useDriverLocations(undefined, orderId)
+  const showLoader = useCappedLoading(isLoading, 1500)
+
+  // Posición GPS del repartidor asignado vía WebSocket
+  const { position: wsDriverPos } = useDriverLocationWebSocket({
+    deliveryId: deliveryId ?? null,
+  })
+
+  const orderDelivered = orderStatus === 'DELIVERED'
 
   const handleNuevoPedido = () => {
     setActiveOrder(null)

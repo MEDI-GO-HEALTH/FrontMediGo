@@ -12,7 +12,7 @@ import { getAffiliateLogisticsDashboard } from '../api/affiliateLogisticsService
 
 const POLL_INTERVAL_MS = 7_000
 
-export default function useDriverLocations(pollIntervalMs = POLL_INTERVAL_MS) {
+export default function useDriverLocations(pollIntervalMs = POLL_INTERVAL_MS, orderId = null) {
   const [drivers, setDrivers] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState(null)
@@ -23,7 +23,7 @@ export default function useDriverLocations(pollIntervalMs = POLL_INTERVAL_MS) {
     pollCountRef.current += 1
 
     try {
-      const dashboard = await getAffiliateLogisticsDashboard()
+      const dashboard = await getAffiliateLogisticsDashboard(orderId)
 
       if (dashboard?.drivers && Array.isArray(dashboard.drivers) && dashboard.drivers.length > 0) {
         setDrivers(
@@ -48,7 +48,7 @@ export default function useDriverLocations(pollIntervalMs = POLL_INTERVAL_MS) {
       setLastUpdated(new Date())
       if (isFirstLoad) setIsLoading(false)
     }
-  }, [])
+  }, [orderId])
 
   useEffect(() => {
     fetchLocations()

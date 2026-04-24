@@ -7,8 +7,9 @@ const ENDPOINTS = {
   assignCourier: '/api/logistics/assignments',
 }
 
-export async function getAffiliateLogisticsDashboard() {
-  const { data } = await client.get(ENDPOINTS.dashboard)
+export async function getAffiliateLogisticsDashboard(orderId = null) {
+  const params = orderId ? { orderId } : {}
+  const { data } = await client.get(ENDPOINTS.dashboard, { params })
   return data
 }
 
