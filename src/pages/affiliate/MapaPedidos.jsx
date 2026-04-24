@@ -210,91 +210,81 @@ export default function MapaPedidos() {
 
       <div className="affiliate-map-workspace">
 
-        {/* ── Sin pedido activo ─────────────────────────────────────────── */}
-        {!activeOrder && !orderDelivered ? (
-          <section className="map-no-order" aria-label="Sin pedido activo">
-            <span className="material-symbols-outlined map-no-order__icon">receipt_long</span>
-            <h3>No tienes un pedido activo</h3>
-            <p>Ve al catálogo de medicamentos, agrega productos al carrito y confirma tu pedido para ver el seguimiento aquí.</p>
-          </section>
+        {/* ── Mapa Leaflet — siempre visible ───────────────────────────── */}
+        <section className="map-viewport" aria-label="Mapa de repartidores en tiempo real">
+          <div className="map-live-bar" aria-live="polite" aria-label="Estado de actualización del mapa">
+            <span className="map-live-dot" aria-hidden="true" />
+            <span>En vivo · {fmtTime(lastUpdated)}</span>
+          </div>
 
-        ) : orderDelivered ? (
-          /* ── Panel de entrega completada ─────────────────────────────── */
-          <section className="order-delivered-panel" aria-label="Pedido entregado" role="status">
-            <div className="order-delivered-animation">
-              <span className="material-symbols-outlined order-delivered-icon">task_alt</span>
-              <div className="order-delivered-pulse" />
+          <div className="map-legend" role="complementary" aria-label="Leyenda de repartidores">
+            <div className="map-legend__item"><span className="map-legend__dot map-legend__dot--assigned" />Mi repartidor</div>
+            <div className="map-legend__item"><span className="map-legend__dot map-legend__dot--available" />Disponible</div>
+            <div className="map-legend__item"><span className="map-legend__dot map-legend__dot--busy" />Ocupado</div>
+          </div>
+
+          <MapContainer
+            center={assignedDriver ? [assignedDriver.lat, assignedDriver.lng] : BOGOTA_CENTER}
+            zoom={INITIAL_ZOOM}
+            className="leaflet-map"
+            aria-label="Mapa de seguimiento de repartidores"
+          >
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            />
+            {drivers.map((driver) => {
+              const realPos = wsDriverPos && driver.status === 'ASSIGNED_TO_ME' ? wsDriverPos : null
+              const d = realPos ? { ...driver, lat: realPos.lat, lng: realPos.lng, lastUpdate: new Date(realPos.ts ?? Date.now()) } : driver
+              return <DriverMarker key={driver.id} driver={d} />
+            })}
+          </MapContainer>
+
+          {noDrivers && !showLoader && (
+            <div className="map-no-drivers" role="status">
+              <span className="material-symbols-outlined">electric_moped</span>
+              <span>No hay repartidores disponibles en tu zona en este momento</span>
             </div>
-            <h2 className="order-delivered-title">¡Pedido Entregado!</h2>
-            <p className="order-delivered-sub">Tu medicamento ha llegado a su destino.</p>
+          )}
 
-            {deliveredAt && (
-              <div className="order-delivered-time">
-                <span className="material-symbols-outlined">schedule</span>
-                <span>Entregado a las <strong>{fmtDeliveredAt(deliveredAt)}</strong></span>
+          {/* Panel de entrega completada — superpuesto sobre el mapa */}
+          {orderDelivered && (
+            <section className="order-delivered-panel" aria-label="Pedido entregado" role="status">
+              <div className="order-delivered-animation">
+                <span className="material-symbols-outlined order-delivered-icon">task_alt</span>
+                <div className="order-delivered-pulse" />
               </div>
-            )}
+              <h2 className="order-delivered-title">¡Pedido Entregado!</h2>
+              <p className="order-delivered-sub">Tu medicamento ha llegado a su destino.</p>
 
-            {activeOrder && (
-              <div className="order-delivered-details">
-                <div className="order-delivered-detail-row">
-                  <span className="material-symbols-outlined">tag</span>
-                  <span>Pedido {activeOrder.orderNumber ?? `#${activeOrder.orderId}`}</span>
+              {deliveredAt && (
+                <div className="order-delivered-time">
+                  <span className="material-symbols-outlined">schedule</span>
+                  <span>Entregado a las <strong>{fmtDeliveredAt(deliveredAt)}</strong></span>
                 </div>
-                <div className="order-delivered-detail-row">
-                  <span className="material-symbols-outlined">electric_moped</span>
-                  <span>{assignedDriver?.name ?? 'Repartidor'}</span>
+              )}
+
+              {activeOrder && (
+                <div className="order-delivered-details">
+                  <div className="order-delivered-detail-row">
+                    <span className="material-symbols-outlined">tag</span>
+                    <span>Pedido {activeOrder.orderNumber ?? `#${activeOrder.orderId}`}</span>
+                  </div>
+                  <div className="order-delivered-detail-row">
+                    <span className="material-symbols-outlined">electric_moped</span>
+                    <span>{assignedDriver?.name ?? 'Repartidor'}</span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            <p className="order-delivered-history-hint">Este pedido aparecerá en tu historial de pedidos.</p>
-            <button type="button" className="order-delivered-new-btn" onClick={handleNuevoPedido}>
-              <span className="material-symbols-outlined">add_shopping_cart</span>
-              Hacer otro pedido
-            </button>
-          </section>
-
-        ) : (
-          /* ── Mapa Leaflet en vivo ─────────────────────────────────────── */
-          <section className="map-viewport" aria-label="Mapa de repartidores en tiempo real">
-            <div className="map-live-bar" aria-live="polite" aria-label="Estado de actualización del mapa">
-              <span className="map-live-dot" aria-hidden="true" />
-              <span>En vivo · {fmtTime(lastUpdated)}</span>
-            </div>
-
-            <div className="map-legend" role="complementary" aria-label="Leyenda de repartidores">
-              <div className="map-legend__item"><span className="map-legend__dot map-legend__dot--assigned" />Mi repartidor</div>
-              <div className="map-legend__item"><span className="map-legend__dot map-legend__dot--available" />Disponible</div>
-              <div className="map-legend__item"><span className="map-legend__dot map-legend__dot--busy" />Ocupado</div>
-            </div>
-
-            <MapContainer
-              center={assignedDriver ? [assignedDriver.lat, assignedDriver.lng] : BOGOTA_CENTER}
-              zoom={INITIAL_ZOOM}
-              className="leaflet-map"
-              aria-label="Mapa de seguimiento de repartidores"
-            >
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              />
-              {drivers.map((driver) => {
-                // Si hay posición en tiempo real por WebSocket para el repartidor asignado, usarla
-                const realPos = wsDriverPos && driver.status === 'ASSIGNED_TO_ME' ? wsDriverPos : null
-                const d = realPos ? { ...driver, lat: realPos.lat, lng: realPos.lng, lastUpdate: new Date(realPos.ts ?? Date.now()) } : driver
-                return <DriverMarker key={driver.id} driver={d} />
-              })}
-            </MapContainer>
-
-            {noDrivers && !showLoader && (
-              <div className="map-no-drivers" role="status">
-                <span className="material-symbols-outlined">electric_moped</span>
-                <span>No hay repartidores disponibles en tu zona en este momento</span>
-              </div>
-            )}
-          </section>
-        )}
+              <p className="order-delivered-history-hint">Este pedido aparecerá en tu historial de pedidos.</p>
+              <button type="button" className="order-delivered-new-btn" onClick={handleNuevoPedido}>
+                <span className="material-symbols-outlined">add_shopping_cart</span>
+                Hacer otro pedido
+              </button>
+            </section>
+          )}
+        </section>
 
         {/* ── Panel lateral de seguimiento ─────────────────────────────── */}
         <aside className="logistics-panel">
