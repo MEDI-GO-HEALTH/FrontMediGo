@@ -109,9 +109,18 @@ export default function MapaEntregas() {
   // Ref estable para sendLocation — evita cambio de tamaño del array de deps en useEffect
   const sendLocationRef = useRef(null)
 
-  // Transmite la posición GPS del repartidor al backend vía WebSocket
+  // ID del usuario repartidor para el canal de ubicación sin pedido activo
+  const driverUserId = (() => {
+    try { return JSON.parse(localStorage.getItem('medigo_user') || 'null')?.id ?? null }
+    catch { return null }
+  })()
+
+  // Transmite la posición GPS del repartidor al backend vía WebSocket.
+  // Usa el deliveryId cuando hay pedido activo; si no, usa el userId prefijado con 'u'
+  // para que el backend lo distinga de un deliveryId numérico.
+  const wsChannelId = activeDelivery?.id ?? (driverUserId ? `u${driverUserId}` : null)
   const { sendLocation } = useDriverLocationWebSocket({
-    deliveryId: activeDelivery?.id ?? null,
+    deliveryId: wsChannelId,
   })
 
   // Mantener la referencia actualizada sin recrear el geolocation watcher
