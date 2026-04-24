@@ -388,6 +388,7 @@ export default function MapaPedidos() {
               wsOrderStatus: wsStatus,
               orderStatus,
               driversCount: drivers.length,
+              drivers: drivers.map(d => ({ id: d.id, name: d.name, status: d.status, orderId: d.orderId })),
               assignedDriver: assignedDriver ? { id: assignedDriver.id, name: assignedDriver.name, status: assignedDriver.status } : null,
               wsDriverPos,
             }, null, 2)}
