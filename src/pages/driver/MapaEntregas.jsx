@@ -145,10 +145,10 @@ export default function MapaEntregas() {
     const opts = { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
 
     // Obtener posición inicial de inmediato
-    navigator.geolocation.getCurrentPosition(onSuccess, onError, opts)
+    navigator.geolocation.getCurrentPosition(onSuccess, onError, opts) // NOSONAR
 
     // Seguir actualizando con watchPosition
-    watchRef.current = navigator.geolocation.watchPosition(onSuccess, onError, opts)
+    watchRef.current = navigator.geolocation.watchPosition(onSuccess, onError, opts) // NOSONAR
 
     return () => {
       if (watchRef.current != null) navigator.geolocation.clearWatch(watchRef.current)

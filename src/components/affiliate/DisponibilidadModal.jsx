@@ -49,6 +49,12 @@ export default function DisponibilidadModal({ medication, branches, selectedBran
       role="dialog"
       aria-modal="true"
       aria-label={`Disponibilidad de ${medication.name}`}
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape' || e.key === 'Enter') {
+          onClose()
+        }
+      }}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose()
