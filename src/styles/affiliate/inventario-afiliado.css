@@ -77,10 +77,179 @@
 .affiliate-inventory-ok {
   display: inline-flex;
   align-items: center;
+  gap: 0.2rem;
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 700;
   color: #166534;
   background: #dcfce7;
+}
+
+.affiliate-inventory-no-stock {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+/* ─── Header con botón del carrito ───────────────────────────────────── */
+.affiliate-inventory-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* ─── Botón flotante del carrito ──────────────────────────────────────── */
+.cart-toggle-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  border: none;
+  background: #0f6fa3;
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.cart-toggle-btn:hover {
+  background: #0b5a87;
+}
+
+.cart-toggle-btn .material-symbols-outlined {
+  font-size: 1.3rem;
+}
+
+.cart-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 1.2rem;
+  height: 1.2rem;
+  padding: 0 0.2rem;
+  border-radius: 999px;
+  background: #e53e3e;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* ─── Celda de acciones ───────────────────────────────────────────────── */
+.affiliate-inventory-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+/* ─── Botón "Ver disponibilidad" en tabla (HU-04) ─────────────────────── */
+.disp-open-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #b6d4e3;
+  background: #fff;
+  color: #0f6fa3;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.disp-open-btn .material-symbols-outlined {
+  font-size: 1rem;
+}
+
+.disp-open-btn:hover {
+  background: #e8f4fb;
+  border-color: #0f6fa3;
+}
+
+/* ─── Botón "Agregar al carrito" en tabla ─────────────────────────────── */
+.cart-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  border: none;
+  background: #0f6fa3;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  white-space: nowrap;
+}
+
+.cart-add-btn .material-symbols-outlined {
+  font-size: 1rem;
+}
+
+.cart-add-btn:hover:not(:disabled) {
+  background: #0b5a87;
+}
+
+.cart-add-btn:disabled {
+  background: #c2cfd7;
+  color: #7a9aad;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* ─── Notificación toast ──────────────────────────────────────────────── */
+.cart-notification {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1.2rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
+  animation: slideUp 0.25s ease;
+  max-width: min(360px, 90vw);
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.cart-notification--success {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.cart-notification--error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.cart-notification .material-symbols-outlined {
+  font-size: 1.2rem;
+  flex-shrink: 0;
 }

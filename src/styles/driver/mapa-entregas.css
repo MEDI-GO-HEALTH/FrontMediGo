@@ -1,4 +1,4 @@
-/* Driver deliveries map page (stitch-based, React/CSS separated) */
+/* Driver deliveries map page */
 
 .driver-map-page {
   background: var(--surface, #f8f9fb);
@@ -229,108 +229,88 @@
   overflow: hidden;
 }
 
-.driver-map-canvas {
+/* ── Mapa Leaflet real ─────────────────────────────────────────────── */
+.driver-leaflet-map {
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.45), transparent 32%),
-    radial-gradient(circle at 70% 60%, rgba(255, 255, 255, 0.22), transparent 35%),
-    linear-gradient(135deg, #d7e7f2 0%, #bed6e8 100%);
-}
-
-.driver-map-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.22) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.22) 1px, transparent 1px),
-    linear-gradient(65deg, rgba(255, 255, 255, 0.16) 2px, transparent 2px);
-  background-size: 32px 32px, 32px 32px, 120px 120px;
-}
-
-.driver-map-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(14, 116, 144, 0.05);
-}
-
-.driver-marker {
-  position: absolute;
-  color: #003358;
-}
-
-.driver-marker .material-symbols-outlined {
-  font-size: 36px;
-  font-variation-settings: 'FILL' 1;
-}
-
-.driver-marker.eps-a { top: 24%; left: 33%; }
-.driver-marker.eps-b { top: 64%; left: 50%; transform: scale(1.2); }
-.driver-marker.truck-busy { top: 33%; right: 24%; color: #7e22ce; }
-.driver-marker.truck-free { bottom: 23%; left: 24%; color: #006a6a; }
-
-.driver-self-marker {
-  position: absolute;
-  top: 45%;
-  left: 45%;
-  z-index: 6;
-}
-
-.driver-self-marker .pulse {
-  position: absolute;
-  width: 52px;
-  height: 52px;
-  border-radius: 9999px;
-  background: rgba(14, 165, 233, 0.2);
-  animation: pulse 2s infinite;
-}
-
-.driver-self-marker .dot-wrap {
-  width: 24px;
-  height: 24px;
-  border-radius: 9999px;
-  background: #fff;
-  padding: 2px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16);
-  position: relative;
-  z-index: 2;
-}
-
-.driver-self-marker .dot {
   width: 100%;
   height: 100%;
-  border-radius: 9999px;
-  background: #0284c7;
+  z-index: 0;
 }
 
-.driver-self-marker .tag {
-  margin-top: 8px;
-  display: inline-block;
-  background: #fff;
-  padding: 0.15rem 0.55rem;
+/* Ocultar controles de zoom nativos de Leaflet (usamos los propios) */
+.driver-leaflet-map .leaflet-control-zoom {
+  display: none;
+}
+
+/* ── Pines de marcadores en el mapa ───────────────────────────────── */
+.driver-map-pin {
+  width: 40px;
+  height: 40px;
   border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+  position: relative;
+}
+
+.driver-map-pin .material-symbols-outlined {
+  font-size: 22px;
+  font-variation-settings: 'FILL' 1;
+  color: #fff;
+}
+
+.driver-map-pin--pickup {
+  background: linear-gradient(135deg, #003358 0%, #004a7c 100%);
+}
+
+.driver-map-pin--destination {
+  background: linear-gradient(135deg, #006a4e 0%, #00845f 100%);
+}
+
+.driver-map-pin--self {
+  background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%);
+  width: 44px;
+  height: 44px;
+}
+
+.driver-map-pin__pulse {
+  position: absolute;
+  width: 64px;
+  height: 64px;
+  border-radius: 9999px;
+  background: rgba(2, 132, 199, 0.22);
+  animation: driverPinPulse 2s ease-in-out infinite;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes driverPinPulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1);   opacity: 0.7; }
+  50%       { transform: translate(-50%, -50%) scale(1.4); opacity: 0.2; }
+}
+
+/* ── Popup Leaflet del repartidor ─────────────────────────────────── */
+.driver-popup {
+  font-family: inherit;
+  font-size: 0.8rem;
+}
+
+.driver-popup__label {
+  margin: 0 0 0.2rem;
   font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #94a3b8;
+  letter-spacing: 0.06em;
+}
+
+.driver-popup__address {
+  margin: 0;
   font-weight: 700;
   color: #0c4a6e;
-  white-space: nowrap;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-}
-
-.driver-route-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  opacity: 0.45;
-}
-
-.driver-route-svg path {
-  fill: none;
-  stroke: #003358;
-  stroke-dasharray: 10 10;
-  stroke-linecap: round;
-  stroke-width: 5;
 }
 
 .driver-search-floating {
@@ -410,9 +390,9 @@
   border-radius: 9999px;
 }
 
-.driver-legend-dot.free { background: #006a6a; }
-.driver-legend-dot.busy { background: #7e22ce; }
-.driver-legend-dot.orders { background: #003358; }
+.driver-legend-dot.pickup      { background: #003358; }
+.driver-legend-dot.destination { background: #006a4e; }
+.driver-legend-dot.self        { background: #0284c7; }
 
 .driver-order-card {
   position: absolute;
@@ -718,3 +698,583 @@
     font-size: 1.35rem;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────
+   HU-10: Botón "Finalizar Entrega"
+──────────────────────────────────────────────────────────────────────── */
+.finalize-delivery-btn {
+  width: 100%;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.85rem;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #006a4e 0%, #00845f 100%);
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.4rem;
+  box-shadow: 0 10px 20px -8px rgba(0, 106, 78, 0.6);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.finalize-delivery-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 24px -8px rgba(0, 106, 78, 0.7);
+}
+
+.finalize-delivery-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   HU-10: Modal de confirmación de entrega
+──────────────────────────────────────────────────────────────────────── */
+.delivery-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.52);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+.delivery-confirm-modal {
+  background: #fff;
+  border-radius: 1.25rem;
+  padding: 2.2rem 2rem;
+  width: min(92%, 420px);
+  box-shadow: 0 28px 60px rgba(0, 0, 0, 0.22);
+  text-align: center;
+  animation: slideUp 0.25s ease;
+}
+
+.delivery-confirm-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #006a4e 0%, #00845f 100%);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.1rem;
+}
+
+.delivery-confirm-icon .material-symbols-outlined {
+  font-size: 32px;
+  font-variation-settings: 'FILL' 1;
+}
+
+.delivery-confirm-modal h2 {
+  margin: 0 0 0.6rem;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0c4a6e;
+}
+
+.delivery-confirm-modal p {
+  margin: 0 0 1rem;
+  color: #475569;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.delivery-confirm-address {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  background: #f1f5f9;
+  border-radius: 0.75rem;
+  padding: 0.7rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #0c4a6e;
+  margin-bottom: 1.5rem;
+}
+
+.delivery-confirm-actions {
+  display: flex;
+  gap: 0.8rem;
+}
+
+.delivery-confirm-btn--cancel {
+  flex: 1;
+  border: 2px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 0.8rem;
+  font-weight: 700;
+  color: #475569;
+  background: transparent;
+  transition: background 0.15s;
+}
+
+.delivery-confirm-btn--cancel:hover {
+  background: #f8fafc;
+}
+
+.delivery-confirm-btn--confirm {
+  flex: 2;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.8rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #006a4e 0%, #00845f 100%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  box-shadow: 0 8px 16px -6px rgba(0, 106, 78, 0.55);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.delivery-confirm-btn--confirm:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.delivery-confirm-btn--confirm:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   HU-10: Panel de éxito post-entrega (dentro de la tarjeta del pedido)
+──────────────────────────────────────────────────────────────────────── */
+.delivery-success-panel {
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+.delivery-success-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #006a4e 0%, #00845f 100%);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  box-shadow: 0 12px 24px -8px rgba(0, 106, 78, 0.5);
+  animation: bounceIn 0.4s ease;
+}
+
+.delivery-success-icon .material-symbols-outlined {
+  font-size: 36px;
+  font-variation-settings: 'FILL' 1;
+}
+
+.delivery-success-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #006a4e;
+}
+
+.delivery-success-sub {
+  margin: 0 0 0.9rem;
+  color: #475569;
+  font-size: 0.82rem;
+}
+
+.delivery-success-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #f0fdf4;
+  color: #16a34a;
+  font-weight: 700;
+  font-size: 0.88rem;
+  border-radius: 9999px;
+  padding: 0.4rem 0.9rem;
+  margin-bottom: 1.2rem;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Keyframes
+──────────────────────────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(24px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes bounceIn {
+  0%   { transform: scale(0.6); opacity: 0; }
+  70%  { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Stepper de estado del pedido
+──────────────────────────────────────────────────────────────────────── */
+.order-stepper {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  margin-bottom: 1rem;
+  position: relative;
+  z-index: 2;
+}
+
+.order-stepper__step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+}
+
+.order-stepper__dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  background: #e2e8f0;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  transition: background 0.25s, color 0.25s;
+  position: relative;
+  z-index: 2;
+}
+
+.order-stepper__dot .material-symbols-outlined {
+  font-size: 16px;
+}
+
+.order-stepper__step--done .order-stepper__dot {
+  background: #003358;
+  color: #fff;
+}
+
+.order-stepper__step--active .order-stepper__dot {
+  background: linear-gradient(135deg, #003358 0%, #0284c7 100%);
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.2);
+}
+
+.order-stepper__label {
+  font-size: 0.56rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  margin-top: 0.3rem;
+  text-align: center;
+  line-height: 1.2;
+  max-width: 64px;
+}
+
+.order-stepper__step--done .order-stepper__label,
+.order-stepper__step--active .order-stepper__label {
+  color: #0c4a6e;
+}
+
+.order-stepper__line {
+  position: absolute;
+  top: 16px;
+  left: calc(50% + 16px);
+  right: calc(-50% + 16px);
+  height: 2px;
+  background: #e2e8f0;
+  z-index: 1;
+}
+
+.order-stepper__line--done {
+  background: #003358;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Botón "Confirmar recogida en sucursal"
+──────────────────────────────────────────────────────────────────────── */
+.pickup-confirm-btn {
+  width: 100%;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.85rem;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #7e22ce 0%, #9333ea 100%);
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.4rem;
+  box-shadow: 0 10px 20px -8px rgba(126, 34, 206, 0.6);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pickup-confirm-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 24px -8px rgba(126, 34, 206, 0.7);
+}
+
+.pickup-confirm-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Error de acción
+──────────────────────────────────────────────────────────────────────── */
+.order-action-error {
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  color: #ba1a1a;
+  text-align: center;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Variantes de color del ícono del modal de confirmación
+──────────────────────────────────────────────────────────────────────── */
+.delivery-confirm-icon--heading_to_pickup {
+  background: linear-gradient(135deg, #003358 0%, #004a7c 100%);
+}
+
+.delivery-confirm-icon--picked_up {
+  background: linear-gradient(135deg, #7e22ce 0%, #9333ea 100%);
+}
+
+.delivery-confirm-icon--delivered {
+  background: linear-gradient(135deg, #006a4e 0%, #00845f 100%);
+}
+
+/* Botones del modal: aceptar (azul) y recoger (violeta) */
+.delivery-confirm-btn--accept {
+  flex: 2;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.8rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #003358 0%, #004a7c 100%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  box-shadow: 0 8px 16px -6px rgba(0, 51, 88, 0.55);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.delivery-confirm-btn--accept:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.delivery-confirm-btn--accept:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.delivery-confirm-btn--pickup {
+  flex: 2;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.8rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #7e22ce 0%, #9333ea 100%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  box-shadow: 0 8px 16px -6px rgba(126, 34, 206, 0.55);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.delivery-confirm-btn--pickup:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.delivery-confirm-btn--pickup:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Panel de pedidos disponibles (sin entrega activa)
+──────────────────────────────────────────────────────────────────────── */
+.pending-orders-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 320px;
+}
+
+.pending-orders-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.pending-orders-header .material-symbols-outlined {
+  font-size: 18px;
+  color: #003358;
+}
+
+.pending-orders-header h3 {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #003358;
+  flex: 1;
+}
+
+.pending-orders-count {
+  background: #003358;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  border-radius: 9999px;
+  padding: 0.1rem 0.45rem;
+}
+
+.pending-orders-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 1rem 0;
+  color: #94a3b8;
+  text-align: center;
+  font-size: 0.82rem;
+}
+
+.pending-orders-empty .material-symbols-outlined {
+  font-size: 2rem;
+  opacity: 0.35;
+}
+
+.pending-orders-empty p {
+  margin: 0;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.pending-orders-empty small {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.pending-orders-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-y: auto;
+  max-height: 240px;
+}
+
+.pending-order-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 0.7rem 0.75rem;
+}
+
+.pending-order-item__info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.pending-order-item__number {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #003358;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pending-order-item__address {
+  font-size: 0.75rem;
+  color: #475569;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pending-order-item__price {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #006a4e;
+}
+
+.pending-order-item__btn {
+  border: none;
+  border-radius: 0.55rem;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #003358 0%, #0284c7 100%);
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+
+.pending-order-item__btn:hover:not(:disabled) { transform: scale(1.04); }
+.pending-order-item__btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ─────────────────────────────────────────────────────────────────────
+   Lista de ítems del pedido activo (en la tarjeta del repartidor)
+──────────────────────────────────────────────────────────────────────── */
+.delivery-items-list {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.delivery-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: #334155;
+}
+
+.delivery-item .material-symbols-outlined {
+  font-size: 15px;
+  color: #64748b;
+}
+
+.delivery-item__qty {
+  margin-left: auto;
+  font-weight: 700;
+  color: #003358;
+  font-size: 0.72rem;
+}
+
+.delivery-item--more {
+  color: #94a3b8;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding-left: 1.2rem;
+}
+

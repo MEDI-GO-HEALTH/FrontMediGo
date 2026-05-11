@@ -2,9 +2,9 @@ import client from './client'
 
 // NOTE: Replace these endpoint paths when backend contracts are finalized.
 const ENDPOINTS = {
-  summary: '/driver/history/summary',
-  trips: '/driver/history/trips',
-  emergencySupport: '/driver/support/emergency',
+  summary: '/api/driver/history/summary',
+  trips: '/api/driver/history/trips',
+  emergencySupport: '/api/driver/support/emergency',
 }
 
 export async function getDriverHistorySummary(params = {}) {

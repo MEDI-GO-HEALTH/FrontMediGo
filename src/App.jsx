@@ -45,6 +45,11 @@ import PerfilRepartidor from './pages/driver/PerfilRepartidor'
 import { ROUTES } from './constants/routes'
 
 // ═════════════════════════════════════════════════════════════════
+// CONTEXTO DEL CARRITO (HU-03)
+// ═════════════════════════════════════════════════════════════════
+import { CartProvider } from './context/CartContext'
+
+// ═════════════════════════════════════════════════════════════════
 // COMPONENTE: ProtectedRoute
 // ═════════════════════════════════════════════════════════════════
 /**
@@ -161,12 +166,16 @@ export default function App() {
 
         {/* ═════════════════════════════════════════════════════════════
             RUTAS DE AFILIADO (Requiere role = 'AFILIADO')
+            CartProvider envuelve todas las rutas de afiliado para
+            que el carrito persista al navegar entre páginas (HU-03)
             ═════════════════════════════════════════════════════════════ */}
         <Route
           path={ROUTES.AFFILIATE.MAP}
           element={
             <ProtectedRoute allowedRoles={['AFILIADO']}>
-              <MapaPedidos />
+              <CartProvider>
+                <MapaPedidos />
+              </CartProvider>
             </ProtectedRoute>
           }
         />
@@ -174,7 +183,9 @@ export default function App() {
           path={ROUTES.AFFILIATE.INVENTORY}
           element={
             <ProtectedRoute allowedRoles={['AFILIADO']}>
-              <InventarioAfiliado />
+              <CartProvider>
+                <InventarioAfiliado />
+              </CartProvider>
             </ProtectedRoute>
           }
         />
@@ -182,7 +193,9 @@ export default function App() {
           path={ROUTES.AFFILIATE.AUCTIONS}
           element={
             <ProtectedRoute allowedRoles={['AFILIADO']}>
-              <CentroSubastas />
+              <CartProvider>
+                <CentroSubastas />
+              </CartProvider>
             </ProtectedRoute>
           }
         />
@@ -190,7 +203,9 @@ export default function App() {
           path={ROUTES.AFFILIATE.PROFILE}
           element={
             <ProtectedRoute allowedRoles={['AFILIADO']}>
-              <PerfilAfiliado />
+              <CartProvider>
+                <PerfilAfiliado />
+              </CartProvider>
             </ProtectedRoute>
           }
         />
