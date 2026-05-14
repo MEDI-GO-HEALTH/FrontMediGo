@@ -225,6 +225,7 @@ export default function Inventario() {
     let mounted = true
 
     const refreshStock = async () => {
+      setBackendNotice('')
       try {
         const source = await getInventario({
           branchId: Number(selectedBranchId),
@@ -243,9 +244,13 @@ export default function Inventario() {
         if (!search.trim()) {
           setItems(FALLBACK_ITEMS)
         }
-      } catch {
-        if (mounted && !search.trim()) {
-          setItems(FALLBACK_ITEMS)
+      } catch (error) {
+        if (mounted) {
+          if (error.message.includes('seguridad')) {
+            setBackendNotice(error.message)
+          } else if (!search.trim()) {
+            setItems(FALLBACK_ITEMS)
+          }
         }
       }
     }
@@ -531,7 +536,12 @@ export default function Inventario() {
             </div>
           </section>
 
-          {backendNotice ? <p className="inventory-notice">{backendNotice}</p> : null}
+          {backendNotice ? (
+            <p className={`inventory-notice ${backendNotice.includes('seguridad') ? 'security-error' : ''}`}>
+              {backendNotice.includes('seguridad') && <span className="material-symbols-outlined" style={{fontSize: '1rem', verticalAlign: 'middle', marginRight: '4px'}}>shield_lock</span>}
+              {backendNotice}
+            </p>
+          ) : null}
 
           <section className="inventory-stat-grid" aria-label="Indicadores de inventario">
             <article className="critical-card">

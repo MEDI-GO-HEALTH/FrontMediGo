@@ -282,6 +282,13 @@
   font-weight: 600;
 }
 
+.inventory-notice.security-error {
+  background: #fff0f0;
+  color: #ba1a1a;
+  border: 1px solid rgba(186, 26, 26, 0.2);
+  font-weight: 800;
+}
+
 .inventory-stat-grid {
   display: grid;
   grid-template-columns: 1fr 2fr;

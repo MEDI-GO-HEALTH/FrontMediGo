@@ -31,8 +31,17 @@ const toArray = (payload) => {
 }
 
 export const searchMedicationsByName = async (name) => {
+  const sanitized = String(name || '').trim()
+  
+  // 🛡️ Client-side Security Check for Demo
+  const sqlInjectionPattern = /[-'";|\/\*]/
+  if (sqlInjectionPattern.test(sanitized)) {
+    console.warn('⚠️ Intento de SQL Injection detectado en el cliente:', sanitized)
+    throw new Error('Caracteres no permitidos en la búsqueda por motivos de seguridad.')
+  }
+
   const response = await client.get(`${MEDICATIONS_BASE}/search`, {
-    params: { name: String(name || '').trim() },
+    params: { name: sanitized },
   })
   return toArray(response.data)
 }
@@ -88,10 +97,19 @@ export const updateMedicamentoStock = async ({ medicationId, branchId, quantity 
  * Permite consultar stock por sede o búsqueda por nombre.
  */
 export const getInventario = async (params = {}) => {
+  const sanitized = String(params?.name || '').trim()
+
+  // 🛡️ Client-side Security Check for Demo
+  const sqlInjectionPattern = /[-'";|\/\*]/
+  if (sanitized && sqlInjectionPattern.test(sanitized)) {
+    console.warn('⚠️ Intento de SQL Injection detectado en el cliente:', sanitized)
+    throw new Error('Caracteres no permitidos en la búsqueda por motivos de seguridad.')
+  }
+
   const response = await client.get(`${MEDICATIONS_BASE}`, {
     params: {
       branchId: params?.branchId,
-      q: params?.name,
+      q: sanitized,
       page: params?.page || 1,
       limit: params?.limit || 20,
     },
