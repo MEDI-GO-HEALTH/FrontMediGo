@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { getInventario } from '../../api/inventarioService'
-import { createSubasta, getActiveAuctions, getAuctionErrorMessage } from '../../api/subastaService'
+import { createSubasta, getAuctions, getActiveAuctions, getAuctionErrorMessage } from '../../api/subastaService'
 import { getSedes } from '../../api/sedesService'
 import AuctionAdminActions from '../../components/admin/AuctionAdminActions'
 import MedigoSidebarBrand from '../../components/common/MedigoSidebarBrand'
@@ -130,7 +130,7 @@ export default function GestionSubastas() {
   }
 
   const [search, setSearch] = useState('')
-  const [auctions, setAuctions] = useState(FALLBACK_AUCTIONS)
+  const [auctions, setAuctions] = useState([])
   const [overview, setOverview] = useState(FALLBACK_OVERVIEW)
   const [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(true)
@@ -149,17 +149,19 @@ export default function GestionSubastas() {
 
     const loadAuctions = async () => {
       try {
-        const response = await getActiveAuctions()
+        const response = await getAuctions()
         if (!mounted) {
           return
         }
 
         const source = response?.data || response
-        if (Array.isArray(source) && source.length > 0) {
+        if (Array.isArray(source)) {
           const mapped = source.map((item, index) => mapAuctionFromApi(item, index))
           const active = mapped.filter((item) => item.active)
           const totalValue = mapped.reduce((acc, item) => acc + item.startPrice, 0)
-          const topBid = Math.max(...mapped.map((item) => item.startPrice), FALLBACK_OVERVIEW.topBid)
+          const topBid = mapped.length > 0 
+            ? Math.max(...mapped.map((item) => item.startPrice))
+            : FALLBACK_OVERVIEW.topBid
 
           setAuctions(mapped)
           setOverview((previous) => ({
