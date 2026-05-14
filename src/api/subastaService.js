@@ -39,9 +39,9 @@ export const getAuctionErrorMessage = (error, fallbackMessage = 'No se pudo comp
   return message || fallbackMessage
 }
 
-/** GET /api/auctions — Listar subastas (Admin) */
-export const getAllAuctions = async () => {
-  const response = await client.get(`${AUCTIONS_BASE}/all`);
+/** GET /api/auctions — Listar subastas */
+export const getAuctions = async (params = {}) => {
+  const response = await client.get(AUCTIONS_BASE, { params });
   return response.data;
 };
 
