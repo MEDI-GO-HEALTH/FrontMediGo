@@ -80,12 +80,21 @@ const pickAllowedFields = (source = {}) => {
 
 /** GET /api/sedes — Listar sedes */
 export const getSedes = async (params = {}) => {
+  const sanitized = String(params?.q || '').trim();
+
+  // 🛡️ Client-side Security Check for Demo
+  const sqlInjectionPattern = /[-'";|\/\*]/;
+  if (sanitized && sqlInjectionPattern.test(sanitized)) {
+    console.warn('⚠️ Intento de SQL Injection detectado en el cliente (Sedes):', sanitized);
+    throw new Error('Caracteres no permitidos en la búsqueda por motivos de seguridad.');
+  }
+
   try {
     const response = await client.get(SEDES_ENDPOINT, {
       params: {
         page: 1,
         limit: 20,
-        q: '',
+        q: sanitized,
         ...params,
       },
     });
