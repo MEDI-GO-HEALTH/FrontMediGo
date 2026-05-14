@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { getInventario } from '../../api/inventarioService'
-import { createSubasta, getAuctions, getActiveAuctions, getAuctionErrorMessage } from '../../api/subastaService'
+import { createSubasta, getAllAuctions, getActiveAuctions, getAuctionErrorMessage } from '../../api/subastaService'
 import { getSedes } from '../../api/sedesService'
 import AuctionAdminActions from '../../components/admin/AuctionAdminActions'
 import MedigoSidebarBrand from '../../components/common/MedigoSidebarBrand'
@@ -149,7 +149,7 @@ export default function GestionSubastas() {
 
     const loadAuctions = async () => {
       try {
-        const response = await getAuctions()
+        const response = await getAllAuctions()
         if (!mounted) {
           return
         }
