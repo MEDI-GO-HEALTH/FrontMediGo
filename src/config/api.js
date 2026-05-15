@@ -3,7 +3,7 @@ const trimTrailingSlash = (value = '') => value.replace(/\/$/, '')
 const DEFAULT_PROD_API_BASE_URL = 'https://ezequiel-gateway-etcrh9dxg9dwhng4.canadacentral-01.azurewebsites.net'
 const DEFAULT_DEV_API_BASE_URL = ''  // Proxy de Vite reenvía /api/* → localhost:8081
 const DEFAULT_API_BASE_URL = import.meta.env.DEV ? DEFAULT_DEV_API_BASE_URL : DEFAULT_PROD_API_BASE_URL
-const DEFAULT_DEV_AUCTION_WS_URL = 'ws://localhost:8080/ws'
+const DEFAULT_DEV_AUCTION_WS_URL = 'ws://localhost:8081/ws'
 
 const isLocalhostUrl = (value = '') => /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(value)
 

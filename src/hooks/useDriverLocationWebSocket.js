@@ -50,6 +50,9 @@ export default function useDriverLocationWebSocket({ deliveryId, onLocation } = 
     const client = new Client({
       brokerURL: API_CONFIG.auctionWsURL, // same /ws endpoint, reuse config
       reconnectDelay: 5000,
+      connectHeaders: {
+        Authorization: `Bearer ${localStorage.getItem('medigo_token')}`,
+      },
       onConnect: () => {
         setConnected(true)
         subscribe(client)
@@ -76,9 +79,15 @@ export default function useDriverLocationWebSocket({ deliveryId, onLocation } = 
   const sendLocation = useCallback((lat, lng) => {
     const r = ref.current
     if (!r.client?.connected || !r.deliveryId) return
+    const userId = localStorage.getItem('medigo_user_id')
     r.client.publish({
       destination: `/app/location/${r.deliveryId}`,
-      body: JSON.stringify({ lat, lng, ts: Date.now() }),
+      body: JSON.stringify({ 
+        lat, 
+        lng, 
+        ts: Date.now(),
+        deliveryPersonId: userId ? Number(userId) : null
+      }),
     })
   }, [])
 

@@ -12,12 +12,13 @@
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet'
+import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
 import { getOrderStatus } from '../../api/affiliateOrderService'
 import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
 import AffiliateShell from '../../components/layout/AffiliateShell'
 import useDriverLocations from '../../hooks/useDriverLocations'
 import useDriverLocationWebSocket from '../../hooks/useDriverLocationWebSocket'
+import useUserLocationWebSocket from '../../hooks/useUserLocationWebSocket'
 import useOrderStatusWebSocket from '../../hooks/useOrderStatusWebSocket'
 import useCappedLoading from '../../hooks/useCappedLoading'
 import '../../styles/affiliate/perfil-afiliado.css'
@@ -29,9 +30,9 @@ const INITIAL_ZOOM = 14
 
 // ── Colores y etiquetas por estado ───────────────────────────────────
 const STATUS_CONFIG = {
-  ASSIGNED_TO_ME: { color: '#22c55e', label: 'Tu repartidor', bgClass: 'driver-pin--assigned' },
-  AVAILABLE:      { color: '#eab308', label: 'Disponible',    bgClass: 'driver-pin--available' },
-  BUSY:           { color: '#9ca3af', label: 'Ocupado',       bgClass: 'driver-pin--busy' },
+  ASSIGNED_TO_ME: { color: '#3b82f6', label: 'Tu repartidor', bgClass: 'driver-pin--assigned' }, // Azul vibrante
+  AVAILABLE:      { color: '#10b981', label: 'Disponible',    bgClass: 'driver-pin--available' }, // Verde esmeralda
+  BUSY:           { color: '#64748b', label: 'Ocupado',       bgClass: 'driver-pin--busy' },      // Gris pizarra
 }
 
 const STATUS_POPUP = {
@@ -51,6 +52,17 @@ const ORDER_STATUS_LABEL = {
   CANCELLED:        'Cancelado',
 }
 
+// ── Icono para la ubicación del Usuario ──────────────────────────────
+const userIcon = L.divIcon({
+  className: '',
+  html: `<div class="user-location-pin" role="img" aria-label="Tu ubicación">
+           <span class="material-symbols-outlined">home_pin</span>
+         </div>`,
+  iconSize: [42, 42],
+  iconAnchor: [21, 42],
+  popupAnchor: [0, -40],
+})
+
 /** Crea icono Leaflet para cada estado del repartidor. */
 const createDriverIcon = (status) => {
   const { bgClass } = STATUS_CONFIG[status] ?? STATUS_CONFIG.BUSY
@@ -61,10 +73,27 @@ const createDriverIcon = (status) => {
              ${pulseHtml}
              <span class="material-symbols-outlined" aria-hidden="true">electric_moped</span>
            </div>`,
-    iconSize:    [40, 40],
-    iconAnchor:  [20, 20],
+    iconSize:    status === 'ASSIGNED_TO_ME' ? [48, 48] : [36, 36],
+    iconAnchor:  status === 'ASSIGNED_TO_ME' ? [24, 24] : [18, 18],
     popupAnchor: [0, -24],
   })
+}
+
+// ── Sub-componente: Ajusta la cámara para ver a ambos ────────────────
+function MapBounds({ userPos, driverPos }) {
+  const map = useMap()
+  useEffect(() => {
+    if (!userPos && !driverPos) return
+    const points = []
+    if (userPos) points.push(userPos)
+    if (driverPos) points.push([driverPos.lat, driverPos.lng])
+    
+    if (points.length > 0) {
+      const bounds = L.latLngBounds(points)
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16, animate: true })
+    }
+  }, [userPos, driverPos, map])
+  return null
 }
 
 const fmtTime = (date) =>
@@ -122,6 +151,7 @@ export default function MapaPedidos() {
   const [orderStatus, setOrderStatus] = useState(null)
   const [deliveredAt, setDeliveredAt] = useState(null)
   const [deliveryId, setDeliveryId]   = useState(null)
+  const [userPos, setUserPos]         = useState(null) // [lat, lng]
   const [showToast, setShowToast]     = useState(false)
   const toastTimerRef = useRef(null)
 
@@ -160,6 +190,28 @@ export default function MapaPedidos() {
       return wsStatus
     })
   }, [wsStatus, wsDeliveryId, wsDeliveredAt, triggerToast])
+
+  // ── Obtener ubicación del usuario ──────────────────────────────────
+  useEffect(() => {
+    if (!navigator.geolocation) return
+    
+    const watcher = navigator.geolocation.watchPosition(
+      (pos) => setUserPos([pos.coords.latitude, pos.coords.longitude]),
+      () => { /* ignorar error */ },
+      { enableHighAccuracy: true, maximumAge: 10000 }
+    )
+
+    return () => navigator.geolocation.clearWatch(watcher)
+  }, [])
+
+  // ── Transmitir ubicación del usuario al repartidor ─────────────
+  const { sendUserLocation } = useUserLocationWebSocket({ orderId })
+
+  useEffect(() => {
+    if (userPos) {
+      sendUserLocation(userPos[0], userPos[1])
+    }
+  }, [userPos, sendUserLocation])
 
   // Repartidores en tiempo real (polling liviano con orderId para marcar ASSIGNED_TO_ME)
   const { drivers, assignedDriver, isLoading, lastUpdated, noDrivers } = useDriverLocations(undefined, orderId)
@@ -225,11 +277,21 @@ export default function MapaPedidos() {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             />
+            
+            <MapBounds userPos={userPos} driverPos={wsDriverPos || assignedDriver} />
+
             {drivers.map((driver) => {
               const realPos = wsDriverPos && driver.status === 'ASSIGNED_TO_ME' ? wsDriverPos : null
               const d = realPos ? { ...driver, lat: realPos.lat, lng: realPos.lng, lastUpdate: new Date(realPos.ts ?? Date.now()) } : driver
               return <DriverMarker key={driver.id} driver={d} />
             })}
+
+            {/* Marcador de la ubicación del usuario */}
+            {userPos && (
+              <Marker position={userPos} icon={userIcon}>
+                <Popup><b>Tu ubicación de entrega</b></Popup>
+              </Marker>
+            )}
           </MapContainer>
 
           {noDrivers && !showLoader && (

@@ -26,6 +26,7 @@ import MedigoSidebarBrand from '../../components/common/MedigoSidebarBrand'
 import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
 import useCappedLoading from '../../hooks/useCappedLoading'
 import useDriverLocationWebSocket from '../../hooks/useDriverLocationWebSocket'
+import useUserLocationWebSocket from '../../hooks/useUserLocationWebSocket'
 import '../../styles/driver/mapa-entregas.css'
 
 // ── Config ────────────────────────────────────────────────────────────
@@ -126,6 +127,20 @@ export default function MapaEntregas() {
   // Mantener la referencia actualizada sin recrear el geolocation watcher
   sendLocationRef.current = sendLocation
 
+  // Recibir ubicación del usuario (afiliado) en tiempo real
+  useUserLocationWebSocket({
+    orderId: activeOrder?.id,
+    onLocation: (pos) => {
+      if (pos?.lat && pos?.lng) {
+        setActiveOrder((prev) => prev ? {
+          ...prev,
+          destinationLat: pos.lat,
+          destinationLng: pos.lng
+        } : null)
+      }
+    }
+  })
+
   const showLoader = useCappedLoading(loading || loadingOrders, 3000)
 
   // ── Geolocalización ──────────────────────────────────────────────
@@ -175,7 +190,15 @@ export default function MapaEntregas() {
           setActiveDelivery(d)
           setDeliveryStep(d.status === 'IN_ROUTE' ? 'PICKED_UP' : 'ASSIGNED')
           // Reconstruir activeOrder mínimo desde la entrega
-          setActiveOrder({ id: d.orderId, orderNumber: `#${d.orderId}` })
+          setActiveOrder({
+            id: d.orderId,
+            orderNumber: d.orderNumber || `#${d.orderId}`,
+            pickupLat: d.branchLat,
+            pickupLng: d.branchLng,
+            pickupAddress: d.branchAddress || d.branchName,
+            destinationLat: d.userLat,
+            destinationLng: d.userLng
+          })
         } else {
           setPendingOrders(orders)
         }
@@ -224,6 +247,15 @@ export default function MapaEntregas() {
         const delivery = await selfAssignOrder(activeOrder.id)
         setActiveDelivery(delivery)
         setDeliveryStep('ASSIGNED')
+        setActiveOrder({
+          id: delivery.orderId,
+          orderNumber: delivery.orderNumber || `#${delivery.orderId}`,
+          pickupLat: delivery.branchLat,
+          pickupLng: delivery.branchLng,
+          pickupAddress: delivery.branchAddress || delivery.branchName,
+          destinationLat: delivery.userLat,
+          destinationLng: delivery.userLng
+        })
         setPendingOrders([])
 
       } else if (pendingAction === 'PICKED_UP') {

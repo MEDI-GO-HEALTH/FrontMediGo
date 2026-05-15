@@ -25,6 +25,9 @@ export default function useOrderStatusWebSocket({ orderId } = {}) {
     const client = new Client({
       brokerURL: API_CONFIG.auctionWsURL,
       reconnectDelay: 5000,
+      connectHeaders: {
+        Authorization: `Bearer ${localStorage.getItem('medigo_token')}`,
+      },
       onConnect: () => {
         setConnected(true)
         ref.current.sub = client.subscribe(

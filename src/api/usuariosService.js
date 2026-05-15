@@ -8,11 +8,11 @@ import client from './client';
 /** GET /api/usuarios — Listar todos los usuarios */
 export const getUsuarios = async (params = {}) => {
   const queryValues = Object.values(params).filter(v => typeof v === 'string');
-  const sqlInjectionPattern = /[-'";|\/\*]/;
+  const sqlInjectionPattern = /['";|\/\*-]/;
 
   for (const val of queryValues) {
     if (sqlInjectionPattern.test(val)) {
-      console.warn('⚠️ Intento de SQL Injection detectado en el cliente (Usuarios):', val);
+      console.warn('Intento de SQL Injection detectado en el cliente (Usuarios):', val);
       throw new Error('Caracteres no permitidos en la búsqueda por motivos de seguridad.');
     }
   }

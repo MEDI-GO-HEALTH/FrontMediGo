@@ -83,7 +83,7 @@ export const getSedes = async (params = {}) => {
   const sanitized = String(params?.q || '').trim();
 
   // 🛡️ Client-side Security Check for Demo
-  const sqlInjectionPattern = /[-'";|\/\*]/;
+  const sqlInjectionPattern = /['";|\/\*-]/;
   if (sanitized && sqlInjectionPattern.test(sanitized)) {
     console.warn('⚠️ Intento de SQL Injection detectado en el cliente (Sedes):', sanitized);
     throw new Error('Caracteres no permitidos en la búsqueda por motivos de seguridad.');

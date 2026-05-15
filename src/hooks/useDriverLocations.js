@@ -38,7 +38,7 @@ export default function useDriverLocations(pollIntervalMs = POLL_INTERVAL_MS, or
               lat: Number(d.lat),
               lng: Number(d.lng),
               status,
-              deliveryId: d.deliveryId ?? null,
+              deliveryId: d.deliveryId ?? `u${d.id}`,
               estimatedTime: d.estimatedTime ?? null,
               orderId: d.orderId ?? null,
               lastUpdate: new Date(),

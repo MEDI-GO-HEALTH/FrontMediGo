@@ -34,7 +34,7 @@ export const searchMedicationsByName = async (name) => {
   const sanitized = String(name || '').trim()
   
   // 🛡️ Client-side Security Check for Demo
-  const sqlInjectionPattern = /[-'";|\/\*]/
+  const sqlInjectionPattern = /['";|\/\*-]/
   if (sqlInjectionPattern.test(sanitized)) {
     console.warn('⚠️ Intento de SQL Injection detectado en el cliente:', sanitized)
     throw new Error('Caracteres no permitidos en la búsqueda por motivos de seguridad.')
@@ -100,7 +100,7 @@ export const getInventario = async (params = {}) => {
   const sanitized = String(params?.name || '').trim()
 
   // 🛡️ Client-side Security Check for Demo
-  const sqlInjectionPattern = /[-'";|\/\*]/
+  const sqlInjectionPattern = /['";|\/\*-]/
   if (sanitized && sqlInjectionPattern.test(sanitized)) {
     console.warn('⚠️ Intento de SQL Injection detectado en el cliente:', sanitized)
     throw new Error('Caracteres no permitidos en la búsqueda por motivos de seguridad.')

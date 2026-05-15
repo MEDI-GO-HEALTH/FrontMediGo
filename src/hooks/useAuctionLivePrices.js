@@ -38,6 +38,9 @@ export default function useAuctionLivePrices(onPriceUpdate) {
     const client = new Client({
       brokerURL: wsUrl,
       reconnectDelay: 5000,
+      connectHeaders: {
+        Authorization: `Bearer ${localStorage.getItem('medigo_token')}`,
+      },
 
       onConnect: () => {
         if (!active) return
