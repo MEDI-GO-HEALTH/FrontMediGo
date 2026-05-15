@@ -11,21 +11,21 @@ import useCappedLoading from '../../hooks/useCappedLoading'
 import '../../styles/driver/perfil-repartidor.css'
 
 const FALLBACK_PROFILE = {
-  firstName: 'Carlos',
-  lastName: 'Rivera',
-  email: 'carlos.rivera@medigo.co',
-  phone: '+57 3101234567',
-  vehicleType: 'Moto',
-  vehiclePlate: 'MDG-45B',
-  licenseNumber: 'LIC-458210',
-  city: 'Bogota',
-  notes: 'Disponible para entregas urbanas y urgentes.',
-  certifications: ['Repartidor Certificado', 'Cadena de Frio'],
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  vehicleType: '',
+  vehiclePlate: '',
+  licenseNumber: '',
+  city: '',
+  notes: '',
+  certifications: [],
   metrics: {
-    rating: 4.9,
-    trips: 128,
-    completionRate: 97,
-    availability: 'online',
+    rating: 0,
+    trips: 0,
+    completionRate: 0,
+    availability: 'offline',
   },
 }
 

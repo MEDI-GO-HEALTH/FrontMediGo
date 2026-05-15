@@ -10,67 +10,12 @@ import PageLoadingOverlay from '../../components/common/PageLoadingOverlay'
 import useCappedLoading from '../../hooks/useCappedLoading'
 import '../../styles/driver/historial-viajes.css'
 
-const FALLBACK_SUMMARY = {
-  totalTrips: 128,
-  tripsGrowthPct: 12,
-  averageRating: 4.9,
-  monthlyEarnings: 2450,
-  currency: 'MXN',
-}
-
-const FALLBACK_TRIPS = [
-  {
-    id: '#MG-82910',
-    date: '12 Oct 2023',
-    time: '08:45 AM',
-    originName: 'Hospital Angeles',
-    originSub: 'Sede Pedregal',
-    destinationMain: 'Av. Insurgentes Sur 1202',
-    destinationSub: 'Col. Guadalupe Inn',
-    distanceKm: 12.4,
-    status: 'completed',
-  },
-  {
-    id: '#MG-82908',
-    date: '11 Oct 2023',
-    time: '03:20 PM',
-    originName: 'Farmacias del Ahorro',
-    originSub: 'Centro Distribucion',
-    destinationMain: 'Calle 10 #245',
-    destinationSub: 'Col. San Pedro',
-    distanceKm: 4.8,
-    status: 'completed',
-  },
-  {
-    id: '#MG-82894',
-    date: '11 Oct 2023',
-    time: '11:15 AM',
-    originName: 'Clinica Medica Sur',
-    originSub: 'Laboratorio Central',
-    destinationMain: 'Periferico Sur 452',
-    destinationSub: 'Col. Tlalpan',
-    distanceKm: 0,
-    status: 'cancelled',
-  },
-  {
-    id: '#MG-82881',
-    date: '10 Oct 2023',
-    time: '09:30 AM',
-    originName: 'Salud Digna',
-    originSub: 'Sucursal Reforma',
-    destinationMain: 'Paseo de la Reforma 300',
-    destinationSub: 'Col. Juarez',
-    distanceKm: 18.2,
-    status: 'completed',
-  },
-]
-
 const DATE_RANGE_OPTIONS = ['Ultimos 30 dias', 'Esta semana', 'Mes anterior', 'Personalizado']
 
 export default function HistorialViajes() {
   const navigate = useNavigate()
-  const [summary, setSummary] = useState(FALLBACK_SUMMARY)
-  const [trips, setTrips] = useState(FALLBACK_TRIPS)
+  const [summary, setSummary] = useState({ totalTrips: 0, tripsGrowthPct: 0, averageRating: 0, monthlyEarnings: 0, currency: 'COP' })
+  const [trips, setTrips] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [dateRange, setDateRange] = useState(DATE_RANGE_OPTIONS[0])
   const [actionError, setActionError] = useState('')
@@ -101,7 +46,7 @@ export default function HistorialViajes() {
           ? tripsResponse.items
           : Array.isArray(tripsResponse)
             ? tripsResponse
-            : FALLBACK_TRIPS
+            : []
 
         setTrips(incomingTrips)
       } catch {
@@ -109,8 +54,8 @@ export default function HistorialViajes() {
           return
         }
 
-        setSummary(FALLBACK_SUMMARY)
-        setTrips(FALLBACK_TRIPS)
+        setSummary({ totalTrips: 0, tripsGrowthPct: 0, averageRating: 0, monthlyEarnings: 0, currency: 'COP' })
+        setTrips([])
       } finally {
         if (mounted) {
           setLoading(false)

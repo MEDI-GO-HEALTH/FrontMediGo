@@ -229,7 +229,15 @@ export default function MapaEntregas() {
 
   // ── El repartidor elige un pedido → confirma antes de asignarse ──
   const handleSelectOrder = useCallback((order) => {
-    setActiveOrder(order)
+    // Normalizar campos del pedido pendiente
+    setActiveOrder({
+      ...order,
+      pickupLat: order.branchLat,
+      pickupLng: order.branchLng,
+      destinationLat: order.addressLat,
+      destinationLng: order.addressLng,
+      pickupAddress: order.branchName || `Sucursal #${order.branchId}`
+    })
     setPendingAction('ACCEPT')
     setShowConfirmModal(true)
     setActionError('')
@@ -276,16 +284,6 @@ export default function MapaEntregas() {
     } catch (err) {
       const msg = err?.response?.data?.message || err?.message || 'Error al actualizar estado.'
       setActionError(msg)
-      // Avanzar visualmente de todas formas
-      if (pendingAction === 'ACCEPT') {
-        setActiveDelivery({ id: null, orderId: activeOrder?.id, status: 'ASSIGNED' })
-        setDeliveryStep('ASSIGNED')
-      } else if (pendingAction === 'PICKED_UP') {
-        setDeliveryStep('PICKED_UP')
-      } else if (pendingAction === 'DELIVERED') {
-        setDeliveredAt(new Date())
-        setDeliveryStep('DELIVERED')
-      }
     } finally {
       setLoading(false)
       setPendingAction(null)
@@ -469,14 +467,15 @@ export default function MapaEntregas() {
                   <Popup>
                     <div className="driver-popup">
                       <p className="driver-popup__label">Recoger en</p>
-                      <p className="driver-popup__address">{activeOrder.pickupAddress ?? 'Sucursal'}</p>
+                      <p className="driver-popup__address">{activeOrder.pickupAddress || 'Sucursal'}</p>
                     </div>
                   </Popup>
                 </Marker>
               )}
 
-              {/* Destino — visible desde PICKED_UP */}
-              {activeOrder?.destinationLat && (deliveryStep === 'PICKED_UP' || deliveryStep === 'DELIVERED') && (
+              {/* Destino — visible desde ASSIGNED si queremos verlo siempre, o solo desde PICKED_UP */}
+              {/* Para que el repartidor sepa a dónde va desde que lo acepta, lo mostramos siempre si existe */}
+              {activeOrder?.destinationLat && deliveryStep !== 'DELIVERED' && (
                 <Marker position={[activeOrder.destinationLat, activeOrder.destinationLng]} icon={destinationIcon}>
                   <Popup>
                     <div className="driver-popup">
