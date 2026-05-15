@@ -193,16 +193,17 @@ export default function MapaPedidos() {
 
   // ── Obtener ubicación del usuario ──────────────────────────────────
   useEffect(() => {
-    if (!navigator.geolocation) return
+    // Solo rastrear si el navegador lo soporta Y hay un pedido activo para mostrar
+    if (!navigator.geolocation || !activeOrder) return
     
-    const watcher = navigator.geolocation.watchPosition(
+    const watcher = navigator.geolocation.watchPosition( // NOSONAR: Necesario para seguimiento en vivo del pedido
       (pos) => setUserPos([pos.coords.latitude, pos.coords.longitude]),
       () => { /* ignorar error */ },
       { enableHighAccuracy: true, maximumAge: 10000 }
     )
 
     return () => navigator.geolocation.clearWatch(watcher)
-  }, [])
+  }, [activeOrder])
 
   // ── Transmitir ubicación del usuario al repartidor ─────────────
   const { sendUserLocation } = useUserLocationWebSocket({ orderId })
