@@ -170,6 +170,15 @@ export default function MapaEntregas() {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Heartbeat de ubicación (para evitar expirar en el backend) ──
+  useEffect(() => {
+    if (!driverPos) return
+    const interval = setInterval(() => {
+      sendLocationRef.current?.(driverPos[0], driverPos[1])
+    }, 30000)
+    return () => clearInterval(interval)
+  }, [driverPos])
+
   const mapCenter = useMemo(() => driverPos ?? BOGOTA_CENTER, [driverPos])
 
   // ── Carga inicial: entrega activa + pedidos disponibles ──────────
